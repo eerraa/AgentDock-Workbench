@@ -33,12 +33,14 @@ func platformSetAutostart(ctx context.Context, runtimeRoot, component string, en
 	switch component {
 	case "core":
 		if manifest.UsesScheduledTask() {
-			action := "/Disable"
+			action := "disable"
 			if enabled {
-				action = "/Enable"
+				action = "enable"
 			}
-			return runScheduledTaskCommand(ctx, "/Change", "/TN", scheduledTaskPath(manifest.AgentDockTaskName), action)
+			_, err := nativeRuntimeTaskAction(ctx, root, manifest, action)
+			return err
 		}
+
 		name := defaultString(manifest.StartupValueName, "AgentDock")
 		if !enabled {
 			return removeRunValue(name)

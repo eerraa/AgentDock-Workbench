@@ -60,7 +60,7 @@ func runTaskCoreHost(args []string) (int, error) {
 	if err != nil {
 		return 1, err
 	}
-	active, err := resolveActiveWithRecovery(runtimeRoot, store, layout, true)
+	active, err := resolveActiveWithRecovery(runtimeRoot, store, layout)
 	if err != nil {
 		return 1, err
 	}
@@ -78,6 +78,8 @@ func runTaskCoreHost(args []string) (int, error) {
 	if compatibilityErr != nil {
 		return 1, compatibilityErr
 	}
-	if err := desktopruntime.RunTaskRuntime(context.Background(), runtimeRoot, coreBinary, active.ActiveVersion); err != nil { return 1, err }
+	if err := desktopruntime.RunTaskRuntime(context.Background(), runtimeRoot, coreBinary, active.ActiveVersion); err != nil {
+		return 1, err
+	}
 	return 0, nil
 }

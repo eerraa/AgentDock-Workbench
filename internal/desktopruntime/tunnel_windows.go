@@ -84,6 +84,9 @@ func platformLaunchTunnel(ctx context.Context, runtimeRoot string) error {
 			return nil
 		}
 
+		if err := waitCloudflaredCoreHealth(ctx, runtime); err != nil {
+			return err
+		}
 		startedAt := time.Now()
 		runErr := runCloudflaredOnce(ctx, runtime, logs)
 		if ctx.Err() != nil {
@@ -108,7 +111,11 @@ func platformLaunchTunnel(ctx context.Context, runtimeRoot string) error {
 			}
 		}
 
-		retryDelay = nextTunnelRetryDelay(retryDelay, time.Since(startedAt))
+		if errors.Is(runErr, errCloudflaredChildExit) {
+			retryDelay = nextTunnelRetryDelay(retryDelay, time.Since(startedAt))
+		} else {
+			retryDelay = time.Second
+		}
 		fmt.Fprintf(logs.stderr, "将在 %s 后重启 cloudflared\n", retryDelay)
 		stopped, err = guard.waitRetry(ctx, retryDelay)
 		if err != nil {
@@ -119,6 +126,8 @@ func platformLaunchTunnel(ctx context.Context, runtimeRoot string) error {
 		}
 	}
 }
+
+var errCloudflaredChildExit = errors.New("cloudflared child exited")
 
 func runCloudflaredOnce(ctx context.Context, runtime tunnelRuntime, logs *processLogs) error {
 	logCursors := tunnelLogCursors{}
@@ -163,7 +172,11 @@ func runCloudflaredOnce(ctx context.Context, runtime tunnelRuntime, logs *proces
 	}
 	phase = "serving"
 	fmt.Fprintf(logs.stderr, "cloudflared phase=serving child_pid=%d\n", command.Process.Pid)
-	return command.Wait()
+	err = command.Wait()
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+	return errors.Join(errCloudflaredChildExit, err)
 }
 
 func platformTunnelStatus(ctx context.Context, runtimeRoot string) (TunnelStatus, error) {
@@ -229,6 +242,10 @@ func platformTunnelAction(ctx context.Context, runtimeRoot, action string) error
 	if err != nil {
 		return err
 	}
+
+	if runtime.manifest.UsesScheduledTask() && runtime.mode != "funnel" {
+		return elevatedRuntimeActionLocked(ctx, runtime.root, runtime.manifest, action)
+	}
 	switch action {
 	case "start":
 		return startTunnel(ctx, runtime)
@@ -270,6 +287,9 @@ func captureTunnelLogCursors(files tunnelFiles) (tunnelLogCursors, error) {
 }
 
 func startCloudflareTunnel(ctx context.Context, runtime tunnelRuntime) error {
+	if runtime.manifest.UsesScheduledTask() {
+		return elevatedRuntimeActionLocked(ctx, runtime.root, runtime.manifest, "start")
+	}
 	if runtime.mode == "none" {
 		return nil
 	}
@@ -314,7 +334,7 @@ func startCloudflareTunnel(ctx context.Context, runtime tunnelRuntime) error {
 		if err := clearActivePublicURL(runtime.files); err != nil {
 			return err
 		}
-		if err := runtime.updateManifest("none", ""); err != nil {
+		if err := runtime.updateManifest("quick", ""); err != nil {
 			return err
 		}
 	} else {
@@ -338,6 +358,9 @@ func startCloudflareTunnel(ctx context.Context, runtime tunnelRuntime) error {
 }
 
 func stopCloudflareTunnel(ctx context.Context, runtime tunnelRuntime) error {
+	if runtime.manifest.UsesScheduledTask() {
+		return elevatedRuntimeActionLocked(ctx, runtime.root, runtime.manifest, "stop")
+	}
 	if err := signalTunnelSupervisorStop(runtime.root); err != nil {
 		return err
 	}
@@ -351,13 +374,16 @@ func stopCloudflareTunnel(ctx context.Context, runtime tunnelRuntime) error {
 }
 
 func regenerateQuickTunnel(ctx context.Context, runtime tunnelRuntime) error {
+	if runtime.manifest.UsesScheduledTask() {
+		return elevatedRuntimeActionLocked(ctx, runtime.root, runtime.manifest, "restart")
+	}
 	if err := stopTunnel(ctx, runtime); err != nil {
 		return err
 	}
 	if err := clearActivePublicURL(runtime.files); err != nil {
 		return err
 	}
-	if err := runtime.updateManifest("none", ""); err != nil {
+	if err := runtime.updateManifest("quick", ""); err != nil {
 		return err
 	}
 	// 清掉旧公网地址后先重启核心，避免新地址准备期间继续使用失效的 OAuth Origin。
@@ -368,6 +394,9 @@ func regenerateQuickTunnel(ctx context.Context, runtime tunnelRuntime) error {
 }
 
 func launchCloudflared(runtime tunnelRuntime) error {
+	if runtime.manifest.UsesScheduledTask() {
+		return errors.New("elevated Tunnel requires its native task host")
+	}
 	// Windows 不能把轮转 writer 直接交给脱离父进程的 cloudflared；因此先启动一个
 	// 长驻的 AgentDock tunnel launch 监督进程，由它持有 cloudflared 并实时轮转日志。
 	// Installer trial 期间 stable shim 会拒绝未提交 generation，因此和 Core 启动一样，
@@ -415,11 +444,23 @@ func cloudflaredCommand(ctx context.Context, runtime tunnelRuntime) (*exec.Cmd, 
 }
 
 func applyQuickTunnelURL(ctx context.Context, runtime tunnelRuntime, publicURL string) error {
-	if err := writeRuntimeText(runtime.files.serverURL, publicURL); err != nil {
+	if err := validateQuickRuntimeOrigin(publicURL); err != nil {
 		return err
 	}
-	if err := restartTunnelCore(ctx, runtime.root); err != nil {
-		return err
+	if client := tunnelHostFromContext(ctx); client != nil {
+		if err := client.replaceOrigin(ctx, publicURL); err != nil {
+			return err
+		}
+	} else {
+		if runtime.manifest.UsesScheduledTask() {
+			return errors.New("Quick Origin requires its task host")
+		}
+		if err := writeRuntimeText(runtime.files.serverURL, publicURL); err != nil {
+			return err
+		}
+		if err := restartTunnelCore(ctx, runtime.root); err != nil {
+			return err
+		}
 	}
 	if err := ctx.Err(); err != nil {
 		return err
@@ -427,10 +468,8 @@ func applyQuickTunnelURL(ctx context.Context, runtime tunnelRuntime, publicURL s
 	if err := runtime.updateManifest("quick", publicURL); err != nil {
 		return err
 	}
-	// ready 文件最后写入，保证桌面端读到地址时核心已经采用新 OAuth Origin。
 	return writeRuntimeText(runtime.files.quickURL, publicURL)
 }
-
 func invalidateQuickTunnelAfterExit(ctx context.Context, runtime tunnelRuntime) error {
 	readyURL, err := readTrimmedText(runtime.files.quickURL)
 	if err != nil {
@@ -439,13 +478,21 @@ func invalidateQuickTunnelAfterExit(ctx context.Context, runtime tunnelRuntime) 
 	if readyURL == "" {
 		return nil
 	}
-	if err := clearActivePublicURL(runtime.files); err != nil {
+	if err := os.Remove(runtime.files.quickURL); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
-	if err := runtime.updateManifest("none", ""); err != nil {
+	if err := runtime.updateManifest("quick", ""); err != nil {
 		return err
 	}
-	// 已对外发布过的 Quick URL 一旦失效，先让 Core 丢弃旧 OAuth Origin，再等待新 URL。
+	if client := tunnelHostFromContext(ctx); client != nil {
+		return client.replaceOrigin(ctx, "")
+	}
+	if runtime.manifest.UsesScheduledTask() {
+		return errors.New("Quick invalidation requires its task host")
+	}
+	if err := writeRuntimeText(runtime.files.serverURL, ""); err != nil {
+		return err
+	}
 	return restartTunnelCore(ctx, runtime.root)
 }
 
