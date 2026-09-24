@@ -85,6 +85,19 @@ func platformLaunchTunnel(ctx context.Context, runtimeRoot string) error {
 		}
 
 		startedAt := time.Now()
+		if !testHealth(ctx, runtime.localOrigin()+"/healthz") {
+			fmt.Fprintf(logs.stderr, "local origin not healthy, cloudflared not started: %s\n", runtime.localOrigin())
+			retryDelay = nextTunnelRetryDelay(retryDelay, 0)
+			fmt.Fprintf(logs.stderr, "将在 %s 后重试 cloudflared\n", retryDelay)
+			stopped, err = guard.waitRetry(ctx, retryDelay)
+			if err != nil {
+				return err
+			}
+			if stopped {
+				return nil
+			}
+			continue
+		}
 		runErr := runCloudflaredOnce(ctx, runtime, logs)
 		if ctx.Err() != nil {
 			return parentContext.Err()

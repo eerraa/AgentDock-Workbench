@@ -113,6 +113,19 @@ func restartScheduledCore(ctx context.Context, manifest Manifest, runtimeRoot st
 	return startScheduledCore(ctx, manifest, runtimeRoot)
 }
 
+// handOffScheduledCore ends the previous elevated core and starts the same
+// scheduled task. The caller does not wait for the port; that task owns the core.
+func handOffScheduledCore(ctx context.Context, manifest Manifest, runtimeRoot string) error {
+	if err := stopScheduledCore(ctx, manifest, runtimeRoot); err != nil {
+		return err
+	}
+	if testHealth(ctx, manifest.HealthURL()) {
+		return fmt.Errorf("AgentDock 核心在计划任务结束后仍响应 %s", manifest.HealthURL())
+	}
+	recoverAbandonedCoreLocks(manifest, runtimeRoot)
+	return StartInteractiveScheduledTask(ctx, runtimeRoot, manifest.AgentDockTaskName)
+}
+
 func stopScheduledCore(ctx context.Context, manifest Manifest, runtimeRoot string) error {
 	endErr := runScheduledTaskCommand(ctx, "/End", "/TN", scheduledTaskPath(manifest.AgentDockTaskName))
 	if endErr != nil && !scheduledTaskNotRunning(endErr) {
