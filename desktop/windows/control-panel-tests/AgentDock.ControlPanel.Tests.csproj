@@ -29,5 +29,7 @@
     <EmbeddedResource Include="../control-panel/Resources/UiStrings.ko-KR.resx">
       <LogicalName>AgentDock.ControlPanel.Resources.UiStrings.ko-KR.resources</LogicalName>
     </EmbeddedResource>
+    <Compile Include="../control-panel/Services/NativeStatusReader.cs" Link="NativeStatusReader.cs" />
+    <Compile Include="../control-panel/Services/NativeStatusProbe.cs" Link="NativeStatusProbe.cs" />
   </ItemGroup>
 </Project>

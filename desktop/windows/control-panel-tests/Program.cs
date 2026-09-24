@@ -8,6 +8,13 @@ if (args is ["--loopback-health", var assemblyPath])
 
 if (args.Contains("--task-owner-only")) { TaskOwnerRegression.Run(); return; }
 if (args.Contains("--summary-only")) { await ExecutionSummaryRegression.RunAsync(); return; }
+if (args is ["--native-status-child", var kind, var pidFile])
+{
+    await NativeStatusRegression.ChildAsync(kind, pidFile);
+    return;
+}
+if (args.Contains("--native-status-only")) { await NativeStatusRegression.RunAsync(); return; }
+
 if (args.Contains("--runtime-display-only")) { RuntimeDisplayRegression.Run(); return; }
 
 var assertions = 0;

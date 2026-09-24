@@ -7,15 +7,21 @@ internal sealed record RuntimeDisplayStatus(string HeaderKey, string ServiceKey,
     internal static RuntimeDisplayStatus From(RuntimeSnapshot? value)
     {
         if (value is null) return new("StatusUnavailable", "Unknown", "Unknown", "WarningBrush");
-        var publicDown = value.TunnelMode.ToLowerInvariant() switch {
-            "quick" or "named" => !value.CloudflaredRunning || string.IsNullOrWhiteSpace(value.PublicOrigin),
-            "funnel" => value.Tailscale is not { Ready: true },
-            _ => false
+        bool? publicReady = value.TunnelMode.ToLowerInvariant() switch
+        {
+            "quick" or "named" => value.CloudflareReady,
+            "funnel" => value.Tailscale is null || value.Tailscale.DiagnosticCode == "probe_failed" ||
+                value.Tailscale.Phase == "CheckingLocal" ? null : value.Tailscale.Ready,
+            "none" => true,
+            _ => null
         };
-        return new(value.Healthy ? (publicDown ? "LocalHealthyPublicUnavailable" : "RunningNormally")
-                : value.CoreRunning ? "RunningHealthFailed" : "Stopped",
-            value.CoreRunning ? "Running" : "Stopped", value.Healthy ? "Healthy" : "Unavailable",
-            value.Healthy ? (publicDown ? "WarningBrush" : "SuccessBrush") : value.CoreRunning ? "WarningBrush" : "SecondaryText");
+        var running = value.Healthy ? true : value.CoreRunning;
+        var header = value.Healthy
+            ? publicReady switch { true => "RunningNormally", false => "LocalHealthyPublicUnavailable", null => "LocalHealthyPublicUnknown" }
+            : running switch { true => "RunningHealthFailed", false => "Stopped", null => "StatusUnavailable" };
+        return new(header, running switch { true => "Running", false => "Stopped", null => "Unknown" },
+            value.Healthy ? "Healthy" : "Unavailable",
+            value.Healthy && publicReady == true ? "SuccessBrush" : running == false ? "SecondaryText" : "WarningBrush");
     }
 }
 
