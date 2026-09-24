@@ -46,6 +46,8 @@ public sealed partial class RuntimeService : IDisposable
         CancellationToken cancellationToken = default,
         bool includeNexusConnection = false)
     {
+        var observationStarted = DateTimeOffset.Now;
+        var observationInputs = RuntimeObservationInputs();
         var manifest = await ReadRuntimeManifestAsync(cancellationToken) ?? new RuntimeManifest();
         var manifestPort = manifest.ListenPort is >= 1 and <= 65535 ? manifest.ListenPort : 8765;
         var settings = await ReadJsonAsync<ControlPanelSettings>(SettingsPath, cancellationToken);
@@ -102,7 +104,7 @@ public sealed partial class RuntimeService : IDisposable
             }
         }
 
-        var localOrigin = $"http://127.0.0.1:{settings.Port}";
+        var localOrigin = $"http://127.0.0.1:{manifestPort}";
         var localMcpUrl = localOrigin + "/mcp";
         var publicOrigin = ReadFirstNonEmpty(
             Path.Combine(RuntimeRoot, "quick-tunnel-url.txt"),
@@ -149,6 +151,15 @@ public sealed partial class RuntimeService : IDisposable
             tailscale = CachedTailscaleStatus(publicOrigin);
         }
 
+        if (tunnelMode == "none") { publicOrigin = ""; publicMcpUrl = ""; }
+        if (tunnelMode == "named")
+        {
+            publicOrigin = ReadFirstNonEmpty(Path.Combine(RuntimeRoot, "server-url.txt"), Path.Combine(RuntimeRoot, "named-server-url.txt")).TrimEnd('/');
+            if (publicOrigin.Length == 0) publicOrigin = manifest.PublicUrl.TrimEnd('/');
+            publicMcpUrl = publicOrigin.Length == 0 ? "" : publicOrigin + "/mcp";
+        }
+        if (!observationInputs.SequenceEqual(RuntimeObservationInputs()))
+            throw new InvalidOperationException("Runtime configuration changed during status observation.");
         return new RuntimeSnapshot(
             manifest,
             settings,
@@ -166,9 +177,13 @@ public sealed partial class RuntimeService : IDisposable
             File.Exists(Path.Combine(RuntimeRoot, "cloudflared-token.dpapi")),
             nexus,
             nexusConnected,
-            DateTimeOffset.Now,
+            observationStarted,
             tailscale);
     }
+
+    private (long Length, long Changed)[] RuntimeObservationInputs() =>
+        new[] { "runtime.json", "control-panel-settings.json", "active-version.json", "cloudflared-mode.txt", "quick-tunnel-url.txt", "server-url.txt", "named-server-url.txt" }
+            .Select(name => { var file = new FileInfo(Path.Combine(RuntimeRoot, name)); return file.Exists ? (file.Length, file.LastWriteTimeUtc.Ticks) : (-1L, 0L); }).ToArray();
 
     public string ReadBearerToken() => ReadProtectedText(Path.Combine(RuntimeRoot, "auth-token.dpapi"), AuthEntropy);
     public string ReadOAuthPassword() => ReadProtectedText(Path.Combine(RuntimeRoot, "oauth-password.dpapi"), OAuthPasswordEntropy);
