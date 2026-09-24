@@ -303,6 +303,9 @@
   <data name="RunningNormally" xml:space="preserve">
     <value>运行正常</value>
   </data>
+  <data name="RuntimeOperationInProgress" xml:space="preserve">
+    <value>已有运行时操作正在进行，请等待结束后再试。</value>
+  </data>
   <data name="ServiceError" xml:space="preserve">
     <value>服务异常</value>
   </data>
