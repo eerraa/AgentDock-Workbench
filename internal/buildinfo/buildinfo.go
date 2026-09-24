@@ -8,12 +8,12 @@ import (
 	"github.com/uvwt/agentdock/internal/executioncompat"
 )
 
-const Version = "1.1.6"
+const Version = "1.1.6100"
 const Distribution = "eerraa"
 const UpstreamVersion = "1.1.6"
 
 // Set only by the final downstream release commit.
-const DownstreamRevision = 0
+const DownstreamRevision = 100
 
 var (
 	Commit    string

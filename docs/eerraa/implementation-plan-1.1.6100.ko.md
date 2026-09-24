@@ -410,40 +410,28 @@ AgentDock unsigned, 지정 cloudflared 재사용/유효 서명, 지정 ISCC, ins
 
 ## 현재 구현 상태 및 재개 경계
 
-최종 릴리스 상태는 **미완료**다. 아래 상태는 이 정본의 현재 실행 위치이며, 별도 계획이나 변경 이력이 아니다. 제품 기준·요구사항·최소 검증 기준은 위 본문을 유지한다.
+제품 기준과 BASE는 `1.1.6` / `df7c22f64438ec317e0518eec44d035ad98be2b2`로 유지한다. 시작 시 수행한 원격 ref 대조를 재사용한다.
 
-### 기준과 작업 위치
+| 단위 | 독립 branch / SHA | 구현과 실제 검증 |
+|---|---|---|
+| R | `fix/windows-elevated-runtime-lifetime` / `b0622a87c11e9848941be5200497dc7ee211791a` | create-time Job/host 강제 종료·자식 정리, private channel, Task 소유권, 같은 사용자 kernel ACL, 설치 파일우선 복원 표적 통과. Task XML 12개·설치 AST mock 20개 및 WPF compile 통과. |
+| K | `feat/korean-localization` / `ebe76f59912c5d45c573c5cbdd8e1c488ff72a59` | 실제 제품 어셈블리 3언어 리소스·표시 6,096개, 기존 pure model 674개, producer 원문 보존·backend·공식 Inno 한국어/라이선스 핀 검사 통과. |
+| G | `feat/windows-bundled-ripgrep` / `9f3fba36d08f1c5465171f09498fd1c6c2d55335` | 실제 rg 고정 번들·검색·generation 검사와 캐시-only 8개 결과 재사용. legacy source 자신의 sidecar 보존/변조 거절 추가 회귀 통과. 최초 외부 명령 세션 timeout과 네 패키지의 ok 출력은 구분한다. |
+| A | `fix/workspace-acl-boundary` / `adf8acceaeedadd1b183844528e29458bd5f6aa4` | 실제 Windows 임시 workspace/root/child/file DACL 불변, AgentDockHome의 별도 private ACL 및 경로 검증 통과. |
+| O | `feat/windows-loopback-health` / `d46a4fcc905bbd2a407cef3ecdbecd2cfcf4c7c1` | 기존 loopback 건강/cache 89개 및 WPF 검증 결과 재사용. 설치 버전 읽기에서 실행파일을 호출하지 않는다. |
+| S | `fix/activity-summary-refresh` / `1fc380e3e1f330e1a359424e433f2712d339cbe8` | 메인 표시 중 자동 0→1→0, pending/unknown, strict schema/null 거절·last-good stale·숨김/재표시·late result 34개 통과. |
+| H | `fix/runtime-health-display` / `9f176cf7411cd4e1b0041d7f27f6b9436785bf92` | full/live/tray 공통 로컬 건강·공개 터널 분리, 이전 snapshot 거절·편집 초안 보존 19개 통과. |
+| C-discovery | `fix/mcp-discovery-null-boundary` / `02d60bf69ee2c0a9106f7dbadb9b50b65835345a` | 실제 tools:[null] SDK panic 재현 후 pre-SDK 검증과 last-good catalog 보존 회귀 통과. 정상 optional metadata 및 원본 오류 보존. |
+| C-receipt | `fix/setup-receipt-retry` / `4c87488034d794ba4c2d125acd41a19e81b2663e` | 실제 Windows sharing lock·부분 JSON·nonce·원본 exit/error 보존 통과. 원래 deadline 안에서 일시적인 공유/잠금 오류만 대기. |
+| D | `feat/eerraa-offline-distribution` / `b9a645c766b6d01d842854eeda62f1d2675e3449` | 온라인 check/update 0 HTTP 요청·upstream fallback 차단, own distribution/source SHA metadata 검사 및 compile 통과. |
+| 추가 지시 미리보기 | `feat/activity-insert-summary` / `d04f1187b7d088927760baf3bf8479d41dedd6e5` | 160 rune 파생 미리보기와 원문 단일 저장·응답·중복 방지·만료 기존 결과 재사용. 메인 요약 S와 별개 기능이다. |
 
-- 시작 시 대조한 BASE는 `df7c22f64438ec317e0518eec44d035ad98be2b2`다. `upstream`의 `feat/1.1.6-release`와 일치했고, 당시 `v1.1.6` 태그는 조회되지 않았다. 동일 비교를 반복하지 않는다.
-- 구현 worktree는 `D:\Engineering\agentdock-eerraa\dist\worktrees\implementation-1.1.6100`이다. 원본 main의 HEAD `9911587f5920773f2e789b724fb9c8aca950b278`은 변경하지 않았다. 기존 삭제 상태와 다른 사용자 파일은 보존한다.
-- 검증된 제품소스 통합 commit은 `87c05edd5d2a9db36dce709b2a1580fd02f9521d`다. `integration/release-1.1.6100`에는 G/S/O만 통합했다. 뒤따르는 정본 기록 commit은 제품소스를 변경하지 않는다.
+검증한 기능 통합 소스는 `9961b778c6eb35c88ba030fab4194f7f722598ea`다. 충돌이 있었던 R/O health 응답은 service·PID·origin hash를 함께 유지하고 해시값·원문 비노출·GET/HEAD 계약을 검사했다. K 리소스 병합은 기존 키와 자리표시자를 보존했고 S의 독립 observer를 유지했다. 통합 WPF는 경고 0/오류 0이며, 통합 S 34개·H 19개·설치 AST 20개 및 한국어 설치 계약이 통과했다. 동일 기능 전체 suite는 반복하지 않았다.
 
-### 단위별 현재 상태
+`fix/windows-named-state-security`는 BASE 그대로이며 별도 변경이나 PR 단위로 취급하지 않는다. 필요한 same-user runtime coordination 보안은 R이 소유한다. 과거 Q의 지정 5개 참조 객체는 로컬에 없어서 그 객체 자체를 검증했다고 주장하지 않는다. 실제 현재 소스에서 재현된 discovery/receipt와 메인 요약·상태 표시 문제는 위 기능 단위로 처리했다.
 
-| 단위 | 브랜치 / 현재 commit | 상태와 재개 경계 |
-| --- | --- | --- |
-| G | `feat/windows-bundled-ripgrep` / `aa090574152401d7f62b347daed69f3cb7024ee6` | 구현·표적 검증 완료. 현재 generation의 `share/agentdock/bin` 번들을 우선하고, 같은 실행파일의 검증된 구형 sidecar만 호환한다. 고정 해시·manifest·라이선스·설치 및 update generation 보존을 구현했다. |
-| S | `feat/activity-insert-summary` / `d04f1187b7d088927760baf3bf8479d41dedd6e5` | 구현·표적 검증 완료. 원문은 저장소에 한 번만 보관하고, 160 rune 이하 미리보기는 표시 경계에서 파생한다. 원문 전달·중복 방지·기존 만료 경계는 유지한다. |
-| O | `feat/windows-loopback-health` / `d46a4fcc905bbd2a407cef3ecdbecd2cfcf4c7c1` | 구현·표적 검증 완료. 전용 loopback HTTP, 프록시·리디렉션 금지, 제한된 JSON 및 서비스 식별을 적용했다. 버전 표시는 실행파일을 시작하지 않고 설치 메타데이터를 캐시하며, 바이너리/active pointer 변경 시 갱신한다. |
-| R | `fix/windows-elevated-runtime-lifetime` / `90688e9186e03c26503a0e70d1bb76ad04043c9e` | **초안 보존용 WIP이며 통합 제외**. create-time Job·native host/controller·private channel 초안만 있으며 호출 연결과 설치 복원은 미완료다. 컴파일·회귀는 미실행이다. 후속 소스 대조 요청이 OpenAI의 보안 상태 판정 단계에서 차단되어 보류했다. 이 commit을 완성 구현으로 간주하지 않는다. |
-| K | `feat/korean-localization` / 본 작업 구현 없음 | 한국어 source/resource 대조 요청도 같은 보안 판정 단계에서 차단되어 보류했다. 한국어 전체와 producer/storage/presentation/설치기·시험을 하나의 K 단위로 끝낸다는 범위는 유지한다. |
-| H | `fix/windows-named-state-security` / BASE 그대로 | default-ACL named mutex/event는 확인했으나 신뢰 가능한 credential-owner 연결을 확정하지 못했다. 소유권이나 기존 ACL을 추정·수정하지 않았다. |
-| Q | 지정 참조 적용 여부 미확인 | `8e2df45`, `e7f6337`, `c698d24`, `dcb35f3`, `3133b2c`는 현재 로컬 객체 DB에 없다. 이를 BASE의 결함 또는 패치 누락으로 단정하지 않는다. 실제 변경과 BASE의 영향을 확인한 뒤 필요한 범위만 처리한다. |
+추가 state-reader 소스 대조와 묶음 조회 요청은 도구의 보안 상태 판정 단계에서 차단되었다. 해당 차단은 우회하지 않았으며 전수 state-reader audit는 미검증이다. 미확인 state 소유권/복원 입구는 수정하지 않고 BASE를 유지한다. 이는 확인된 결함이나 앞서 통과한 표적 시험의 실패를 뜻하지 않는다.
 
-보안 상태 판정 차단은 AgentDock의 실행 권한 거절이나 제품 회귀 실패와 구별한다. 차단된 소스 요청을 다른 도구·명령으로 우회하지 않았고, 보류 단위와 무관한 G/S/O 구현은 계속했다. R의 미완성 초안, K/H/Q의 미확인 상태를 통합 성공으로 포장하지 않는다.
+이번 검증은 임시 fixture/프로세스와 모의 OS adapter에 한정한다. 실제 설치된 elevated Task의 UAC·session 전환, 실기기/VM Setup 설치·업그레이드·복구, 실제 Cloudflare/Tailscale 인터넷 준비, 전수 UI/DPI/OS 행렬은 실행하지 않았다. 운영 교체·push·PR·릴리스 게시는 하지 않는다.
 
-### 재사용할 실제 검증 결과
-
-- G: PowerShell 번들 캐시·손상 거절 검사 8개 통과. 실제 고정 rg 바이너리를 사용한 `internal/bundledrg`, `internal/tool/file`, `internal/installer`, `internal/selfupdate` 표적 Go 검사는 네 패키지 모두 `ok`를 출력했다. 해당 바깥 명령 세션은 결과 출력 뒤 제한시간으로 종료되어 명령 전체의 정상 종료와는 구별한다. 이후 `git diff --check`는 별도로 통과했다. 설치/update 검사는 임시 디렉터리 fixture이며 제품 설치가 아니다.
-- S: `internal/insertion`, `internal/app`, `internal/mcp`의 삽입·원문 응답 표적 검사 통과. WPF 빌드 경고 0, 오류 0. 저장소에서 파생 요약을 제거한 마지막 수정 뒤에는 `TestInsertionSummary` slice만 재검사하여 통과했다.
-- O: `TestCoreHealthIdentifiesServiceAndProcessWithoutPrivateData` 통과. WPF 빌드 경고 0, 오류 0. 기존 console test project에 연결한 synthetic 건강/캐시 검사 89개 통과. 시험 코드 문법 오류는 수정 후 해당 console slice만 다시 실행했다. 실제 네트워크·제품 runtime·작업 스케줄러·설치기·UI는 시작하지 않았다.
-- 통합: 충돌 없는 G/S/O 결합 후 `go build ./cmd/agentdock ./cmd/agentdock-shim`, `TestRuntimeAPIStatusWithBearer`, WPF 빌드, 통합 diff 검사와 clean tree 확인 통과. 기능별 동일 시험은 반복하지 않았다. 제품소스 통합 WPF 경고 0, 오류 0.
-- 미검증: R compile/회귀, 전체 한국어 소비자·설치기, 신뢰 소유권/ACL·표준↔상승 실행, Quick·설치 복원 조합, Q 적용 여부, 최종 Setup 생성/정적 검사. 실기기·VM 설치와 운영 교체는 요청 범위 밖이므로 수행하지 않는다.
-
-### 릴리스 경계
-
-`1.1.6100 / DownstreamRevision 100 / UpstreamVersion 1.1.6`은 여전히 목표이며, 최종 downstream release commit은 만들지 않았다. 버전 변경과 최종 패키징도 실행하지 않았다. `D:\Engineering\agentdock-eerraa\dist\windows-release-1.1.6100`은 아직 존재하지 않으며 최종 Setup의 크기·해시는 없다.
-
-지정 cloudflared는 `dist\windows-release\cloudflared.exe`, 54,976,432 bytes, SHA-256 `2837888CC0F5D58F15B6DC478376DE90B4D3BA5241C7947455D1E0A0DF429712`, Authenticode `Valid` / Cloudflare, Inc.로 확인했다. 지정 `D:\Engineering\.agentdock-build-tools\inno\ISCC.exe`는 존재한다. 통합 소스의 `scripts\install\install.ps1`은 112,749 bytes이며 ASCII 조건을 만족한다. 이는 패키징 입력 확인이지 최종 Setup 검증 결과가 아니다.
-
-재개 시 G/S/O 구현과 위 검증을 재사용한다. R은 WIP의 실제 미연결/미검증 상태부터, K/H는 미확정한 G0 경계부터, Q는 현재 코드와의 실제 차이 판정부터 진행한다. 필수 구현과 영향 경계가 완료되기 전에는 불완전한 산출물을 최종 `1.1.6100`으로 패키징하지 않는다. 원격 push·PR·릴리스 게시와 운영 교체는 여전히 수행하지 않는다.
+최종 downstream release commit에서만 `Version=1.1.6100`, `DownstreamRevision=100`, `UpstreamVersion=1.1.6`을 적용한다. 버전·문서만 바뀌면 위 기능 결과를 재사용한다. 최종 clean 소스는 PowerShell 7에서 지정 cloudflared/ISCC를 사용하여 `D:\Engineering\agentdock-eerraa\dist\windows-release-1.1.6100`에 amd64 오프라인 Setup 하나를 만든다. 실제 생성 성공·파일 크기·SHA-256·서명은 생성 뒤 산출물과 기존 build-report로 확인하며, 이 소스 checkpoint 자체를 설치/실행 시험 완료 증거로 쓰지 않는다.
