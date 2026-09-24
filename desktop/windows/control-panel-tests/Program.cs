@@ -1,5 +1,12 @@
 using AgentDock.ControlPanel;
 
+if (args is ["--native-status-child", var kind, var pidFile])
+{
+    await NativeStatusRegression.ChildAsync(kind, pidFile);
+    return;
+}
+if (args.Contains("--native-status-only")) { await NativeStatusRegression.RunAsync(); return; }
+
 if (args.Contains("--runtime-display-only")) { RuntimeDisplayRegression.Run(); return; }
 
 var assertions = 0;

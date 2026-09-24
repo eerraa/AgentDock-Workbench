@@ -133,17 +133,20 @@ public sealed partial class RuntimeService : IDisposable
         {
             version = await ReadCoreVersionAsync(binaryPath, cancellationToken);
         }
-        var coreRunning = health.Healthy || await ReadCoreRunningAsync(binaryPath, cancellationToken);
         var nexus = ReadNexusDeviceStatus();
-        var nexusConnected = includeNexusConnection && coreRunning && nexus.Paired && string.IsNullOrWhiteSpace(nexus.Error)
-            && await ReadNexusConnectionAsync(binaryPath, cancellationToken);
-        var cloudflaredRunning = IsProcessRunningAtPath("cloudflared", manifest.CloudflaredBinary);
+        var readNexus = includeNexusConnection && nexus.Paired && string.IsNullOrWhiteSpace(nexus.Error);
+        var service = !health.Healthy || readNexus
+            ? await ReadNativeStatusAsync(binaryPath, "service", NativeStatusReader.ParseService, cancellationToken)
+            : null;
+        bool? coreRunning = health.Healthy ? true : service?.Running;
+        var nexusConnected = readNexus && coreRunning == true && service?.NexusConnected == true;
         var tunnelMode = ReadText(Path.Combine(RuntimeRoot, "cloudflared-mode.txt"));
         if (string.IsNullOrWhiteSpace(tunnelMode))
         {
             tunnelMode = string.IsNullOrWhiteSpace(manifest.TunnelMode) ? "none" : manifest.TunnelMode;
         }
 
+        tunnelMode = tunnelMode.Trim().ToLowerInvariant();
         NativeTunnelStatus? tailscale = null;
         if (usesTailscale)
         {
@@ -158,6 +161,12 @@ public sealed partial class RuntimeService : IDisposable
             if (publicOrigin.Length == 0) publicOrigin = manifest.PublicUrl.TrimEnd('/');
             publicMcpUrl = publicOrigin.Length == 0 ? "" : publicOrigin + "/mcp";
         }
+        // The native owner already knows process identity and runtime readiness.
+        // Do not infer either from a second, privilege-sensitive WPF process scan.
+        var cloudflare = tunnelMode is "quick" or "named"
+            ? await ReadNativeStatusAsync(binaryPath, "tunnel",
+                output => NativeStatusReader.ParseCloudflare(output, tunnelMode, publicOrigin), cancellationToken)
+            : null;
         if (!observationInputs.SequenceEqual(RuntimeObservationInputs()))
             throw new InvalidOperationException("Runtime configuration changed during status observation.");
         return new RuntimeSnapshot(
@@ -166,7 +175,7 @@ public sealed partial class RuntimeService : IDisposable
             version,
             coreRunning,
             health.Healthy,
-            cloudflaredRunning,
+            cloudflare?.Running,
             localMcpUrl,
             publicOrigin,
             publicMcpUrl,
@@ -178,7 +187,8 @@ public sealed partial class RuntimeService : IDisposable
             nexus,
             nexusConnected,
             observationStarted,
-            tailscale);
+            tailscale,
+            cloudflare?.Ready);
     }
 
     private (long Length, long Changed)[] RuntimeObservationInputs() =>
@@ -533,6 +543,7 @@ public sealed partial class RuntimeService : IDisposable
         }
 
         var snapshot = await GetSnapshotAsync(cancellationToken);
+        if (snapshot.CoreRunning is null) throw new InvalidOperationException(UiText.Get("StatusUnavailable"));
         var backupDirectory = Path.Combine(Path.GetTempPath(), $"agentdock-privilege-{Guid.NewGuid():N}");
         var taskTransitionPrepared = false;
         Directory.CreateDirectory(backupDirectory);
@@ -554,11 +565,11 @@ public sealed partial class RuntimeService : IDisposable
 
                 // 任务创建时默认禁用。若 Core 当前正在运行，则临时启用任务用于启动；
                 // 最后再恢复原本的开机启动选择，从而让“当前运行”和“开机启动”保持彼此独立。
-                if (snapshot.CoreStartupEnabled || snapshot.CoreRunning)
+                if (snapshot.CoreStartupEnabled || snapshot.CoreRunning == true)
                 {
                     await SetStartupAsync("core", true, cancellationToken);
                 }
-                if (snapshot.CoreRunning)
+                if (snapshot.CoreRunning == true)
                 {
                     await RunCoreActionAsync("start", cancellationToken);
                 }
@@ -570,7 +581,7 @@ public sealed partial class RuntimeService : IDisposable
             else
             {
                 SetStandardCoreStartup(manifest, snapshot.CoreStartupEnabled);
-                if (snapshot.CoreRunning)
+                if (snapshot.CoreRunning == true)
                 {
                     await RunCoreActionAsync("start", cancellationToken);
                 }
@@ -588,7 +599,7 @@ public sealed partial class RuntimeService : IDisposable
                 await RunTaskAdminTransitionAsync("restore", manifest, backupDirectory, cancellationToken);
                 await WritePrivilegeModeAsync(wasElevated, cancellationToken);
                 SetStandardCoreStartup(manifest, !wasElevated && snapshot.CoreStartupEnabled);
-                if (!wasElevated && snapshot.CoreRunning)
+                if (!wasElevated && snapshot.CoreRunning == true)
                 {
                     await RunCoreActionAsync("start", cancellationToken);
                 }
@@ -1094,27 +1105,6 @@ public sealed partial class RuntimeService : IDisposable
         };
     }
 
-    private async Task<bool> ReadNexusConnectionAsync(string binaryPath, CancellationToken cancellationToken)
-    {
-        var startInfo = CreateRedirectedProcessStartInfo(binaryPath);
-        foreach (var argument in new[] { "service", "status", "--runtime-root", RuntimeRoot })
-        {
-            startInfo.ArgumentList.Add(argument);
-        }
-
-        try
-        {
-            var output = await RunProcessAsync(startInfo, cancellationToken);
-            var status = JsonSerializer.Deserialize<NativeServiceStatus>(output, JsonOptions);
-            return status?.NexusConnected == true;
-        }
-        catch (Exception ex) when (ex is InvalidOperationException or JsonException)
-        {
-            // 实时状态读取失败时按未连接处理；配对身份与配置异常仍由 NexusDeviceStatus 单独表达。
-            return false;
-        }
-    }
-
     private static NexusDeviceStatus ReadNexusDeviceStatus()
     {
         var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
@@ -1381,33 +1371,6 @@ public sealed partial class RuntimeService : IDisposable
         }
     }
 
-    private async Task<bool> ReadCoreRunningAsync(string binaryPath, CancellationToken cancellationToken)
-    {
-        if (!File.Exists(binaryPath))
-        {
-            return false;
-        }
-
-        var startInfo = CreateRedirectedProcessStartInfo(binaryPath);
-        startInfo.ArgumentList.Add("service");
-        startInfo.ArgumentList.Add("status");
-        startInfo.ArgumentList.Add("--runtime-root");
-        startInfo.ArgumentList.Add(RuntimeRoot);
-        try
-        {
-            var output = await RunProcessAsync(startInfo, cancellationToken);
-            return JsonSerializer.Deserialize<NativeServiceStatus>(output, JsonOptions)?.Running == true;
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or Win32Exception or JsonException)
-        {
-            return false;
-        }
-    }
-
     private static async Task<T?> ReadJsonAsync<T>(string path, CancellationToken cancellationToken)
     {
         try
@@ -1462,38 +1425,6 @@ public sealed partial class RuntimeService : IDisposable
         catch
         {
             return "";
-        }
-    }
-
-    private static bool IsProcessRunningAtPath(string processName, string expectedPath)
-    {
-        if (string.IsNullOrWhiteSpace(expectedPath))
-        {
-            return false;
-        }
-        try
-        {
-            var normalizedExpected = Path.GetFullPath(expectedPath);
-            return Process.GetProcessesByName(processName).Any(process =>
-            {
-                using (process)
-                {
-                    try
-                    {
-                        var actual = process.MainModule?.FileName;
-                        return !string.IsNullOrWhiteSpace(actual) &&
-                               string.Equals(Path.GetFullPath(actual), normalizedExpected, StringComparison.OrdinalIgnoreCase);
-                    }
-                    catch
-                    {
-                        return false;
-                    }
-                }
-            });
-        }
-        catch
-        {
-            return false;
         }
     }
 
