@@ -107,6 +107,46 @@ func TestRuntimeTaskOwnerContractAndOrderedActions(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestRuntimeTaskStartWithCOMWorkingDirectory(t *testing.T) {
+	root := t.TempDir()
+	sid := "S-1-5-21-123-456-789-1001"
+	for _, test := range []struct {
+		name      string
+		value     func() variant
+		wantStart bool
+	}{
+		// TaskAdmin leaves this optional property unset. Task Scheduler can
+		// return a null BSTR, which must behave like an allocated empty BSTR.
+		{"unset", func() variant { return variant{VT: vtBstr} }, true},
+		{"empty", func() variant { return variantBSTR("") }, true},
+		{"owned-root", func() variant { return variantBSTR(root) }, true},
+		{"foreign-root", func() variant { return variantBSTR(filepath.Dir(root)) }, false},
+		{"integer-zero", func() variant { return variantInt32(0) }, false},
+		{"missing-value", variantEmpty, false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			contract := runtimeTaskContract{
+				Name: "AgentDock", UserSID: sid,
+				Path:             filepath.Join(root, "bin", "agentdock-tray.exe"),
+				Arguments:        `--run-core-task --runtime-root "` + root + `"`,
+				WorkingDirectory: variantString(test.value()),
+				LogonType:        taskLogonInteractiveToken, RunLevel: 1, Actions: 1, ActionType: 0,
+			}
+			started := false
+			err := applyScheduledAction(t.Context(), "start", scheduledActionOps{
+				Validate: func(context.Context) error {
+					return validateRuntimeTaskContract(root, "AgentDock", sid, contract)
+				},
+				Run: func(context.Context) error { started = true; return nil },
+			})
+			if started != test.wantStart || (err == nil) != test.wantStart {
+				t.Fatalf("working directory=%q: started=%t, want %t; err=%v", contract.WorkingDirectory, started, test.wantStart, err)
+			}
+		})
+	}
+}
+
 func TestRuntimeCapturedHealthRejectsWrongPIDVersionOriginAndCancelledWait(t *testing.T) {
 	identity, err := currentRuntimeHostIdentity()
 	if err != nil {
