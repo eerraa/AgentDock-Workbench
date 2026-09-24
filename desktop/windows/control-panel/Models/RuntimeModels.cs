@@ -168,7 +168,15 @@ public sealed record RuntimeSnapshot(
     NexusDeviceStatus Nexus,
     bool NexusConnected,
     DateTimeOffset CheckedAt,
-    NativeTunnelStatus? Tailscale = null);
+    NativeTunnelStatus? Tailscale = null)
+{
+    internal bool PublicTunnelDown => Healthy && TunnelMode.ToLowerInvariant() switch
+    {
+        "named" or "quick" => !CloudflaredRunning,
+        "funnel" => Tailscale is not { Ready: true },
+        _ => false
+    };
+}
 
 public sealed class CapabilityInventory
 {

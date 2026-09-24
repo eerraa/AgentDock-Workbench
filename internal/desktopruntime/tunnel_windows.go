@@ -273,6 +273,9 @@ func startCloudflareTunnel(ctx context.Context, runtime tunnelRuntime) error {
 	if runtime.mode == "none" {
 		return nil
 	}
+	if !testHealth(ctx, runtime.localOrigin()+"/healthz") {
+		return fmt.Errorf("AgentDock 本机健康检查失败，未启动 cloudflared: %s", runtime.localOrigin())
+	}
 	if info, err := os.Stat(runtime.manifest.CloudflaredBinary); err != nil || info.IsDir() {
 		return fmt.Errorf("找不到 cloudflared.exe，请运行 Setup.exe 修复安装: %s", runtime.manifest.CloudflaredBinary)
 	}

@@ -402,6 +402,10 @@ public partial class App : System.Windows.Application
 
     private static string GetTrayStatusText(RuntimeSnapshot snapshot)
     {
+        if (snapshot.PublicTunnelDown)
+        {
+            return UiText.Get("PublicTunnelDown");
+        }
         if (snapshot.Healthy)
         {
             return UiText.Get("RunningNormally");

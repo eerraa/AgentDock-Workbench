@@ -303,6 +303,9 @@
   <data name="RunningNormally" xml:space="preserve">
     <value>Running normally</value>
   </data>
+  <data name="PublicTunnelDown" xml:space="preserve">
+    <value>Local origin is up, public tunnel is down</value>
+  </data>
   <data name="ServiceError" xml:space="preserve">
     <value>Service error</value>
   </data>

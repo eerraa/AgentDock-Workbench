@@ -303,6 +303,9 @@
   <data name="RunningNormally" xml:space="preserve">
     <value>정상 실행 중</value>
   </data>
+  <data name="PublicTunnelDown" xml:space="preserve">
+    <value>로컬은 정상, 공개 터널 중지</value>
+  </data>
   <data name="ServiceError" xml:space="preserve">
     <value>서비스 오류</value>
   </data>

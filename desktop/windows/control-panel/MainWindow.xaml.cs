@@ -105,8 +105,11 @@ public partial class MainWindow : Window
         _updatingUi = true;
         try
         {
-            HeaderStatusText.Text = snapshot.Healthy ? UiText.Get("RunningNormally") : snapshot.CoreRunning ? UiText.Get("RunningHealthFailed") : UiText.Get("Stopped");
-            StatusDot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, snapshot.Healthy ? "SuccessBrush" : snapshot.CoreRunning ? "WarningBrush" : "SecondaryText");
+            var tunnelDown = snapshot.PublicTunnelDown;
+            HeaderStatusText.Text = tunnelDown
+                ? UiText.Get("PublicTunnelDown")
+                : snapshot.Healthy ? UiText.Get("RunningNormally") : snapshot.CoreRunning ? UiText.Get("RunningHealthFailed") : UiText.Get("Stopped");
+            StatusDot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, tunnelDown || (snapshot.CoreRunning && !snapshot.Healthy) ? "WarningBrush" : snapshot.Healthy ? "SuccessBrush" : "SecondaryText");
 
             NexusStatusText.Text = !string.IsNullOrWhiteSpace(snapshot.Nexus.Error)
                 ? UiText.Get("ConfigurationError")
@@ -115,7 +118,7 @@ public partial class MainWindow : Window
                     : snapshot.NexusConnected ? UiText.Get("Connected") : UiText.Get("NotConnected");
 
             ServiceStatusText.Text = snapshot.CoreRunning ? UiText.Get("Running") : UiText.Get("Stopped");
-            HealthStatusText.Text = snapshot.Healthy ? UiText.Get("Healthy") : UiText.Get("Unavailable");
+            HealthStatusText.Text = snapshot.PublicTunnelDown ? UiText.Get("PublicTunnelDown") : snapshot.Healthy ? UiText.Get("Healthy") : UiText.Get("Unavailable");
             VersionText.Text = string.IsNullOrWhiteSpace(snapshot.Version) ? UiText.Get("Unknown") : snapshot.Version;
             LocalMcpTextBox.Text = snapshot.LocalMcpUrl;
             PublicMcpTextBox.Text = _tunnelChangeInProgress && SelectedTunnelMode() == "quick" ? "" : snapshot.PublicMcpUrl;
