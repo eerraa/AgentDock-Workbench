@@ -2822,7 +2822,7 @@ Shortcuts: Ctrl+F searches conversations; F5 refreshes; Esc closes details; Shif
   <data name="ActivitySummaryLastRequest" xml:space="preserve"><value>Last tool request: {0:T}</value></data>
   <data name="ActivitySummaryNoRequest" xml:space="preserve"><value>No recorded tool request</value></data>
   <data name="ActivitySummaryStale" xml:space="preserve"><value>Unavailable or stale</value></data>
-  <data name="LocalHealthyPublicUnavailable" xml:space="preserve"><value>Local Core is healthy; public access is unavailable</value></data>
+  <data name="LocalHealthyPublicUnavailable" xml:space="preserve"><value>Local Core is healthy; managed public transport is not ready</value></data>
   <data name="ExecutionPayloadSaved" xml:space="preserve"><value>Saved</value></data>
   <data name="ExecutionPayloadPosition" xml:space="preserve"><value>{0:N0}–{1:N0} / {2:N0} bytes · {3:N0} lines</value></data>
   <data name="ExecutionPayloadPreviewPosition" xml:space="preserve"><value>Preview / {0:N0} bytes · {1:N0} lines</value></data>
@@ -2870,4 +2870,5 @@ Original diagnostic:
 {1}</value></data>
   <data name="OfflineUpdateInformation" xml:space="preserve"><value>AgentDock Eerraa is distributed through verified offline Setup packages. Install a newer Setup to update; this action does not check upstream or download software.</value></data>
   <data name="DistributionVersionFormat" xml:space="preserve"><value>AgentDock Eerraa {0} · upstream {1} · revision {2}</value></data>
+  <data name="LocalHealthyPublicUnknown" xml:space="preserve"><value>Local Core is healthy; public transport status is unknown</value></data>
 </root>

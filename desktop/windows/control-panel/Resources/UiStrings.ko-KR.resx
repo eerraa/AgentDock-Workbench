@@ -2822,7 +2822,7 @@
   <data name="ActivitySummaryLastRequest" xml:space="preserve"><value>최근 도구 요청: {0:T}</value></data>
   <data name="ActivitySummaryNoRequest" xml:space="preserve"><value>기록된 도구 요청 없음</value></data>
   <data name="ActivitySummaryStale" xml:space="preserve"><value>현재 사용할 수 없거나 오래된 정보</value></data>
-  <data name="LocalHealthyPublicUnavailable" xml:space="preserve"><value>로컬 Core는 정상이며 공개 연결은 사용할 수 없습니다</value></data>
+  <data name="LocalHealthyPublicUnavailable" xml:space="preserve"><value>로컬 Core는 정상이며 관리 중인 공개 터널은 아직 준비되지 않았습니다</value></data>
   <data name="ExecutionPayloadSaved" xml:space="preserve"><value>저장됨</value></data>
   <data name="ExecutionPayloadPosition" xml:space="preserve"><value>{0:N0}–{1:N0} / {2:N0}바이트 · {3:N0}행</value></data>
   <data name="ExecutionPayloadPreviewPosition" xml:space="preserve"><value>미리보기 / {0:N0}바이트 · {1:N0}행</value></data>
@@ -2870,4 +2870,5 @@
 {1}</value></data>
   <data name="OfflineUpdateInformation" xml:space="preserve"><value>AgentDock Eerraa는 검증된 오프라인 Setup으로 배포됩니다. 새 Setup을 설치하여 업데이트하세요. 이 동작은 업스트림을 조회하거나 소프트웨어를 다운로드하지 않습니다.</value></data>
   <data name="DistributionVersionFormat" xml:space="preserve"><value>AgentDock Eerraa {0} · 업스트림 {1} · 리비전 {2}</value></data>
+  <data name="LocalHealthyPublicUnknown" xml:space="preserve"><value>로컬 Core는 정상이며 공개 터널 상태는 확인되지 않았습니다</value></data>
 </root>
