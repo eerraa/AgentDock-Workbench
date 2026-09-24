@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -40,7 +41,7 @@ func Serve(ctx context.Context, server *mcp.Server, runtime runtimeapi.Runtime, 
 	mux.HandleFunc("/", statusPageHandler(server, cfg))
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("content-type", "application/json")
-		writeJSON(w, map[string]any{"ok": true, "version": buildinfo.Version})
+		writeJSON(w, map[string]any{"ok": true, "version": buildinfo.Version, "process_id": os.Getpid()})
 	})
 	mux.HandleFunc("/.well-known/mcp.json", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, serverCard(cfg, r))
