@@ -74,7 +74,7 @@ func configureCloudflareTunnel(ctx context.Context, request TunnelConfigureReque
 		if err := platformSetTunnelAutostart(ctx, runtime.root, false); err != nil {
 			return err
 		}
-		return platformServiceAction(ctx, runtime.root, "restart")
+		return restartConfiguredCore(ctx, runtime)
 	case "quick":
 		if err := writeRuntimeText(runtime.files.mode, "quick"); err != nil {
 			return err
@@ -88,11 +88,11 @@ func configureCloudflareTunnel(ctx context.Context, request TunnelConfigureReque
 		if err := platformSetTunnelAutostart(ctx, runtime.root, true); err != nil {
 			return err
 		}
-		if err := platformServiceAction(ctx, runtime.root, "restart"); err != nil {
+		if err := restartConfiguredCore(ctx, runtime); err != nil {
 			return err
 		}
 		runtime.mode = "quick"
-		return startTunnel(ctx, runtime)
+		return startConfiguredTunnel(ctx, runtime)
 	case "named":
 		if err := writeRuntimeText(runtime.files.namedServerURL, namedServerURL); err != nil {
 			return err
@@ -112,12 +112,26 @@ func configureCloudflareTunnel(ctx context.Context, request TunnelConfigureReque
 		if err := platformSetTunnelAutostart(ctx, runtime.root, true); err != nil {
 			return err
 		}
-		if err := platformServiceAction(ctx, runtime.root, "restart"); err != nil {
+		if err := restartConfiguredCore(ctx, runtime); err != nil {
 			return err
 		}
 		runtime.mode = "named"
-		return startTunnel(ctx, runtime)
+		return startConfiguredTunnel(ctx, runtime)
 	default:
 		return fmt.Errorf("不支持的公网模式：%s", request.Mode)
 	}
+}
+
+func restartConfiguredCore(ctx context.Context, runtime tunnelRuntime) error {
+	if runtime.manifest.UsesScheduledTask() {
+		return handOffScheduledCore(ctx, runtime.manifest, runtime.root)
+	}
+	return platformServiceAction(ctx, runtime.root, "restart")
+}
+
+func startConfiguredTunnel(ctx context.Context, runtime tunnelRuntime) error {
+	if runtime.manifest.UsesScheduledTask() {
+		return launchCloudflared(runtime)
+	}
+	return startTunnel(ctx, runtime)
 }

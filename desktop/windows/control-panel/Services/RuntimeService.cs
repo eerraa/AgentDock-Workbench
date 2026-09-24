@@ -444,7 +444,7 @@ public sealed partial class RuntimeService : IDisposable
                 arguments.AddRange(["--token-file", secretFile]);
             }
 
-            await RunNativeAgentDockAsync("tunnel", arguments, cancellationToken);
+            await RunNativeAgentDockAsync("tunnel", arguments, cancellationToken, allowElevation: false);
         }
         finally
         {
