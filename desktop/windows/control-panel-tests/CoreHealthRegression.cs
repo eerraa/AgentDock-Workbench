@@ -155,6 +155,31 @@ internal static class CoreHealthRegression
             File.WriteAllText(pointer, JsonSerializer.Serialize(new { schema_version = 1, active_version = "v1.1.6", state = "committed" }));
             using (var cache = Construct(cacheType, null, clock))
                 Check(await Cached(cacheType, cache, binary, pointer) == "1.1.6", "passive pointer read never executes Core or stable shim");
+            var generationCore = Path.Combine(generation, "agentdock-core.exe");
+            using (var cache = Construct(cacheType, null, clock))
+            {
+                Check(await Cached(cacheType, cache, binary, pointer) == "1.1.6", "generation initially present");
+                File.Delete(generationCore);
+                Check(await Cached(cacheType, cache, binary, pointer) == "", "deleted generation immediately invalidates positive cache");
+                File.WriteAllText(generationCore, "New inert generation");
+                Check(await Cached(cacheType, cache, binary, pointer) == "1.1.6", "created generation immediately invalidates negative cache");
+            }
+            calls = 0;
+            Func<string, string, CancellationToken, Task<string>> counted = (_, _, _) => { calls++; return Task.FromResult("1.1.6"); };
+            using (var cache = Construct(cacheType, counted, clock))
+            {
+                await Cached(cacheType, cache, binary, pointer);
+                await Cached(cacheType, cache, binary, pointer);
+                Check(calls == 1, "unchanged generation retains cache");
+                File.AppendAllText(generationCore, "replacement");
+                await Cached(cacheType, cache, binary, pointer);
+                Check(calls == 2, "generation replacement invalidates cache");
+            }
+            Func<string, string, CancellationToken, Task<string>> racing = (_, _, _) =>
+            { File.Delete(generationCore); return Task.FromResult("1.1.6"); };
+            using (var cache = Construct(cacheType, racing, clock))
+                Check(await Cached(cacheType, cache, binary, pointer) == "", "changed dependency during read is not published");
+            File.WriteAllText(generationCore, "Restored inert generation");
             File.WriteAllText(pointer, "{\"schema_version\":\"1\",\"active_version\":\"v1.1.6\"}");
             using (var cache = Construct(cacheType, null, clock))
                 Check(await Cached(cacheType, cache, binary, pointer) == "", "malformed pointer is unknown, not healthy or a process fallback");
