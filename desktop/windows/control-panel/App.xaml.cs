@@ -308,6 +308,10 @@ public partial class App : System.Windows.Application
         try
         {
             _traySnapshot = await Runtime.GetSnapshotAsync();
+            if (ControlPanelWindow.IsVisible)
+            {
+                ControlPanelWindow.ApplyLiveRuntimeStatus(_traySnapshot);
+            }
             if (_notifyIcon is not null)
             {
                 _notifyIcon.Text = TruncateNotifyIconText($"AgentDock: {GetTrayStatusText(_traySnapshot)}");
