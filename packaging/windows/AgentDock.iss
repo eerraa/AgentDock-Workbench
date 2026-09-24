@@ -24,10 +24,10 @@
 AppId={{D6788C7A-4104-48D4-B5C3-F4858B5606EA}
 AppName=AgentDock
 AppVersion={#AppVersion}
-AppPublisher=AgentDock
-AppPublisherURL=https://github.com/A-m-o-r-F-a-t-i/agentdock
-AppSupportURL=https://github.com/A-m-o-r-F-a-t-i/agentdock/issues
-AppUpdatesURL=https://github.com/A-m-o-r-F-a-t-i/agentdock/releases
+AppPublisher=Eerraa
+AppPublisherURL=https://github.com/eerraa/agentdock
+AppSupportURL=https://github.com/eerraa/agentdock/issues
+AppUpdatesURL=https://github.com/eerraa/agentdock/releases
 DefaultDirName={localappdata}\AgentDock
 DefaultGroupName=AgentDock
 DisableProgramGroupPage=yes
@@ -90,7 +90,7 @@ Type: files; Name: "{userdesktop}\{code:GetLocalizedMessage|DesktopShortcutName}
 
 [Icons]
 Name: "{group}\AgentDock"; Filename: "{app}\bin\agentdock-tray.exe"; WorkingDir: "{app}"; IconFilename: "{app}\installer\agentdock.ico"; AppUserModelID: "com.uvwt.agentdock.controlpanel"
-Name: "{group}\{code:GetLocalizedMessage|DocsShortcut}"; Filename: "https://uvwt.github.io/agentdock-docs/"
+Name: "{group}\{code:GetLocalizedMessage|DocsShortcut}"; Filename: "https://github.com/eerraa/agentdock/tree/main/docs"
 Name: "{group}\{code:GetLocalizedMessage|UninstallShortcut}"; Filename: "{uninstallexe}"
 
 #include "includes\code.iss"

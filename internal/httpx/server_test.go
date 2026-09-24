@@ -2,7 +2,9 @@ package httpx
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"github.com/uvwt/agentdock/internal/buildinfo"
 	"io"
 	"net/http"
@@ -646,7 +648,7 @@ func TestCoreHealthIdentifiesServiceAndProcessWithoutPrivateData(t *testing.T) {
 	if err := json.Unmarshal(recorder.Body.Bytes(), &body); err != nil {
 		t.Fatal(err)
 	}
-	if recorder.Code != http.StatusOK || len(body) != 4 || body["ok"] != true || body["version"] != buildinfo.Version || body["service"] != "agentdock" || body["process_id"] != float64(os.Getpid()) {
+	if recorder.Code != http.StatusOK || len(body) != 5 || body["origin_hash"] != fmt.Sprintf("%x", sha256.Sum256(nil)) || body["ok"] != true || body["version"] != buildinfo.Version || body["service"] != "agentdock" || body["process_id"] != float64(os.Getpid()) {
 		t.Fatalf("invalid health: %v", body)
 	}
 	if recorder.Header().Get("Content-Type") != "application/json" || recorder.Header().Get("Cache-Control") != "no-store" {
@@ -660,6 +662,28 @@ func TestCoreHealthIdentifiesServiceAndProcessWithoutPrivateData(t *testing.T) {
 		}
 		if method == http.MethodPost && (recorder.Code != http.StatusMethodNotAllowed || recorder.Header().Get("Allow") != "GET, HEAD") {
 			t.Fatal("unsupported method accepted")
+		}
+	}
+}
+
+func TestCoreHealthOriginIdentityDoesNotExposeConfiguration(t *testing.T) {
+	for _, origin := range []string{"", "https://fixture.trycloudflare.com", "https://fixed.example"} {
+		recorder := httptest.NewRecorder()
+		writeCoreHealth(recorder, httptest.NewRequest(http.MethodGet, "/healthz", nil), origin)
+		var body map[string]any
+		if err := json.Unmarshal(recorder.Body.Bytes(), &body); err != nil {
+			t.Fatal(err)
+		}
+		if len(body) != 5 || body["origin_hash"] != fmt.Sprintf("%x", sha256.Sum256([]byte(origin))) || body["service"] != "agentdock" || body["process_id"] != float64(os.Getpid()) {
+			t.Fatalf("combined health identity: %v", body)
+		}
+		if origin != "" && strings.Contains(recorder.Body.String(), origin) {
+			t.Fatal("raw origin leaked")
+		}
+		for _, private := range []string{"runtime_root", "token", "secret", "user_sid", "authorization"} {
+			if _, ok := body[private]; ok {
+				t.Fatal("private health field", private)
+			}
 		}
 	}
 }
