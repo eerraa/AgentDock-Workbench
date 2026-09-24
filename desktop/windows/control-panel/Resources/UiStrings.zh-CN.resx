@@ -306,6 +306,9 @@
   <data name="RuntimeOperationInProgress" xml:space="preserve">
     <value>已有运行时操作正在进行，请等待结束后再试。</value>
   </data>
+  <data name="PublicTunnelDown" xml:space="preserve">
+    <value>本机正常，公共隧道已停止</value>
+  </data>
   <data name="ServiceError" xml:space="preserve">
     <value>服务异常</value>
   </data>
