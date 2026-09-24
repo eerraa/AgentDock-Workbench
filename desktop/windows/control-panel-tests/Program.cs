@@ -6,6 +6,7 @@ if (args is ["--loopback-health", var assemblyPath])
     return;
 }
 
+if (args.Contains("--task-owner-only")) { TaskOwnerRegression.Run(); return; }
 
 var assertions = 0;
 void Check(bool condition, string name) { if (!condition) throw new InvalidOperationException(name); assertions++; }
