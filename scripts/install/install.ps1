@@ -761,8 +761,7 @@ function Stop-AgentDockScheduledTask {
     if ($null -eq $task) {
         return
     }
-    $info = Get-ScheduledTaskInfo -TaskName 'AgentDock' -TaskPath '\'
-    if ($info.State -ne 'Running') {
+    if ($task.State -ne 'Running') {
         return
     }
     Stop-ScheduledTask -TaskName 'AgentDock' -TaskPath '\' -ErrorAction Stop
