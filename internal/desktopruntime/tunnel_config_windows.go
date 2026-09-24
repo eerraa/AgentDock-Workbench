@@ -131,7 +131,10 @@ func restartConfiguredCore(ctx context.Context, runtime tunnelRuntime) error {
 
 func startConfiguredTunnel(ctx context.Context, runtime tunnelRuntime) error {
 	if runtime.manifest.UsesScheduledTask() {
-		return launchCloudflared(runtime)
+		// handOffScheduledCore already started the task. That task owns the
+		// supervisor inside its kill-on-close job and waits for local health
+		// before cloudflared. A detached launch would keep running after /End.
+		return nil
 	}
 	return startTunnel(ctx, runtime)
 }

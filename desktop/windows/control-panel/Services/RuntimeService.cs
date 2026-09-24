@@ -231,6 +231,20 @@ public sealed partial class RuntimeService : IDisposable
 
     public async Task RunActionAsync(string action, CancellationToken cancellationToken = default)
     {
+        var manifest = await ReadRuntimeManifestAsync(cancellationToken) ?? new RuntimeManifest();
+        if (string.Equals(manifest.PrivilegeMode, "elevated", StringComparison.OrdinalIgnoreCase))
+        {
+            if (action is not ("start" or "stop" or "restart"))
+            {
+                throw new ArgumentOutOfRangeException(nameof(action), action, UiText.Get("UnsupportedRuntimeAction"));
+            }
+            // The scheduled task owns the core and the tunnel supervisor. Do not
+            // run tunnel start here: it fails while the port is still closed and
+            // the elevated fallback would relaunch agentdock.exe through UAC.
+            await RunScheduledServiceActionAsync(manifest, action, cancellationToken);
+            return;
+        }
+
         switch (action)
         {
             case "start":
@@ -971,18 +985,60 @@ public sealed partial class RuntimeService : IDisposable
         // Core 加入 KILL_ON_JOB_CLOSE Job Object，确保 Task Scheduler 强制结束 host 时不会留下孤儿进程。
         using var job = KillOnCloseJob.Create();
         using var process = Process.Start(startInfo) ?? throw new InvalidOperationException(UiText.Get("CoreStartFailed"));
+        Process? supervisor = null;
         try
         {
             job.Assign(process);
+            supervisor = StartTaskTunnelSupervisor(manifest);
+            if (supervisor != null)
+            {
+                job.Assign(supervisor);
+            }
         }
         catch
         {
             process.Kill(entireProcessTree: true);
+            if (supervisor is { HasExited: false })
+            {
+                supervisor.Kill(entireProcessTree: true);
+            }
             throw;
         }
         // Core 自己持有受限轮转日志；宿主只负责生命周期，避免第二个追加句柄绕过大小上限。
-        await process.WaitForExitAsync(cancellationToken);
-        return process.ExitCode;
+        // 监督进程在同一 Job 里等本地 /healthz 成功后才启动 cloudflared。任务结束时 Job 一起收掉。
+        try
+        {
+            await process.WaitForExitAsync(cancellationToken);
+            return process.ExitCode;
+        }
+        finally
+        {
+            supervisor?.Dispose();
+        }
+    }
+
+    private Process? StartTaskTunnelSupervisor(RuntimeManifest manifest)
+    {
+        var mode = (manifest.TunnelMode ?? "").Trim();
+        if (!mode.Equals("named", StringComparison.OrdinalIgnoreCase) &&
+            !mode.Equals("quick", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var binaryPath = ResolveCoreBinaryPath(manifest);
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = binaryPath,
+            WorkingDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "AgentDock"),
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+        startInfo.ArgumentList.Add("tunnel");
+        startInfo.ArgumentList.Add("launch");
+        startInfo.ArgumentList.Add("--runtime-root");
+        startInfo.ArgumentList.Add(RuntimeRoot);
+        return Process.Start(startInfo);
     }
 
     internal Task RunCoreStartupAsync(CancellationToken cancellationToken = default) =>
@@ -1048,6 +1104,7 @@ public sealed partial class RuntimeService : IDisposable
             }
             catch (InvalidOperationException) when (
                 allowElevation &&
+                command != "tunnel" &&
                 manifest.PublicAccessProvider != "tailscale" &&
                 !arguments.Contains("tailscale") &&
                 string.Equals(manifest.PrivilegeMode, "elevated", StringComparison.OrdinalIgnoreCase))
