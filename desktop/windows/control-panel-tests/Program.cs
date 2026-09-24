@@ -8,6 +8,7 @@ if (args is ["--loopback-health", var assemblyPath])
 
 if (args.Contains("--task-owner-only")) { TaskOwnerRegression.Run(); return; }
 if (args.Contains("--summary-only")) { await ExecutionSummaryRegression.RunAsync(); return; }
+if (args.Contains("--runtime-display-only")) { RuntimeDisplayRegression.Run(); return; }
 
 var assertions = 0;
 void Check(bool condition, string name) { if (!condition) throw new InvalidOperationException(name); assertions++; }

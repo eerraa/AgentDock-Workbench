@@ -925,4 +925,5 @@ Update now?</value>
   <data name="ActivitySummaryLastRequest" xml:space="preserve"><value>Last tool request: {0:T}</value></data>
   <data name="ActivitySummaryNoRequest" xml:space="preserve"><value>No recorded tool request</value></data>
   <data name="ActivitySummaryStale" xml:space="preserve"><value>Unavailable or stale</value></data>
+  <data name="LocalHealthyPublicUnavailable" xml:space="preserve"><value>Local Core is healthy; public access is unavailable</value></data>
 </root>
