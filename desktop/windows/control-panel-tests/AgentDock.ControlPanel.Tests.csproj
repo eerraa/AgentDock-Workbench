@@ -18,5 +18,16 @@
     <Compile Include="../control-panel/Models/RuntimeModels.cs" Link="RuntimeModels.cs" />
     <Compile Include="../control-panel/Models/NativeTunnelStatus.cs" Link="NativeTunnelStatus.cs" />
     <Compile Include="../control-panel/Services/RuntimeDisplayStatus.cs" Link="RuntimeDisplayStatus.cs" />
+    <Compile Include="../control-panel/Localization/OwnedText.cs" Link="OwnedText.cs" />
+    <Compile Include="../control-panel/Localization/UiText.cs" Link="UiText.cs" />
+    <EmbeddedResource Include="../control-panel/Resources/UiStrings.resx">
+      <LogicalName>AgentDock.ControlPanel.Resources.UiStrings.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="../control-panel/Resources/UiStrings.zh-CN.resx">
+      <LogicalName>AgentDock.ControlPanel.Resources.UiStrings.zh-CN.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="../control-panel/Resources/UiStrings.ko-KR.resx">
+      <LogicalName>AgentDock.ControlPanel.Resources.UiStrings.ko-KR.resources</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 </Project>
