@@ -29,6 +29,9 @@ if ($LASTEXITCODE -ne 0 -or $identity.distribution -ne 'eerraa') { throw 'Could 
 $commit = (& git -C $repository rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0) { throw 'Could not read the source commit.' }
 $buildDate = [DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
+$identity.source_commit = $commit
+$identity.commit = $commit.Substring(0, 12)
+$identity.build_date = $buildDate
 $ldflags = "-s -w -X github.com/uvwt/agentdock/internal/buildinfo.Commit=$commit -X github.com/uvwt/agentdock/internal/buildinfo.BuildDate=$buildDate"
 $originalGoOS,$originalGoArch,$originalCGO = $env:GOOS,$env:GOARCH,$env:CGO_ENABLED
 $utf8 = [Text.UTF8Encoding]::new($false)
@@ -84,6 +87,7 @@ try {
         if ($SignedBuild) {
             & (Join-Path $PSScriptRoot 'sign-windows.ps1') -Path @('agentdock.exe','agentdock-tray.exe','agentdock-arbiter.exe','agentdock-shim.exe','agentdock-tray-shim.exe').ForEach({ Join-Path $payload $_ })
         }
+        $identity.platform = "windows/$architecture"
         $identity | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $payload 'build-info.json') -Encoding utf8NoBOM
         $archive = Join-Path $releaseRoot "agentdock_windows_$architecture.zip"
         $paths = @('agentdock.exe','agentdock-tray.exe','agentdock-arbiter.exe','agentdock-shim.exe','agentdock-tray-shim.exe','agentdock.ico','share','wsl-helper','build-info.json').ForEach({ Join-Path $payload $_ })
