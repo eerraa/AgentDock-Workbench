@@ -184,33 +184,19 @@ func (c *Config) Normalize() error {
 	if c.AgentDockDefaultDir == "" {
 		c.AgentDockDefaultDir = filepath.Join(home, "AgentDock")
 	}
-	paths := []struct {
-		label string
-		value *string
-	}{
-		{label: "AgentDockHome", value: &c.AgentDockHome},
-		{label: "AgentDockDefaultDir", value: &c.AgentDockDefaultDir},
+	homePath, err := prepareRuntimeDirectory("AgentDockHome", c.AgentDockHome, true)
+	if err != nil {
+		return err
 	}
-	for _, path := range paths {
-		cleaned := filepath.Clean(strings.TrimSpace(*path.value))
-		if !filepath.IsAbs(cleaned) {
-			return fmt.Errorf("%s must resolve to an absolute path: %s", path.label, cleaned)
-		}
-		if err := os.MkdirAll(cleaned, 0o700); err != nil {
-			return fmt.Errorf("create %s %s: %w", path.label, cleaned, err)
-		}
-		info, err := os.Stat(cleaned)
-		if err != nil {
-			return fmt.Errorf("stat %s %s: %w", path.label, cleaned, err)
-		}
-		if !info.IsDir() {
-			return fmt.Errorf("%s is not a directory: %s", path.label, cleaned)
-		}
-		if err := securepath.EnsurePrivate(cleaned); err != nil {
-			return fmt.Errorf("secure %s %s: %w", path.label, cleaned, err)
-		}
-		*path.value = cleaned
+	c.AgentDockHome = homePath
+	// The default directory is the user's workspace. A protected inheritable DACL
+	// there is propagated to every existing child and blocks the listener until
+	// that walk finishes. Only the private home is secured.
+	defaultDir, err := prepareRuntimeDirectory("AgentDockDefaultDir", c.AgentDockDefaultDir, false)
+	if err != nil {
+		return err
 	}
+	c.AgentDockDefaultDir = defaultDir
 	c.BrowserExecutablePath = strings.TrimSpace(c.BrowserExecutablePath)
 	if c.BrowserExecutablePath != "" {
 		c.BrowserExecutablePath = filepath.Clean(c.BrowserExecutablePath)
@@ -295,6 +281,29 @@ func (c *Config) Normalize() error {
 	}
 	c.TrustedProxyCIDRs = networks
 	return nil
+}
+
+func prepareRuntimeDirectory(label, path string, secure bool) (string, error) {
+	cleaned := filepath.Clean(strings.TrimSpace(path))
+	if !filepath.IsAbs(cleaned) {
+		return "", fmt.Errorf("%s must resolve to an absolute path: %s", label, cleaned)
+	}
+	if err := os.MkdirAll(cleaned, 0o700); err != nil {
+		return "", fmt.Errorf("create %s %s: %w", label, cleaned, err)
+	}
+	info, err := os.Stat(cleaned)
+	if err != nil {
+		return "", fmt.Errorf("stat %s %s: %w", label, cleaned, err)
+	}
+	if !info.IsDir() {
+		return "", fmt.Errorf("%s is not a directory: %s", label, cleaned)
+	}
+	if secure {
+		if err := securepath.EnsurePrivate(cleaned); err != nil {
+			return "", fmt.Errorf("secure %s %s: %w", label, cleaned, err)
+		}
+	}
+	return cleaned, nil
 }
 
 func (c Config) AuthRequired() bool {
