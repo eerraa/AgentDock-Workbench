@@ -31,12 +31,9 @@ func TestDownstreamIdentityAndCompleteSourceSHA(t *testing.T) {
 			t.Fatalf("invalid Windows version component: %s", part)
 		}
 	}
-	patch, _ := strconv.Atoi(parts[2])
-	expected := 6
-	if DownstreamRevision != 0 {
-		expected = 6*1000 + DownstreamRevision
-	}
-	if patch != expected {
-		t.Fatalf("downstream revision encoding: %s", Version)
+	// The release owner assigns the main product version explicitly; the upstream
+	// baseline and downstream release ordinal remain independent metadata.
+	if Version != "1.1.16101" || UpstreamVersion != "1.1.6" || DownstreamRevision != 101 {
+		t.Fatalf("main release identity mismatch: version=%s upstream=%s revision=%d", Version, UpstreamVersion, DownstreamRevision)
 	}
 }
