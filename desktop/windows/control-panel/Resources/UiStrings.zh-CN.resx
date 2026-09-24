@@ -2822,7 +2822,7 @@
   <data name="ActivitySummaryLastRequest" xml:space="preserve"><value>最近工具请求：{0:T}</value></data>
   <data name="ActivitySummaryNoRequest" xml:space="preserve"><value>尚无工具请求记录</value></data>
   <data name="ActivitySummaryStale" xml:space="preserve"><value>当前不可用或数据已过期</value></data>
-  <data name="LocalHealthyPublicUnavailable" xml:space="preserve"><value>本机核心健康；公网访问不可用</value></data>
+  <data name="LocalHealthyPublicUnavailable" xml:space="preserve"><value>本机核心健康；托管公网传输尚未就绪</value></data>
   <data name="ExecutionPayloadSaved" xml:space="preserve"><value>已保存</value></data>
   <data name="ExecutionPayloadPosition" xml:space="preserve"><value>{0:N0}–{1:N0} / {2:N0} 字节 · {3:N0} 行</value></data>
   <data name="ExecutionPayloadPreviewPosition" xml:space="preserve"><value>预览 / {0:N0} 字节 · {1:N0} 行</value></data>
@@ -2870,4 +2870,5 @@
 {1}</value></data>
   <data name="OfflineUpdateInformation" xml:space="preserve"><value>AgentDock Eerraa 通过经验证的离线 Setup 分发。更新请安装新 Setup；此操作不查询上游或下载软件。</value></data>
   <data name="DistributionVersionFormat" xml:space="preserve"><value>AgentDock Eerraa {0} · 上游 {1} · 修订 {2}</value></data>
+  <data name="LocalHealthyPublicUnknown" xml:space="preserve"><value>本机核心健康；公网传输状态未知</value></data>
 </root>
