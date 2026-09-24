@@ -143,8 +143,11 @@ func applyWindowsGenerationUpdate(ctx context.Context, request applyRequest) (ap
 	if err := atomicfile.Write(filepath.Join(root, windowsDesktopVersionFile), []byte(normalizeVersion(request.TargetVersion)+"\n"), 0o600); err != nil {
 		fmt.Fprintf(request.Output, "警告：写入 Windows 桌面版本标记失败: %v\n", err)
 	}
-	if err := bootstrapBundledSkills(ctx, layout.GenerationCore(request.TargetVersion), layout.GenerationSkills(request.TargetVersion), request.Output); err != nil {
+	targetCore := layout.GenerationCore(request.TargetVersion)
+	if err := bootstrapBundledSkills(ctx, targetCore, layout.GenerationSkills(request.TargetVersion), request.Output); err != nil {
 		fmt.Fprintf(request.Output, "警告：新版本已提交，但官方核心 Skill 同步失败: %v\n", err)
+	} else if err := finalizeLegacySkillMigration(ctx, targetCore, request.Output); err != nil {
+		fmt.Fprintf(request.Output, "警告：legacy Skill migration 暂未收口，旧目录将继续保留用于回滚: %v\n", err)
 	}
 	garbageCollectWindowsGenerations(layout, normalizeVersion(request.TargetVersion), sourceVersion)
 	return applyResult{Restarted: coreWasRunning}, nil
@@ -209,7 +212,7 @@ func stageWindowsGeneration(ctx context.Context, layout updateengine.WindowsLayo
 	}
 	if present {
 		relative := filepath.FromSlash(bundledrg.RelativeDir)
-		if err := os.MkdirAll(filepath.Join(stagingDir, "tools"), 0o700); err != nil {
+		if err := os.MkdirAll(filepath.Dir(filepath.Join(stagingDir, relative)), 0o700); err != nil {
 			return err
 		}
 		if err := copyDirectoryWindows(filepath.Join(request.DesktopStagedPath, relative), filepath.Join(stagingDir, relative)); err != nil {

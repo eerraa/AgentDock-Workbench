@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/uvwt/agentdock/internal/config"
 	"github.com/uvwt/agentdock/internal/envstore"
 	mcpclient "github.com/uvwt/agentdock/internal/mcp/client"
 )
@@ -77,7 +78,20 @@ func (s *Service) Manage(ctx context.Context, request ManageRequest) (Result, er
 		if err != nil {
 			return nil, dynamicMCPToolError(err)
 		}
-		return s.envAction(envstore.ScopeMCP, cfg.Name, action, request)
+		storageKey := cfg.StorageKey
+		if storageKey == "" {
+			storageKey = cfg.Name
+		}
+		if cfg.SourceType == "plugin" && (action == "env_set" || action == "env_unset") &&
+			config.IsReservedPluginEnvironmentKey(strings.TrimSpace(request.Key)) {
+			return nil, toolErrorDetails(
+				"VALIDATION_ERROR",
+				"PLUGIN_DATA_DIR is reserved by the Plugin runtime",
+				"validation",
+				map[string]any{"name": cfg.Name, "plugin_name": cfg.PluginName, "key": strings.TrimSpace(request.Key)},
+			)
+		}
+		return s.envAction(envstore.ScopeMCP, storageKey, action, request)
 	case "refresh":
 		name := request.Name
 		server, tools, err := s.mcpClients.Refresh(ctx, name)
@@ -103,7 +117,11 @@ func (s *Service) Search(ctx context.Context, request SearchRequest) (Result, er
 	if server == "" {
 		pluginOwned := make(map[string]bool)
 		if s.pluginMembership != nil {
-			for _, item := range s.mcpClients.EnabledIndex() {
+			index, err := s.mcpClients.EnabledIndexContext(ctx)
+			if err != nil {
+				return nil, dynamicMCPToolError(err)
+			}
+			for _, item := range index {
 				_, _, owned, lookupErr := s.pluginMembership(item.Name)
 				if lookupErr != nil {
 					return nil, toolErrorCause("PLUGIN_STATE_INVALID", "read MCP plugin ownership", "runtime", map[string]any{"server": item.Name}, lookupErr)
@@ -141,40 +159,6 @@ func (s *Service) Search(ctx context.Context, request SearchRequest) (Result, er
 	return Result{"query": query, "server": server, "tools": tools, "count": len(tools), "catalogs": s.mcpClients.Snapshots(names)}, nil
 }
 
-func (s *Service) Inspect(ctx context.Context, request InspectRequest) (Result, error) {
-	qualifiedName := request.Name
-	serverName, _, ok := strings.Cut(strings.TrimSpace(qualifiedName), ":")
-	if !ok || strings.TrimSpace(serverName) == "" {
-		return nil, toolErrorDetails("MCP_TOOL_NAME_INVALID", "MCP tool name must use <server>:<tool>", "validation", map[string]any{"tool": qualifiedName})
-	}
-	if err := s.ensureAvailable(serverName); err != nil {
-		return nil, err
-	}
-	server, tool, err := s.mcpClients.InspectTool(ctx, qualifiedName)
-	if err != nil {
-		return nil, dynamicMCPToolError(err)
-	}
-	result := Result{
-		"name":         qualifiedName,
-		"server":       server,
-		"tool_name":    tool.Name,
-		"title":        tool.Title,
-		"description":  tool.Description,
-		"input_schema": tool.InputSchema,
-	}
-	if summaries := s.mcpClients.Snapshots([]string{server}); len(summaries) == 1 {
-		result["catalog_revision"] = summaries[0].Revision
-		result["server_version"] = summaries[0].ServerVersion
-	}
-	if tool.OutputSchema != nil {
-		result["output_schema"] = tool.OutputSchema
-	}
-	if tool.Annotations != nil {
-		result["annotations"] = tool.Annotations
-	}
-	return result, nil
-}
-
 func (s *Service) Call(ctx context.Context, request CallRequest) (Result, error) {
 	qualifiedName := request.Name
 	serverName, _, ok := strings.Cut(strings.TrimSpace(qualifiedName), ":")
@@ -189,10 +173,18 @@ func (s *Service) Call(ctx context.Context, request CallRequest) (Result, error)
 		arguments = map[string]any{}
 	}
 	result, err := s.mcpClients.Call(ctx, qualifiedName, arguments)
-	if err != nil {
-		return nil, dynamicMCPToolError(err)
+	catalog, catalogErr := s.mcpClients.CachedSummary(serverName)
+	if catalogErr != nil {
+		catalog = map[string]any{"server": serverName, "catalog_revision": "", "complete": false, "stale": true, "total": 0, "tools": []map[string]any{}, "error": catalogErr.Error()}
 	}
-	return Result{"name": qualifiedName, "result": result}, nil
+	response := Result{"name": qualifiedName, "mcp_catalog": catalog}
+	if result != nil {
+		response["result"] = result
+	}
+	if err != nil {
+		return response, dynamicMCPToolError(err)
+	}
+	return response, nil
 }
 
 func dynamicMCPToolError(err error) error {
@@ -201,7 +193,10 @@ func dynamicMCPToolError(err error) error {
 		return toolErrorCause("MCP_ERROR", err.Error(), "external", nil, err)
 	}
 	category := "external"
-	if strings.Contains(mcpErr.Code, "INVALID") || strings.Contains(mcpErr.Code, "NOT_FOUND") || strings.Contains(mcpErr.Code, "EXISTS") || strings.Contains(mcpErr.Code, "DISABLED") || strings.Contains(mcpErr.Code, "REQUIRED") {
+	if strings.Contains(mcpErr.Code, "INVALID") || strings.Contains(mcpErr.Code, "NOT_FOUND") ||
+		strings.Contains(mcpErr.Code, "EXISTS") || strings.Contains(mcpErr.Code, "DISABLED") ||
+		strings.Contains(mcpErr.Code, "REQUIRED") || strings.Contains(mcpErr.Code, "OWNED") ||
+		strings.Contains(mcpErr.Code, "COLLISION") {
 		category = "validation"
 	}
 	if mcpErr.Code == "MCP_AUTH_REQUIRED" {

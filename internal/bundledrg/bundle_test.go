@@ -29,7 +29,7 @@ func TestSpecificationPinsOfficialX64ArtifactAndLicences(t *testing.T) {
 			t.Fatal("pinned archive member not recognized")
 		}
 	}
-	for _, path := range []string{"tools/rg/../rg.exe", "TOOLS/rg/rg.exe", "tools/rg/other.exe", "tools/rg/rg.exe/extra", "tools\\rg\\rg.exe"} {
+	for _, path := range []string{"share/agentdock/bin/../rg.exe", "TOOLS/rg/rg.exe", "share/agentdock/bin/other.exe", "share/agentdock/bin/rg.exe/extra", "tools\\rg\\rg.exe"} {
 		if ArchiveFile(path) {
 			t.Fatalf("unsafe archive member accepted: %s", path)
 		}
@@ -44,7 +44,7 @@ func TestSpecificationPinsOfficialX64ArtifactAndLicences(t *testing.T) {
 }
 
 func TestMissingAndCorruptBundleAreDifferentOutcomes(t *testing.T) {
-	root := filepath.Join(t.TempDir(), "tools", "rg")
+	root := filepath.Join(t.TempDir(), "share", "agentdock", "bin")
 	if _, err := Open(context.Background(), root); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("missing bundle: %v", err)
 	}

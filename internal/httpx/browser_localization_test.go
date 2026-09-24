@@ -148,7 +148,7 @@ func TestBrowserLocaleInventoryAndKoreanStatusPage(t *testing.T) {
 	response := httptest.NewRecorder()
 	statusPageHandler(nil, cfg).ServeHTTP(response, request)
 	body := html.UnescapeString(response.Body.String())
-	for _, expected := range []string{`<html lang="ko-KR">`, "MCP 엔드포인트", "OAuth + 접근 토큰", `data-copied="복사됨"`, "Eerraa 독자 배포", agentDockRepositoryURL, agentDockDocsURL, "업스트림 QQ 커뮤니티"} {
+	for _, expected := range []string{`<html lang="ko-KR">`, "MCP 엔드포인트", "OAuth + 접근 토큰", `data-copied="복사됨"`, "소스 코드, 배포 버전", agentDockRepositoryURL, agentDockDocsURL, "QQ 커뮤니티"} {
 		if !strings.Contains(body, expected) {
 			t.Errorf("missing Korean status %q", expected)
 		}

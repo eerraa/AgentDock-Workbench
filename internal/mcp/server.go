@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"maps"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	sdkjsonrpc "github.com/modelcontextprotocol/go-sdk/jsonrpc"
@@ -22,6 +24,8 @@ import (
 
 type Server struct {
 	presentationMu        sync.Mutex
+	presentation          atomic.Pointer[presentationState]
+	templateReads         atomic.Uint64
 	registeredUIResources []string
 	runtime               *app.Runtime
 	cfg                   config.Config
@@ -40,6 +44,7 @@ func NewServer(runtime *app.Runtime, cfg config.Config) *Server {
 		serverOptions,
 	)
 	if runtime != nil {
+		server.sdk.AddReceivingMiddleware(server.presentationMiddleware)
 		server.sdk.AddReceivingMiddleware(server.observeDiscovery)
 		runtime.OnDisplaySettingsChanged(server.refreshPresentation)
 		server.refreshPresentation()
@@ -81,7 +86,11 @@ func (s *Server) ToolNames() []string {
 }
 
 func (s *Server) ToolContractHash() string {
-	encoded, err := json.Marshal(s.ToolDescriptors())
+	var revision uint64
+	if state := s.presentation.Load(); state != nil {
+		revision = state.Revision
+	}
+	encoded, err := json.Marshal(map[string]any{"tools": s.ToolDescriptors(), "presentation_revision": revision})
 	if err != nil {
 		return ""
 	}
@@ -103,10 +112,7 @@ func (s *Server) Invoke(ctx context.Context, name string, arguments map[string]a
 	defer s.runtime.FinishToolResponse(ctx, response, false)
 	result, err := s.runtime.Call(ctx, name, arguments)
 	envelope := toolEnvelope(name, result, err)
-	if _, encodeErr := json.Marshal(envelope); encodeErr != nil {
-		return nil, encodeErr
-	}
-	return appendResponseBlocks(envelope, s.runtime.FinishToolResponse(ctx, response, true)), nil
+	return s.finishResponse(ctx, name, arguments, response, envelope)
 }
 
 func (s *Server) HTTPHandler() http.Handler {
@@ -179,29 +185,17 @@ func (s *Server) callTool(ctx context.Context, name string, request *mcpsdk.Call
 	}
 	slog.Info("tool finished", finishedAttrs...)
 
-	encoded, encodeErr := json.Marshal(toolEnvelope(name, result, err))
+	envelope, finishErr := s.finishResponse(ctx, name, arguments, pendingResponse, toolEnvelope(name, result, err))
+	if finishErr != nil {
+		return nil, finishErr
+	}
+	encoded, encodeErr := json.Marshal(envelope)
 	if encodeErr != nil {
 		return nil, fmt.Errorf("encode MCP tool result: %w", encodeErr)
 	}
 	var response mcpsdk.CallToolResult
 	if decodeErr := json.Unmarshal(encoded, &response); decodeErr != nil {
 		return nil, fmt.Errorf("decode MCP tool result: %w", decodeErr)
-	}
-	if def, ok := s.runtime.ToolDefinition(name); ok {
-		if meta := toolResultMetadata(def, arguments, s.uiEnabled()); len(meta) > 0 {
-			if response.Meta == nil {
-				response.Meta = mcpsdk.Meta{}
-			}
-			for key, value := range meta {
-				response.Meta[key] = value
-			}
-		}
-	}
-	if !s.uiEnabled() {
-		response.Meta = withoutOwnedUIMount(response.Meta)
-	}
-	for _, text := range s.runtime.FinishToolResponse(ctx, pendingResponse, true) {
-		response.Content = append(response.Content, &mcpsdk.TextContent{Text: text})
 	}
 	return &response, nil
 }
@@ -210,6 +204,9 @@ func (s *Server) uiEnabled() bool {
 	if s == nil {
 		return false
 	}
+	if state := s.presentation.Load(); state != nil {
+		return state.Mode == "App"
+	}
 	if s.runtime != nil {
 		return s.runtime.ChatGPTMCPUIEnabled()
 	}
@@ -217,25 +214,7 @@ func (s *Server) uiEnabled() bool {
 }
 
 func (s *Server) refreshPresentation() {
-	s.presentationMu.Lock()
-	defer s.presentationMu.Unlock()
-	if s.sdk == nil || s.runtime == nil {
-		return
-	}
-	if !s.uiEnabled() && len(s.registeredUIResources) > 0 {
-		s.sdk.RemoveResources(s.registeredUIResources...)
-		s.registeredUIResources = nil
-	} else if s.uiEnabled() && len(s.registeredUIResources) == 0 {
-		s.registerAppResources()
-		for _, resource := range s.appResourceDefinitions() {
-			s.registeredUIResources = append(s.registeredUIResources, resource.URI)
-		}
-	}
-	// AddTool replaces descriptors without stopping in-flight handlers. The SDK
-	// coalesces tools/list_changed on initialized supporting connections.
-	for _, definition := range s.runtime.ToolDefinitions() {
-		s.registerTool(definition)
-	}
+	s.refreshPresentationState()
 }
 
 func withoutOwnedUIMount(original mcpsdk.Meta) mcpsdk.Meta {
@@ -246,11 +225,13 @@ func withoutOwnedUIMount(original mcpsdk.Meta) mcpsdk.Meta {
 	for key, value := range original {
 		copy[key] = value
 	}
-	delete(copy, "openai/outputTemplate")
+	for _, key := range []string{"openai/outputTemplate", "ui/resourceUri", "openai/widgetAccessible", "openai/widgetCSP", "openai/widgetDomain", "openai/widgetDescription", "openai/widgetPrefersBorder"} {
+		delete(copy, key)
+	}
 	if ui, ok := original["ui"].(map[string]any); ok {
 		kept := make(map[string]any, len(ui))
 		for key, value := range ui {
-			if key != "resourceUri" {
+			if key == "visibility" {
 				kept[key] = value
 			}
 		}
@@ -363,7 +344,11 @@ func toolDescriptors(definitions []ToolDefinition, mcpAppsEnabled bool) []map[st
 
 func toolEnvelope(name string, structured any, err error) map[string]any {
 	if err != nil {
-		payload := map[string]any{"tool": name, "error": err.Error()}
+		payload := maps.Clone(asMap(structured))
+		if payload == nil {
+			payload = map[string]any{}
+		}
+		payload["tool"], payload["error"] = name, err.Error()
 		var toolErr *app.ToolError
 		if errors.As(err, &toolErr) {
 			payload["code"] = toolErr.Code
@@ -378,7 +363,7 @@ func toolEnvelope(name string, structured any, err error) map[string]any {
 				}
 			}
 		}
-		return map[string]any{"isError": true, "structuredContent": payload, "content": []map[string]any{{"type": "text", "text": pretty(payload)}}}
+		return appendMCPCatalog(map[string]any{"isError": true, "structuredContent": payload, "content": []map[string]any{{"type": "text", "text": pretty(payload)}}}, name)
 	}
 	if name == "view_image" {
 		payload := asMap(structured)
@@ -389,7 +374,7 @@ func toolEnvelope(name string, structured any, err error) map[string]any {
 		}
 	}
 	if name == "mcp_tool_call" {
-		return dynamicMCPToolEnvelope(structured)
+		return appendMCPCatalog(dynamicMCPToolEnvelope(structured), name)
 	}
 	return map[string]any{"isError": false, "structuredContent": structured, "content": []map[string]any{{"type": "text", "text": pretty(structured)}}}
 }

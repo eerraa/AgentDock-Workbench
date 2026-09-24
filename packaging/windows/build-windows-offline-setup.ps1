@@ -89,8 +89,13 @@ try {
     }
     if ($Architecture -eq 'amd64') {
         $spec = Get-Content -LiteralPath (Join-Path $PSScriptRoot '..\..\internal\bundledrg\windows-amd64.json') -Raw | ConvertFrom-Json
+        $manifestEntries = @($archive.Entries | Where-Object { $_.FullName.Replace('\','/') -ceq 'share/agentdock/bin/manifest.json' })
+        if ($manifestEntries.Count -ne 1 -or $manifestEntries[0].Length -gt 16384) { throw 'Bundled rg manifest is missing, duplicate or oversized.' }
+        $reader = [IO.StreamReader]::new($manifestEntries[0].Open())
+        try { $manifest = $reader.ReadToEnd() | ConvertFrom-Json } finally { $reader.Dispose() }
+        if (($manifest | ConvertTo-Json -Depth 8 -Compress) -cne ($spec | ConvertTo-Json -Depth 8 -Compress)) { throw 'Bundled rg manifest does not match source pins.' }
         foreach ($file in $spec.files) {
-            $name = 'tools/rg/' + $file.path
+            $name = 'share/agentdock/bin/' + $file.path
             $entries = @($archive.Entries | Where-Object { $_.FullName.Replace('\','/') -ceq $name })
             if ($entries.Count -ne 1 -or $entries[0].Length -ne $file.size) { throw "Required bundled ripgrep file is missing, duplicate or incomplete: $name" }
             $stream = $entries[0].Open()

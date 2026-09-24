@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Principal;
 using System.Text;
@@ -29,7 +28,8 @@ public sealed partial class RuntimeService : IDisposable
     };
 
     private readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
-    private readonly SemaphoreSlim _operation = new(1, 1);
+    private readonly CoreHealthReader _coreHealth = new();
+    private readonly CoreVersionCache _coreVersions = new();
 
     public RuntimeService(string? runtimeRoot = null)
     {
@@ -48,6 +48,8 @@ public sealed partial class RuntimeService : IDisposable
         CancellationToken cancellationToken = default,
         bool includeNexusConnection = false)
     {
+        var observationStarted = DateTimeOffset.Now;
+        var observationInputs = RuntimeObservationInputs();
         var manifest = await ReadRuntimeManifestAsync(cancellationToken) ?? new RuntimeManifest();
         var manifestPort = manifest.ListenPort is >= 1 and <= 65535 ? manifest.ListenPort : 8765;
         var settings = await ReadJsonAsync<ControlPanelSettings>(SettingsPath, cancellationToken);
@@ -104,7 +106,7 @@ public sealed partial class RuntimeService : IDisposable
             }
         }
 
-        var localOrigin = $"http://127.0.0.1:{settings.Port}";
+        var localOrigin = $"http://127.0.0.1:{manifestPort}";
         var localMcpUrl = localOrigin + "/mcp";
         var publicOrigin = ReadFirstNonEmpty(
             Path.Combine(RuntimeRoot, "quick-tunnel-url.txt"),
@@ -133,17 +135,20 @@ public sealed partial class RuntimeService : IDisposable
         {
             version = await ReadCoreVersionAsync(binaryPath, cancellationToken);
         }
-        var coreRunning = health.Healthy || await ReadCoreRunningAsync(binaryPath, cancellationToken);
         var nexus = ReadNexusDeviceStatus();
-        var nexusConnected = includeNexusConnection && coreRunning && nexus.Paired && string.IsNullOrWhiteSpace(nexus.Error)
-            && await ReadNexusConnectionAsync(binaryPath, cancellationToken);
-        var cloudflaredRunning = IsProcessRunningAtPath("cloudflared", manifest.CloudflaredBinary);
+        var readNexus = includeNexusConnection && nexus.Paired && string.IsNullOrWhiteSpace(nexus.Error);
+        var service = !health.Healthy || readNexus
+            ? await ReadNativeStatusAsync(binaryPath, "service", NativeStatusReader.ParseService, cancellationToken)
+            : null;
+        bool? coreRunning = health.Healthy ? true : service?.Running;
+        var nexusConnected = readNexus && coreRunning == true && service?.NexusConnected == true;
         var tunnelMode = ReadText(Path.Combine(RuntimeRoot, "cloudflared-mode.txt"));
         if (string.IsNullOrWhiteSpace(tunnelMode))
         {
             tunnelMode = string.IsNullOrWhiteSpace(manifest.TunnelMode) ? "none" : manifest.TunnelMode;
         }
 
+        tunnelMode = tunnelMode.Trim().ToLowerInvariant();
         NativeTunnelStatus? tailscale = null;
         if (usesTailscale)
         {
@@ -151,13 +156,28 @@ public sealed partial class RuntimeService : IDisposable
             tailscale = CachedTailscaleStatus(publicOrigin);
         }
 
+        if (tunnelMode == "none") { publicOrigin = ""; publicMcpUrl = ""; }
+        if (tunnelMode == "named")
+        {
+            publicOrigin = ReadFirstNonEmpty(Path.Combine(RuntimeRoot, "server-url.txt"), Path.Combine(RuntimeRoot, "named-server-url.txt")).TrimEnd('/');
+            if (publicOrigin.Length == 0) publicOrigin = manifest.PublicUrl.TrimEnd('/');
+            publicMcpUrl = publicOrigin.Length == 0 ? "" : publicOrigin + "/mcp";
+        }
+        // The native owner already knows process identity and runtime readiness.
+        // Do not infer either from a second, privilege-sensitive WPF process scan.
+        var cloudflare = tunnelMode is "quick" or "named"
+            ? await ReadNativeStatusAsync(binaryPath, "tunnel",
+                output => NativeStatusReader.ParseCloudflare(output, tunnelMode, publicOrigin), cancellationToken)
+            : null;
+        if (!observationInputs.SequenceEqual(RuntimeObservationInputs()))
+            throw new InvalidOperationException("Runtime configuration changed during status observation.");
         return new RuntimeSnapshot(
             manifest,
             settings,
             version,
             coreRunning,
             health.Healthy,
-            cloudflaredRunning,
+            cloudflare?.Running,
             localMcpUrl,
             publicOrigin,
             publicMcpUrl,
@@ -168,9 +188,14 @@ public sealed partial class RuntimeService : IDisposable
             File.Exists(Path.Combine(RuntimeRoot, "cloudflared-token.dpapi")),
             nexus,
             nexusConnected,
-            DateTimeOffset.Now,
-            tailscale);
+            observationStarted,
+            tailscale,
+            cloudflare?.Ready);
     }
+
+    private (long Length, long Changed)[] RuntimeObservationInputs() =>
+        new[] { "runtime.json", "control-panel-settings.json", "active-version.json", "cloudflared-mode.txt", "quick-tunnel-url.txt", "server-url.txt", "named-server-url.txt" }
+            .Select(name => { var file = new FileInfo(Path.Combine(RuntimeRoot, name)); return file.Exists ? (file.Length, file.LastWriteTimeUtc.Ticks) : (-1L, 0L); }).ToArray();
 
     public string ReadBearerToken() => ReadProtectedText(Path.Combine(RuntimeRoot, "auth-token.dpapi"), AuthEntropy);
     public string ReadOAuthPassword() => ReadProtectedText(Path.Combine(RuntimeRoot, "oauth-password.dpapi"), OAuthPasswordEntropy);
@@ -232,17 +257,11 @@ public sealed partial class RuntimeService : IDisposable
 
     public async Task RunActionAsync(string action, CancellationToken cancellationToken = default)
     {
-        var manifest = await ReadRuntimeManifestAsync(cancellationToken) ?? new RuntimeManifest();
-        if (string.Equals(manifest.PrivilegeMode, "elevated", StringComparison.OrdinalIgnoreCase))
+        var manifest = await ReadRuntimeManifestAsync(cancellationToken);
+        if (manifest?.PrivilegeMode == "elevated")
         {
-            if (action is not ("start" or "stop" or "restart"))
-            {
-                throw new ArgumentOutOfRangeException(nameof(action), action, UiText.Get("UnsupportedRuntimeAction"));
-            }
-            // The scheduled task owns the core and the tunnel supervisor. Do not
-            // run tunnel start here: it fails while the port is still closed and
-            // the elevated fallback would relaunch agentdock.exe through UAC.
-            await RunScheduledServiceActionAsync(manifest, action, cancellationToken);
+            await RunCoreActionAsync(action, cancellationToken);
+            if (manifest.PublicAccessProvider == "tailscale") await RunTunnelActionAsync(action, cancellationToken);
             return;
         }
 
@@ -459,7 +478,7 @@ public sealed partial class RuntimeService : IDisposable
                 arguments.AddRange(["--token-file", secretFile]);
             }
 
-            await RunNativeAgentDockAsync("tunnel", arguments, cancellationToken, allowElevation: false);
+            await RunNativeAgentDockAsync("tunnel", arguments, cancellationToken);
         }
         finally
         {
@@ -534,8 +553,10 @@ public sealed partial class RuntimeService : IDisposable
         }
 
         var snapshot = await GetSnapshotAsync(cancellationToken);
+        if (snapshot.CoreRunning is null) throw new InvalidOperationException(UiText.Get("StatusUnavailable"));
         var backupDirectory = Path.Combine(Path.GetTempPath(), $"agentdock-privilege-{Guid.NewGuid():N}");
         var taskTransitionPrepared = false;
+        var preserveRecovery = false;
         Directory.CreateDirectory(backupDirectory);
 
         try
@@ -555,11 +576,11 @@ public sealed partial class RuntimeService : IDisposable
 
                 // 任务创建时默认禁用。若 Core 当前正在运行，则临时启用任务用于启动；
                 // 最后再恢复原本的开机启动选择，从而让“当前运行”和“开机启动”保持彼此独立。
-                if (snapshot.CoreStartupEnabled || snapshot.CoreRunning)
+                if (snapshot.CoreStartupEnabled || snapshot.CoreRunning == true)
                 {
                     await SetStartupAsync("core", true, cancellationToken);
                 }
-                if (snapshot.CoreRunning)
+                if (snapshot.CoreRunning == true)
                 {
                     await RunCoreActionAsync("start", cancellationToken);
                 }
@@ -571,7 +592,7 @@ public sealed partial class RuntimeService : IDisposable
             else
             {
                 SetStandardCoreStartup(manifest, snapshot.CoreStartupEnabled);
-                if (snapshot.CoreRunning)
+                if (snapshot.CoreRunning == true)
                 {
                     await RunCoreActionAsync("start", cancellationToken);
                 }
@@ -579,23 +600,25 @@ public sealed partial class RuntimeService : IDisposable
         }
         catch (Exception transitionError)
         {
-            if (!taskTransitionPrepared)
+            if (!taskTransitionPrepared && !File.Exists(Path.Combine(backupDirectory, "state.json")))
             {
                 throw;
             }
 
             try
             {
-                await RunTaskAdminTransitionAsync("restore", manifest, backupDirectory, cancellationToken);
-                await WritePrivilegeModeAsync(wasElevated, cancellationToken);
+                using var recovery = new CancellationTokenSource(TimeSpan.FromSeconds(45));
+                await RunTaskAdminTransitionAsync("restore", manifest, backupDirectory, recovery.Token);
+                await WritePrivilegeModeAsync(wasElevated, recovery.Token);
                 SetStandardCoreStartup(manifest, !wasElevated && snapshot.CoreStartupEnabled);
-                if (!wasElevated && snapshot.CoreRunning)
+                if (snapshot.CoreRunning == true)
                 {
-                    await RunCoreActionAsync("start", cancellationToken);
+                    await RunCoreActionAsync("start", recovery.Token);
                 }
             }
             catch (Exception rollbackError)
             {
+                preserveRecovery = true;
                 throw new AggregateException(UiText.Get("PrivilegeSwitchRollbackFailed"), transitionError, rollbackError);
             }
             throw;
@@ -604,7 +627,7 @@ public sealed partial class RuntimeService : IDisposable
         {
             try
             {
-                Directory.Delete(backupDirectory, recursive: true);
+                if (!preserveRecovery) Directory.Delete(backupDirectory, recursive: true);
             }
             catch
             {
@@ -879,11 +902,6 @@ public sealed partial class RuntimeService : IDisposable
         };
         if (action == "prepare-elevated")
         {
-            var stableTrayEntry = ResolveTrayBinary(manifest);
-            if (!File.Exists(stableTrayEntry))
-            {
-                throw new FileNotFoundException(UiText.Format("ManagementBinaryMissing", stableTrayEntry), stableTrayEntry);
-            }
             using var identity = WindowsIdentity.GetCurrent();
             var userSid = identity.User?.Value;
             if (string.IsNullOrWhiteSpace(userSid) || string.IsNullOrWhiteSpace(identity.Name))
@@ -891,7 +909,7 @@ public sealed partial class RuntimeService : IDisposable
                 throw new InvalidOperationException(UiText.Get("CurrentWindowsIdentityUnavailable"));
             }
             arguments.AddRange([
-                "--launcher-path", stableTrayEntry,
+                "--launcher-path", trayBinary,
                 "--user-sid", userSid,
                 "--user-name", identity.Name
             ]);
@@ -957,96 +975,11 @@ public sealed partial class RuntimeService : IDisposable
         key.SetValue(valueName, command, RegistryValueKind.String);
     }
 
-    internal async Task<int> RunElevatedCoreTaskAsync(CancellationToken cancellationToken = default)
-    {
-        var manifest = await ReadRuntimeManifestAsync(cancellationToken) ?? new RuntimeManifest();
-        var binaryPath = ResolveCoreBinaryPath(manifest);
-        if (!File.Exists(binaryPath))
-        {
-            throw new FileNotFoundException(UiText.Format("CoreBinaryMissing", binaryPath), binaryPath);
-        }
-
-        var workingDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "AgentDock");
-        Directory.CreateDirectory(workingDirectory);
-
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = binaryPath,
-            WorkingDirectory = workingDirectory,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            WindowStyle = ProcessWindowStyle.Hidden
-        };
-        startInfo.ArgumentList.Add("service");
-        startInfo.ArgumentList.Add("launch-core");
-        startInfo.ArgumentList.Add("--runtime-root");
-        startInfo.ArgumentList.Add(RuntimeRoot);
-
-        // Highest 计划任务运行 WinExe 托管进程，再由它无控制台启动核心并持续等待。
-        // Core 加入 KILL_ON_JOB_CLOSE Job Object，确保 Task Scheduler 强制结束 host 时不会留下孤儿进程。
-        using var job = KillOnCloseJob.Create();
-        using var process = Process.Start(startInfo) ?? throw new InvalidOperationException(UiText.Get("CoreStartFailed"));
-        Process? supervisor = null;
-        try
-        {
-            job.Assign(process);
-            supervisor = StartTaskTunnelSupervisor(manifest);
-            if (supervisor != null)
-            {
-                job.Assign(supervisor);
-            }
-        }
-        catch
-        {
-            process.Kill(entireProcessTree: true);
-            if (supervisor is { HasExited: false })
-            {
-                supervisor.Kill(entireProcessTree: true);
-            }
-            throw;
-        }
-        // Core 自己持有受限轮转日志；宿主只负责生命周期，避免第二个追加句柄绕过大小上限。
-        // 监督进程在同一 Job 里等本地 /healthz 成功后才启动 cloudflared。任务结束时 Job 一起收掉。
-        try
-        {
-            await process.WaitForExitAsync(cancellationToken);
-            return process.ExitCode;
-        }
-        finally
-        {
-            supervisor?.Dispose();
-        }
-    }
-
-    private Process? StartTaskTunnelSupervisor(RuntimeManifest manifest)
-    {
-        var mode = (manifest.TunnelMode ?? "").Trim();
-        if (!mode.Equals("named", StringComparison.OrdinalIgnoreCase) &&
-            !mode.Equals("quick", StringComparison.OrdinalIgnoreCase))
-        {
-            return null;
-        }
-
-        var binaryPath = ResolveCoreBinaryPath(manifest);
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = binaryPath,
-            WorkingDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "AgentDock"),
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-        startInfo.ArgumentList.Add("tunnel");
-        startInfo.ArgumentList.Add("launch");
-        startInfo.ArgumentList.Add("--runtime-root");
-        startInfo.ArgumentList.Add(RuntimeRoot);
-        return Process.Start(startInfo);
-    }
-
     internal Task RunCoreStartupAsync(CancellationToken cancellationToken = default) =>
-        RunNativeAgentDockAsync("service", ["start"], cancellationToken, allowElevation: false);
+        RunNativeAgentDockAsync("service", ["start"], cancellationToken);
 
     internal Task RunTunnelStartupAsync(CancellationToken cancellationToken = default) =>
-        RunNativeAgentDockAsync("tunnel", ["start"], cancellationToken, allowElevation: false);
+        RunNativeAgentDockAsync("tunnel", ["start"], cancellationToken);
 
     internal Task RunCoreActionAsync(string action, CancellationToken cancellationToken = default)
     {
@@ -1071,100 +1004,21 @@ public sealed partial class RuntimeService : IDisposable
     private async Task RunNativeAgentDockAsync(
         string command,
         IReadOnlyCollection<string> arguments,
-        CancellationToken cancellationToken,
-        bool allowElevation = true)
+        CancellationToken cancellationToken)
     {
-        if (!await _operation.WaitAsync(0, cancellationToken))
-        {
-            throw new InvalidOperationException(UiText.Get("RuntimeOperationInProgress"));
-        }
-        try
-        {
-            var manifest = await ReadRuntimeManifestAsync(cancellationToken) ?? new RuntimeManifest();
-            if (IsElevatedServiceLifecycle(manifest, command, arguments))
-            {
-                var action = arguments.First(argument => argument is "start" or "stop" or "restart");
-                await RunScheduledServiceActionAsync(manifest, action, cancellationToken);
-                return;
-            }
+        var manifest = await ReadRuntimeManifestAsync(cancellationToken) ?? new RuntimeManifest();
+        var binaryPath = await ResolveCoreBinaryAsync(cancellationToken);
+        var commandArguments = new List<string> { command };
+        commandArguments.AddRange(arguments);
+        commandArguments.AddRange(["--runtime-root", RuntimeRoot]);
 
-            var binaryPath = await ResolveCoreBinaryAsync(cancellationToken);
-            var commandArguments = new List<string> { command };
-            commandArguments.AddRange(arguments);
-            commandArguments.AddRange(["--runtime-root", RuntimeRoot]);
-
-            var startInfo = CreateRedirectedProcessStartInfo(binaryPath);
-            foreach (var argument in commandArguments)
-            {
-                startInfo.ArgumentList.Add(argument);
-            }
-
-            try
-            {
-                _ = await RunProcessAsync(startInfo, cancellationToken);
-            }
-            catch (InvalidOperationException) when (
-                allowElevation &&
-                command != "tunnel" &&
-                manifest.PublicAccessProvider != "tailscale" &&
-                !arguments.Contains("tailscale") &&
-                string.Equals(manifest.PrivilegeMode, "elevated", StringComparison.OrdinalIgnoreCase))
-            {
-                // 最高权限计划任务启动的核心进程不能保证允许普通托盘终止。
-                // 原生命令真正失败时才请求 UAC；命令设计为幂等，可安全重试已完成的前置状态变更。
-                await RunElevatedProcessAsync(binaryPath, commandArguments, cancellationToken);
-            }
-        }
-        finally
-        {
-            _operation.Release();
-        }
-    }
-
-    private static bool IsElevatedServiceLifecycle(RuntimeManifest manifest, string command, IReadOnlyCollection<string> arguments)
-    {
-        return string.Equals(manifest.PrivilegeMode, "elevated", StringComparison.OrdinalIgnoreCase) &&
-            command == "service" &&
-            arguments.Any(argument => argument is "start" or "stop" or "restart");
-    }
-
-    private async Task RunScheduledServiceActionAsync(RuntimeManifest manifest, string action, CancellationToken cancellationToken)
-    {
-        var taskName = string.IsNullOrWhiteSpace(manifest.AgentDockTaskName) ? "AgentDock" : manifest.AgentDockTaskName.Trim();
-        var taskPath = "\\" + taskName.TrimStart('\\');
-        if (action is "stop" or "restart")
-        {
-            await RunScheduledTaskCommandAsync(cancellationToken, allowNotRunning: true, "/End", "/TN", taskPath);
-        }
-        if (action is "start" or "restart")
-        {
-            await RunScheduledTaskCommandAsync(cancellationToken, allowNotRunning: false, "/Run", "/TN", taskPath);
-        }
-    }
-
-    private static async Task RunScheduledTaskCommandAsync(CancellationToken cancellationToken, bool allowNotRunning, params string[] arguments)
-    {
-        var startInfo = CreateRedirectedProcessStartInfo(Path.Combine(Environment.SystemDirectory, "schtasks.exe"));
-        foreach (var argument in arguments)
+        var startInfo = CreateRedirectedProcessStartInfo(binaryPath);
+        foreach (var argument in commandArguments)
         {
             startInfo.ArgumentList.Add(argument);
         }
-        try
-        {
-            _ = await RunProcessAsync(startInfo, cancellationToken);
-        }
-        catch (InvalidOperationException ex) when (allowNotRunning && IsTaskNotRunning(ex.Message))
-        {
-        }
-    }
 
-    private static bool IsTaskNotRunning(string message)
-    {
-        return message.Contains("no running instance", StringComparison.OrdinalIgnoreCase)
-            || message.Contains("当前没有运行", StringComparison.OrdinalIgnoreCase)
-            || message.Contains("没有运行", StringComparison.OrdinalIgnoreCase)
-            || message.Contains("현재 실행", StringComparison.OrdinalIgnoreCase)
-            || message.Contains("실행 중이지", StringComparison.OrdinalIgnoreCase);
+        _ = await RunProcessAsync(startInfo, cancellationToken);
     }
 
     private static async Task RunElevatedProcessAsync(
@@ -1207,27 +1061,6 @@ public sealed partial class RuntimeService : IDisposable
         };
     }
 
-    private async Task<bool> ReadNexusConnectionAsync(string binaryPath, CancellationToken cancellationToken)
-    {
-        var startInfo = CreateRedirectedProcessStartInfo(binaryPath);
-        foreach (var argument in new[] { "service", "status", "--runtime-root", RuntimeRoot })
-        {
-            startInfo.ArgumentList.Add(argument);
-        }
-
-        try
-        {
-            var output = await RunProcessAsync(startInfo, cancellationToken);
-            var status = JsonSerializer.Deserialize<NativeServiceStatus>(output, JsonOptions);
-            return status?.NexusConnected == true;
-        }
-        catch (Exception ex) when (ex is InvalidOperationException or JsonException)
-        {
-            // 实时状态读取失败时按未连接处理；配对身份与配置异常仍由 NexusDeviceStatus 单独表达。
-            return false;
-        }
-    }
-
     private static NexusDeviceStatus ReadNexusDeviceStatus()
     {
         var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
@@ -1256,38 +1089,21 @@ public sealed partial class RuntimeService : IDisposable
     private static async Task<string> RunProcessAsync(ProcessStartInfo startInfo, CancellationToken cancellationToken)
     {
         using var process = Process.Start(startInfo) ?? throw new InvalidOperationException(UiText.Format("ProcessStartFailed", startInfo.FileName));
-        try
+        var standardOutput = process.StandardOutput.ReadToEndAsync(cancellationToken);
+        var standardError = process.StandardError.ReadToEndAsync(cancellationToken);
+        await process.WaitForExitAsync(cancellationToken);
+        var output = (await standardOutput).Trim();
+        var error = (await standardError).Trim();
+        if (process.ExitCode != 0)
         {
-            var standardOutput = process.StandardOutput.ReadToEndAsync(cancellationToken);
-            var standardError = process.StandardError.ReadToEndAsync(cancellationToken);
-            await process.WaitForExitAsync(cancellationToken);
-            var output = (await standardOutput).Trim();
-            var error = (await standardError).Trim();
-            if (process.ExitCode != 0)
-            {
-                throw new InvalidOperationException(string.IsNullOrWhiteSpace(error) ? output : error);
-            }
+            throw new InvalidOperationException(NativeDiagnosticText.Describe(string.IsNullOrWhiteSpace(error) ? output : error));
+        }
 
-            if (string.IsNullOrWhiteSpace(output))
-            {
-                return error;
-            }
-            return string.IsNullOrWhiteSpace(error) ? output : output + Environment.NewLine + error;
-        }
-        catch (OperationCanceledException)
+        if (string.IsNullOrWhiteSpace(output))
         {
-            try
-            {
-                if (!process.HasExited)
-                {
-                    process.Kill(entireProcessTree: true);
-                }
-            }
-            catch (Exception ex) when (ex is InvalidOperationException or Win32Exception)
-            {
-            }
-            throw;
+            return error;
         }
+        return string.IsNullOrWhiteSpace(error) ? output : output + Environment.NewLine + error;
     }
 
     private static async Task<string> RunUpdateProcessAsync(
@@ -1306,7 +1122,7 @@ public sealed partial class RuntimeService : IDisposable
         var errorText = error.ToString().Trim();
         if (process.ExitCode != 0)
         {
-            throw new InvalidOperationException(string.IsNullOrWhiteSpace(errorText) ? outputText : errorText);
+            throw new InvalidOperationException(NativeDiagnosticText.Describe(string.IsNullOrWhiteSpace(errorText) ? outputText : errorText));
         }
 
         var completedMessage = UiText.Get("UpdateCompleted");
@@ -1357,7 +1173,7 @@ public sealed partial class RuntimeService : IDisposable
         {
             return new UpdateProgress(null, false, string.IsNullOrWhiteSpace(updateEvent.Error) ? UiText.Get("UpdateFailed") : updateEvent.Error);
         }
-        if (string.Equals(updateEvent.Stage, "downloading", StringComparison.Ordinal) && updateEvent.BytesRead is long bytesRead)
+        if (string.Equals(updateEvent.Stage, "downloading", StringComparison.Ordinal) && updateEvent.Bytes is long bytesRead)
         {
             var totalBytes = updateEvent.TotalBytes.GetValueOrDefault(-1);
             if (totalBytes > 0)
@@ -1454,89 +1270,11 @@ public sealed partial class RuntimeService : IDisposable
         return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AgentDock");
     }
 
-    private async Task<(bool Healthy, string Version)> ReadHealthAsync(string origin, CancellationToken cancellationToken)
-    {
-        try
-        {
-            using var response = await _httpClient.GetAsync(origin.TrimEnd('/') + "/healthz", cancellationToken);
-            if (!response.IsSuccessStatusCode)
-            {
-                return (false, "");
-            }
+    private Task<(bool Healthy, string Version)> ReadHealthAsync(string origin, CancellationToken cancellationToken) =>
+        _coreHealth.ReadAsync(origin, cancellationToken);
 
-            try
-            {
-                var body = await response.Content.ReadAsStringAsync(cancellationToken);
-                var health = JsonSerializer.Deserialize<CoreVersionInfo>(body, JsonOptions);
-                return (true, health?.Version?.Trim() ?? "");
-            }
-            catch (Exception ex) when (ex is IOException or JsonException)
-            {
-                // 健康端点已返回成功时，版本解析失败不应把服务误判为离线；随后再回退读取本地二进制 BuildInfo。
-                return (true, "");
-            }
-        }
-        catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
-        {
-            return (false, "");
-        }
-        catch (HttpRequestException)
-        {
-            return (false, "");
-        }
-    }
-
-    private async Task<string> ReadCoreVersionAsync(string binaryPath, CancellationToken cancellationToken)
-    {
-        if (!File.Exists(binaryPath))
-        {
-            return "";
-        }
-
-        var startInfo = CreateRedirectedProcessStartInfo(binaryPath);
-        startInfo.ArgumentList.Add("version");
-        startInfo.ArgumentList.Add("--json");
-        try
-        {
-            var output = await RunProcessAsync(startInfo, cancellationToken);
-            return JsonSerializer.Deserialize<CoreVersionInfo>(output, JsonOptions)?.Version?.Trim() ?? "";
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or Win32Exception or JsonException)
-        {
-            return "";
-        }
-    }
-
-    private async Task<bool> ReadCoreRunningAsync(string binaryPath, CancellationToken cancellationToken)
-    {
-        if (!File.Exists(binaryPath))
-        {
-            return false;
-        }
-
-        var startInfo = CreateRedirectedProcessStartInfo(binaryPath);
-        startInfo.ArgumentList.Add("service");
-        startInfo.ArgumentList.Add("status");
-        startInfo.ArgumentList.Add("--runtime-root");
-        startInfo.ArgumentList.Add(RuntimeRoot);
-        try
-        {
-            var output = await RunProcessAsync(startInfo, cancellationToken);
-            return JsonSerializer.Deserialize<NativeServiceStatus>(output, JsonOptions)?.Running == true;
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or Win32Exception or JsonException)
-        {
-            return false;
-        }
-    }
+    private Task<string> ReadCoreVersionAsync(string binaryPath, CancellationToken cancellationToken) =>
+        _coreVersions.ReadAsync(binaryPath, Path.Combine(RuntimeRoot, "active-version.json"), cancellationToken);
 
     private static async Task<T?> ReadJsonAsync<T>(string path, CancellationToken cancellationToken)
     {
@@ -1592,63 +1330,6 @@ public sealed partial class RuntimeService : IDisposable
         catch
         {
             return "";
-        }
-    }
-
-    private const uint ProcessQueryLimitedInformation = 0x1000;
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern IntPtr OpenProcess(uint access, bool inheritHandle, int processId);
-
-    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    private static extern bool QueryFullProcessImageName(IntPtr process, uint flags, StringBuilder name, ref uint size);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern bool CloseHandle(IntPtr handle);
-
-    private static bool IsProcessRunningAtPath(string processName, string expectedPath)
-    {
-        if (string.IsNullOrWhiteSpace(expectedPath))
-        {
-            return false;
-        }
-        try
-        {
-            var normalizedExpected = Path.GetFullPath(expectedPath);
-            return Process.GetProcessesByName(processName).Any(process =>
-            {
-                using (process)
-                {
-                    // MainModule needs PROCESS_VM_READ and fails for the elevated task's
-                    // cloudflared. Limited query still returns the image path.
-                    var actual = QueryProcessImagePath(process);
-                    return !string.IsNullOrWhiteSpace(actual) &&
-                           string.Equals(Path.GetFullPath(actual), normalizedExpected, StringComparison.OrdinalIgnoreCase);
-                }
-            });
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private static string? QueryProcessImagePath(Process process)
-    {
-        var handle = OpenProcess(ProcessQueryLimitedInformation, false, process.Id);
-        if (handle == IntPtr.Zero)
-        {
-            return null;
-        }
-        try
-        {
-            var buffer = new StringBuilder(1024);
-            var size = (uint)buffer.Capacity;
-            return QueryFullProcessImageName(handle, 0, buffer, ref size) ? buffer.ToString() : null;
-        }
-        finally
-        {
-            CloseHandle(handle);
         }
     }
 
@@ -1737,8 +1418,9 @@ public sealed partial class RuntimeService : IDisposable
     public void Dispose()
     {
         _tailscaleLifetime.Cancel();
+        _coreHealth.Dispose();
+        _coreVersions.Dispose();
         _funnelVerification.Dispose();
         _httpClient.Dispose();
-        _operation.Dispose();
     }
 }

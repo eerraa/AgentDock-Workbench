@@ -126,6 +126,7 @@ public partial class ExecutionWindow
     private void RenderInsertionStatus()
     {
         if (InsertionStatus is null) return;
+        InsertionStatus.ToolTip = null;
         WithdrawInsertionButton.Visibility = Visibility.Collapsed;
         if (InsertionTextBox.IsReadOnly) { InsertionStatus.Text = UiText.Get("ExecutionInsertionDraftLimit"); return; }
         if (Encoding.UTF8.GetByteCount(InsertionTextBox.Text) > InsertionTextLimit)
@@ -148,6 +149,15 @@ public partial class ExecutionWindow
                 "delivery_unknown" => UiText.Get("ExecutionInsertionDeliveryUnknown"),
                 _ => ""
             };
+        }
+        var latest = items.LastOrDefault();
+        var summary = latest.Text("summary");
+        if (!string.IsNullOrWhiteSpace(summary))
+        {
+            // Summary is display-only. Keep the exact full message accessible
+            // and never replace the queued text or retransmit a preview.
+            InsertionStatus.Text += " · " + summary;
+            InsertionStatus.ToolTip = latest.Text("text");
         }
     }
     private async void WithdrawInsertion_Click(object sender, RoutedEventArgs e)

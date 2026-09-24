@@ -26,6 +26,7 @@ func TestRequiredRGArchiveExtractionPreservesPinnedComponent(t *testing.T) {
 		}
 		files[bundledrg.RelativeDir+"/"+expected.Path] = data
 	}
+	files[bundledrg.RelativeDir+"/manifest.json"] = bundledrg.ManifestBytes()
 	root, err := extractDesktopUpdateArchive(context.Background(), makeWindowsDesktopArchive(t, files), t.TempDir(), "1.1.4001")
 	if err != nil {
 		t.Fatal(err)
@@ -50,7 +51,7 @@ func TestRequiredRGLegacyUpdaterDoesNotDiscardGenerationComponent(t *testing.T) 
 		t.Fatal("required real rg fixture missing")
 	}
 	staging := t.TempDir()
-	root := filepath.Join(staging, "tools", "rg")
+	root := filepath.Join(staging, "share", "agentdock", "bin")
 	if err := os.MkdirAll(root, 0700); err != nil {
 		t.Fatal(err)
 	}
@@ -62,6 +63,9 @@ func TestRequiredRGLegacyUpdaterDoesNotDiscardGenerationComponent(t *testing.T) 
 		if err := os.WriteFile(filepath.Join(root, expected.Path), data, 0600); err != nil {
 			t.Fatal(err)
 		}
+	}
+	if err := os.WriteFile(filepath.Join(root, "manifest.json"), bundledrg.ManifestBytes(), 0600); err != nil {
+		t.Fatal(err)
 	}
 	target := filepath.Join(t.TempDir(), "bin", "agentdock.exe")
 	_, err := applyPlatformUpdate(context.Background(), applyRequest{CurrentPath: target, DesktopStagedPath: staging})

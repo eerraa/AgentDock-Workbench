@@ -15,16 +15,13 @@ func TestNonWindowsExecCommandRejectsRuntimeOverride(t *testing.T) {
 	}
 }
 
-func TestNonWindowsCommandMetadataUsesResolvedHostWorkdir(t *testing.T) {
-	service, _ := newCommandTestService(t)
-	invocation, err := service.prepareCommandInvocation(ExecRequest{Cmd: "printf fixture"})
+func TestNativeCommandRecordsItsResolvedExecutionContext(t *testing.T) {
+	svc, cfg := newCommandTestService(t)
+	result, err := svc.Exec(t.Context(), ExecRequest{Cmd: "printf metadata", ExecutionMode: "sync"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if invocation.execution.Runtime != runtime.GOOS || invocation.workdir == "" || invocation.execution.Workdir != invocation.workdir {
-		t.Fatalf("missing resolved host execution metadata: %#v", invocation)
-	}
-	if invocation.execution.Distribution != "" {
-		t.Fatal("native host command acquired WSL metadata")
+	if result["runtime"] != runtime.GOOS || result["workdir"] != cfg.AgentDockDefaultDir {
+		t.Fatalf("native execution metadata lost: %+v", result)
 	}
 }

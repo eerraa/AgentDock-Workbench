@@ -22,6 +22,8 @@ type FileChange struct {
 	StatsKnown bool   `json:"stats_known"`
 }
 type ExecutionCall struct {
+	Request        *Payload   `json:"request,omitempty"`
+	Response       *Payload   `json:"response,omitempty"`
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 	CallMeasurements
 	FileEdit *FileEditDetails `json:"file_edit,omitempty"`
@@ -29,46 +31,48 @@ type ExecutionCall struct {
 	OwnerPID      int    `json:"owner_pid,omitempty"`
 	OwnerInstance string `json:"owner_instance,omitempty"`
 	Binding
-	LabelSource       string       `json:"activity_label_source,omitempty"`
-	DisplayTitle      string       `json:"display_title"`
-	StartedAt         time.Time    `json:"started_at"`
-	ParameterSummary  string       `json:"parameter_summary,omitempty"`
-	OutputSummary     string       `json:"output_summary,omitempty"`
-	ErrorSummary      string       `json:"error_summary,omitempty"`
-	TaskThreadID      string       `json:"task_thread_id,omitempty"`
-	ReadOnlyLegacy    bool         `json:"read_only_legacy,omitempty"`
-	SchemaVersion     int          `json:"schema_version"`
-	Status            string       `json:"status"`
-	Title             string       `json:"title"`
-	ToolName          string       `json:"tool_name"`
-	SessionID         string       `json:"session_id,omitempty"`
-	Runtime           string       `json:"runtime,omitempty"`
-	Workdir           string       `json:"workdir,omitempty"`
-	DisplayCommand    string       `json:"display_command,omitempty"`
-	Summary           string       `json:"summary,omitempty"`
-	ApprovalID        string       `json:"approval_id,omitempty"`
-	RuleID            string       `json:"rule_id,omitempty"`
-	PermissionMode    string       `json:"permission_mode,omitempty"`
-	ErrorCode         string       `json:"error_code,omitempty"`
-	CreatedAt         time.Time    `json:"created_at"`
-	UpdatedAt         time.Time    `json:"updated_at"`
-	CompletedAt       *time.Time   `json:"completed_at,omitempty"`
-	CreatedSeq        uint64       `json:"created_seq"`
-	UpdatedSeq        uint64       `json:"updated_seq"`
-	ElapsedMS         int64        `json:"elapsed_ms,omitempty"`
-	EventCount        int          `json:"event_count"`
-	ExitCode          *int         `json:"exit_code,omitempty"`
-	CommandOK         *bool        `json:"command_ok,omitempty"`
-	TimedOut          bool         `json:"timed_out,omitempty"`
-	HasOutput         bool         `json:"has_output,omitempty"`
-	OutputPreview     string       `json:"output_preview,omitempty"`
-	StderrPreview     string       `json:"stderr_preview,omitempty"`
-	StdoutTruncated   bool         `json:"stdout_truncated,omitempty"`
-	StderrTruncated   bool         `json:"stderr_truncated,omitempty"`
-	FileChanges       []FileChange `json:"file_changes,omitempty"`
-	ChangesTruncated  bool         `json:"changes_truncated,omitempty"`
-	HistoryIncomplete bool         `json:"history_incomplete,omitempty"`
-	Legacy            bool         `json:"legacy,omitempty"`
+	LabelSource       string         `json:"activity_label_source,omitempty"`
+	TitleText         *LocalizedText `json:"title_text,omitempty"`
+	SummaryText       *LocalizedText `json:"summary_text,omitempty"`
+	DisplayTitle      string         `json:"display_title"`
+	StartedAt         time.Time      `json:"started_at"`
+	ParameterSummary  string         `json:"parameter_summary,omitempty"`
+	OutputSummary     string         `json:"output_summary,omitempty"`
+	ErrorSummary      string         `json:"error_summary,omitempty"`
+	TaskThreadID      string         `json:"task_thread_id,omitempty"`
+	ReadOnlyLegacy    bool           `json:"read_only_legacy,omitempty"`
+	SchemaVersion     int            `json:"schema_version"`
+	Status            string         `json:"status"`
+	Title             string         `json:"title"`
+	ToolName          string         `json:"tool_name"`
+	SessionID         string         `json:"session_id,omitempty"`
+	Runtime           string         `json:"runtime,omitempty"`
+	Workdir           string         `json:"workdir,omitempty"`
+	DisplayCommand    string         `json:"display_command,omitempty"`
+	Summary           string         `json:"summary,omitempty"`
+	ApprovalID        string         `json:"approval_id,omitempty"`
+	RuleID            string         `json:"rule_id,omitempty"`
+	PermissionMode    string         `json:"permission_mode,omitempty"`
+	ErrorCode         string         `json:"error_code,omitempty"`
+	CreatedAt         time.Time      `json:"created_at"`
+	UpdatedAt         time.Time      `json:"updated_at"`
+	CompletedAt       *time.Time     `json:"completed_at,omitempty"`
+	CreatedSeq        uint64         `json:"created_seq"`
+	UpdatedSeq        uint64         `json:"updated_seq"`
+	ElapsedMS         int64          `json:"elapsed_ms,omitempty"`
+	EventCount        int            `json:"event_count"`
+	ExitCode          *int           `json:"exit_code,omitempty"`
+	CommandOK         *bool          `json:"command_ok,omitempty"`
+	TimedOut          bool           `json:"timed_out,omitempty"`
+	HasOutput         bool           `json:"has_output,omitempty"`
+	OutputPreview     string         `json:"output_preview,omitempty"`
+	StderrPreview     string         `json:"stderr_preview,omitempty"`
+	StdoutTruncated   bool           `json:"stdout_truncated,omitempty"`
+	StderrTruncated   bool           `json:"stderr_truncated,omitempty"`
+	FileChanges       []FileChange   `json:"file_changes,omitempty"`
+	ChangesTruncated  bool           `json:"changes_truncated,omitempty"`
+	HistoryIncomplete bool           `json:"history_incomplete,omitempty"`
+	Legacy            bool           `json:"legacy,omitempty"`
 }
 type CallQuery struct {
 	View              string
@@ -194,6 +198,7 @@ func (p *callProjection) apply(event Event) {
 		call = &ExecutionCall{SchemaVersion: ExecutionSchemaVersion, Binding: event.Binding, ToolName: event.ToolName, Title: event.Title, Status: "created", CreatedAt: event.CreatedAt, CreatedSeq: event.Seq, Legacy: legacy}
 		call.CallID = id
 		call.LabelSource = event.LabelSource
+		call.TitleText = event.TitleText.clone()
 		call.StartedAt, call.DisplayTitle, call.ReadOnlyLegacy = event.CreatedAt, event.Title, legacy
 		if call.BindingQuality == "" {
 			call.BindingQuality = "unattributed"
@@ -240,12 +245,11 @@ func (p *callProjection) apply(event Event) {
 	}
 	if call.Label == "" && event.Label != "" {
 		call.Label = event.Label
-		// The label and its provenance are one presentation value. A supplied
-		// label, even one equal to the default, must clear the initial fallback.
 		call.LabelSource = event.LabelSource
 	}
 	if call.Title == "" || event.Kind == "call.bound" {
 		call.Title = event.Title
+		call.TitleText = event.TitleText.clone()
 	}
 	if call.ToolName == "" {
 		call.ToolName = event.ToolName
@@ -311,6 +315,7 @@ func (p *callProjection) apply(event Event) {
 	}
 	if event.Summary != "" && (call.Summary == "" || strings.HasPrefix(event.Kind, "call.") || event.Kind == "tool.completed" || event.Kind == "command.completed") {
 		call.Summary = event.Summary
+		call.SummaryText = event.SummaryText.clone()
 	}
 	if event.ExitCode != nil {
 		value := *event.ExitCode
@@ -329,7 +334,7 @@ func (p *callProjection) apply(event Event) {
 	}
 	call.StdoutTruncated = call.StdoutTruncated || event.StdoutTruncated
 	call.StderrTruncated = call.StderrTruncated || event.StderrTruncated
-	call.HasOutput = call.OutputPreview != "" || call.StderrPreview != "" || call.StdoutTruncated || call.StderrTruncated
+	call.HasOutput = call.Response != nil && call.Response.State != "pending" || call.OutputPreview != "" || call.StderrPreview != "" || call.StdoutTruncated || call.StderrTruncated
 	if event.Kind == "file.changed" {
 		if len(call.FileChanges) < 128 {
 			call.FileChanges = append(call.FileChanges, FileChange{Path: event.ResolvedPath, Insertions: event.Insertions, Deletions: event.Deletions, StatsKnown: event.ChangeStatsKnown})
@@ -452,6 +457,10 @@ func (s *Store) projectAppendedLocked(event Event) {
 }
 func cloneCall(call *ExecutionCall, output bool) ExecutionCall {
 	copied := *call
+	copied.TitleText = call.TitleText.clone()
+	copied.SummaryText = call.SummaryText.clone()
+	copied.Request = call.Request.clone(output)
+	copied.Response = call.Response.clone(output)
 	copied.CallMeasurements = call.CallMeasurements.clone()
 	copied.LastActivityAt = copyValue(call.LastActivityAt)
 	copied.FileEdit = call.FileEdit.clone(output)
@@ -686,4 +695,18 @@ func (s *Store) CallStatistics(ctx context.Context) (CallStats, map[string]CallS
 		result[conversationID] = stats.result()
 	}
 	return total.result(), result, nil
+}
+
+// CallCursor is a read-only stream boundary, not a new activity event.
+func (s *Store) CallCursor(ctx context.Context) (uint64, error) {
+	release, err := s.lock(ctx)
+	if err != nil {
+		return 0, err
+	}
+	defer release()
+	projection, err := s.projectionLocked(ctx)
+	if err != nil {
+		return 0, err
+	}
+	return projection.seq, nil
 }

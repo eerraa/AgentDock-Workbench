@@ -20,7 +20,7 @@ func requiredRGPayload(t *testing.T, root string) string {
 		t.Fatal("required real rg fixture is missing; this suite must not skip")
 	}
 	payload := filepath.Join(root, "payload")
-	bundle := filepath.Join(payload, "tools", "rg")
+	bundle := filepath.Join(payload, "share", "agentdock", "bin")
 	if err := os.MkdirAll(bundle, 0700); err != nil {
 		t.Fatal(err)
 	}
@@ -39,6 +39,9 @@ func requiredRGPayload(t *testing.T, root string) string {
 		if err := os.WriteFile(filepath.Join(payload, name), []byte("fixture-original"), 0600); err != nil {
 			t.Fatal(err)
 		}
+	}
+	if err := os.WriteFile(filepath.Join(bundle, "manifest.json"), bundledrg.ManifestBytes(), 0600); err != nil {
+		t.Fatal(err)
 	}
 	return payload
 }
@@ -124,7 +127,7 @@ func TestRequiredRGCorruptPayloadCannotReplaceCommittedGeneration(t *testing.T) 
 	if err := commitWindowsActivePointer(runtimeRoot, "rg-good"); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(payload, "tools", "rg", "rg.exe"), []byte("tampered"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(payload, "share", "agentdock", "bin", "rg.exe"), []byte("tampered"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := stageWindowsPayload(request, newJournal(runtimeRoot, "rg-reject")); !errors.Is(err, bundledrg.ErrIntegrity) {
@@ -133,5 +136,52 @@ func TestRequiredRGCorruptPayloadCannotReplaceCommittedGeneration(t *testing.T) 
 	present, err := bundledrg.VerifyIfPresent(context.Background(), original.GenerationDir)
 	if err != nil || !present {
 		t.Fatalf("corrupt repair damaged the committed bundle: %v", err)
+	}
+}
+
+func TestRequiredRGLegacyMigrationPreservesSourceSidecar(t *testing.T) {
+	for _, relative := range []string{bundledrg.RelativeDir, "tools/rg"} {
+		t.Run(relative, func(t *testing.T) {
+			root := t.TempDir()
+			legacy := filepath.Join(root, "legacy")
+			target := filepath.Join(root, "target")
+			fixture := os.Getenv("AGENTDOCK_TEST_RG_BUNDLE")
+			if fixture == "" {
+				t.Fatal("required pinned rg fixture is missing")
+			}
+			source := filepath.Join(legacy, filepath.FromSlash(relative))
+			if err := os.MkdirAll(source, 0700); err != nil {
+				t.Fatal(err)
+			}
+			for _, file := range bundledrg.Specification().Files {
+				data, err := os.ReadFile(filepath.Join(fixture, file.Path))
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(filepath.Join(source, file.Path), data, 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if relative == bundledrg.RelativeDir {
+				if err := os.WriteFile(filepath.Join(source, "manifest.json"), bundledrg.ManifestBytes(), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := preserveLegacySearchBundle(t.Context(), legacy, target); err != nil {
+				t.Fatal(err)
+			}
+			copied := filepath.Join(target, filepath.FromSlash(relative))
+			verified, err := bundledrg.OpenLegacy(t.Context(), copied)
+			if err != nil {
+				t.Fatal(err)
+			}
+			verified.Close()
+			if err := os.WriteFile(filepath.Join(source, "rg.exe"), []byte("changed-source"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			if err := preserveLegacySearchBundle(t.Context(), legacy, filepath.Join(root, "rejected")); !errors.Is(err, bundledrg.ErrIntegrity) {
+				t.Fatalf("corrupt source was accepted: %v", err)
+			}
+		})
 	}
 }

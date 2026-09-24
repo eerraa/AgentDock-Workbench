@@ -3,6 +3,7 @@
 package bundledrg
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"debug/pe"
@@ -14,10 +15,11 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 )
 
-const RelativeDir = "tools/rg"
+const RelativeDir = "share/agentdock/bin"
 
 //go:embed windows-amd64.json
 var specification []byte
@@ -65,6 +67,16 @@ func (verified *Verified) Close() error { return verified.file.Close() }
 // Only absence of the entire component directory is a supported missing bundle.
 // A present but partial, redirected or corrupt bundle is a fail-closed error.
 func Open(ctx context.Context, root string) (*Verified, error) {
+	return openBundle(ctx, root, true)
+}
+
+// OpenLegacy reads only the pinned sidecar of the same running executable.
+// Earlier packages did not include a separate manifest; no active pointer or
+// system-wide tool directory is consulted here.
+func OpenLegacy(ctx context.Context, root string) (*Verified, error) {
+	return openBundle(ctx, root, false)
+}
+func openBundle(ctx context.Context, root string, requireManifest bool) (*Verified, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -78,10 +90,42 @@ func Open(ctx context.Context, root string) (*Verified, error) {
 	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
 		return nil, fmt.Errorf("%w: component directory is not a regular directory", ErrIntegrity)
 	}
-	// A tools directory junction must not redirect a generation's component.
-	parent, err := os.Lstat(filepath.Dir(root))
-	if err != nil || !parent.IsDir() || parent.Mode()&os.ModeSymlink != 0 {
-		return nil, fmt.Errorf("%w: component parent is redirected or unreadable", ErrIntegrity)
+	// None of the component's relative ancestors may redirect ownership.
+	levels := 1
+	if requireManifest {
+		levels = 2
+	}
+	ancestor := filepath.Dir(root)
+	for i := 0; i < levels; i++ {
+		info, err := os.Lstat(ancestor)
+		if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+			return nil, fmt.Errorf("%w: redirected component ancestor", ErrIntegrity)
+		}
+		ancestor = filepath.Dir(ancestor)
+	}
+	if requireManifest {
+		info, err := os.Lstat(filepath.Join(root, "manifest.json"))
+		if err != nil || !info.Mode().IsRegular() || info.Size() > 16*1024 {
+			return nil, fmt.Errorf("%w: missing or invalid component manifest", ErrIntegrity)
+		}
+		file, err := openReadOnly(filepath.Join(root, "manifest.json"))
+		if err != nil {
+			return nil, fmt.Errorf("%w: component manifest: %v", ErrIntegrity, err)
+		}
+		data, err := io.ReadAll(io.LimitReader(contextReader{ctx, file}, 16*1024+1))
+		file.Close()
+		if err != nil || len(data) > 16*1024 {
+			return nil, fmt.Errorf("%w: unreadable or oversized component manifest", ErrIntegrity)
+		}
+		var manifest Spec
+		decoder := json.NewDecoder(bytes.NewReader(data))
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&manifest); err != nil {
+			return nil, fmt.Errorf("%w: component manifest: %v", ErrIntegrity, err)
+		}
+		if err := decoder.Decode(new(any)); err != io.EOF || !reflect.DeepEqual(manifest, Specification()) {
+			return nil, fmt.Errorf("%w: component manifest differs from compiled pins", ErrIntegrity)
+		}
 	}
 	spec := Specification()
 	var executable *os.File
@@ -177,6 +221,9 @@ func VerifyIfPresent(ctx context.Context, base string) (bool, error) {
 // ArchiveFile recognizes only exact, pinned component files, never arbitrary
 // tools or traversal paths. The caller retains archive ownership and limits.
 func ArchiveFile(name string) bool {
+	if name == RelativeDir+"/manifest.json" {
+		return true
+	}
 	for _, file := range Specification().Files {
 		if name == RelativeDir+"/"+file.Path {
 			return true
@@ -188,3 +235,7 @@ func ArchiveFile(name string) bool {
 func Supported(goos, arch string) bool {
 	return strings.Join([]string{goos, arch}, "/") == Specification().Platform
 }
+
+// ManifestBytes returns a private copy of the pinned, human-readable source,
+// version, architecture, license and SHA-256 manifest carried in the payload.
+func ManifestBytes() []byte { return append([]byte(nil), specification...) }

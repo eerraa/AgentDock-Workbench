@@ -26,9 +26,14 @@ if ($version -eq '1.1.2' -and -not $Candidate) {
 $sourceChanges = @(& git -C $repository status --porcelain)
 if ($LASTEXITCODE -ne 0) { throw 'Could not inspect source state.' }
 if ($sourceChanges.Count -gt 0) { throw 'Formal release requires a clean verified source commit.' }
+$identity = (& go -C $repository run ./tools/release build-info | Out-String) | ConvertFrom-Json
+if ($LASTEXITCODE -ne 0 -or $identity.distribution -ne 'eerraa') { throw 'Could not read the downstream build identity.' }
 $commit = (& git -C $repository rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0) { throw 'Could not read the source commit.' }
 $buildDate = [DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
+$identity.source_commit = $commit
+$identity.commit = $commit.Substring(0, 12)
+$identity.build_date = $buildDate
 $ldflags = "-s -w -X github.com/uvwt/agentdock/internal/buildinfo.Commit=$commit -X github.com/uvwt/agentdock/internal/buildinfo.BuildDate=$buildDate"
 $originalGoOS,$originalGoArch,$originalCGO = $env:GOOS,$env:GOARCH,$env:CGO_ENABLED
 $utf8 = [Text.UTF8Encoding]::new($false)
@@ -82,14 +87,15 @@ try {
         if (Test-Path -LiteralPath (Join-Path $payload 'wsl-helper')) { Remove-Item -LiteralPath (Join-Path $payload 'wsl-helper') -Recurse -Force }
         Copy-Item -LiteralPath $helperRoot -Destination (Join-Path $payload 'wsl-helper') -Recurse
         if ($architecture -eq 'amd64') {
-            & (Join-Path $PSScriptRoot 'prepare-bundled-rg.ps1') -Destination (Join-Path $payload 'tools\rg') -CacheDirectory $ToolCacheDirectory | Out-Null
+            & (Join-Path $PSScriptRoot 'prepare-bundled-rg.ps1') -Destination (Join-Path $payload 'share\agentdock\bin') -CacheDirectory $ToolCacheDirectory | Out-Null
         }
         if ($SignedBuild) {
             & (Join-Path $PSScriptRoot 'sign-windows.ps1') -Path @('agentdock.exe','agentdock-tray.exe','agentdock-arbiter.exe','agentdock-shim.exe','agentdock-tray-shim.exe').ForEach({ Join-Path $payload $_ })
         }
+        $identity.platform = "windows/$architecture"
+        $identity | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $payload 'build-info.json') -Encoding utf8NoBOM
         $archive = Join-Path $releaseRoot "agentdock_windows_$architecture.zip"
-        $paths = @('agentdock.exe','agentdock-tray.exe','agentdock-arbiter.exe','agentdock-shim.exe','agentdock-tray-shim.exe','agentdock.ico','share','wsl-helper').ForEach({ Join-Path $payload $_ })
-        if ($architecture -eq 'amd64') { $paths += (Join-Path $payload 'tools') }
+        $paths = @('agentdock.exe','agentdock-tray.exe','agentdock-arbiter.exe','agentdock-shim.exe','agentdock-tray-shim.exe','agentdock.ico','share','wsl-helper','build-info.json').ForEach({ Join-Path $payload $_ })
         Compress-Archive -LiteralPath $paths -DestinationPath $archive -Force
         Write-Checksum $archive
         $parameters = @{
@@ -106,6 +112,7 @@ try {
     Copy-Item -LiteralPath (Join-Path $repository 'scripts\install\install.ps1') -Destination (Join-Path $releaseRoot 'install.ps1') -Force
     Write-Checksum (Join-Path $releaseRoot 'install.ps1')
     [ordered]@{
+        distribution=$identity.distribution; upstream_version=$identity.upstream_version; downstream_revision=$identity.downstream_revision
         version=$version; channel=$(if($Candidate){'candidate-not-released'}else{'release'}); source_dirty=($sourceChanges.Count -gt 0); changed_paths=$sourceChanges; commit=$commit; build_date=$buildDate; platforms=@($Architectures | ForEach-Object {"windows/$_"})
         agentdock_authenticode=$(if($SignedBuild){'signed'}else{'unsigned'}); cloudflared_authenticode='valid'
         wsl_helpers='Windows feature payload only; no separate Linux release'

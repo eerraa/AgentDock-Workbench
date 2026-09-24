@@ -94,7 +94,7 @@ func TestRuntimeDefaultsToOwnOfflineChannel(t *testing.T) {
 }
 
 func TestDownstreamNumericVersionOrdering(t *testing.T) {
-	for _, pair := range [][2]string{{"1.1.0", "1.1.4001"}, {"1.1.4", "1.1.4001"}, {"1.1.4001", "1.1.4002"}} {
+	for _, pair := range [][2]string{{"1.1.5", "1.1.6100"}, {"1.1.6", "1.1.6100"}, {"1.1.6100", "1.1.6101"}} {
 		comparison, ok := compareVersions(pair[0], pair[1])
 		if !ok || comparison >= 0 {
 			t.Fatalf("downstream version ordering: %v => %d, %v", pair, comparison, ok)

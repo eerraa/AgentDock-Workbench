@@ -19,7 +19,7 @@ func realBundleCopy(t *testing.T) string {
 	if source == "" {
 		t.Fatal("required real-bundle fixture is missing; this suite never skips")
 	}
-	root := filepath.Join(t.TempDir(), "tools", "rg")
+	root := filepath.Join(t.TempDir(), "share", "agentdock", "bin")
 	if err := os.MkdirAll(root, 0700); err != nil {
 		t.Fatal(err)
 	}
@@ -31,6 +31,9 @@ func realBundleCopy(t *testing.T) string {
 		if err := os.WriteFile(filepath.Join(root, expected.Path), data, 0600); err != nil {
 			t.Fatal(err)
 		}
+	}
+	if err := os.WriteFile(filepath.Join(root, "manifest.json"), ManifestBytes(), 0600); err != nil {
+		t.Fatal(err)
 	}
 	return root
 }
@@ -144,4 +147,15 @@ func TestRequiredConcurrentBundleReadersKeepExecutableImmutable(t *testing.T) {
 		t.Fatalf("completed searches leaked a read lock: %v", err)
 	}
 	writable.Close()
+}
+
+func TestRequiredRealBundleRejectsChangedManifest(t *testing.T) {
+	root := realBundleCopy(t)
+	data := strings.ReplaceAll(string(ManifestBytes()), `"15.2.0"`, `"99.0.0"`)
+	if err := os.WriteFile(filepath.Join(root, "manifest.json"), []byte(data), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Open(context.Background(), root); !errors.Is(err, ErrIntegrity) {
+		t.Fatalf("changed manifest accepted: %v", err)
+	}
 }

@@ -38,6 +38,9 @@ import (
 type Result = toolcore.Result
 
 type Runtime struct {
+	sidebarHistory           sidebarHistoryCache
+	pluginStore              *pluginregistry.Store
+	contextSnapshots         *contextSnapshots
 	display                  *config.DisplayPreferences
 	connections              clientConnections
 	executionMaintenanceDone chan struct{}
@@ -100,16 +103,28 @@ func NewRuntime(cfg config.Config) (*Runtime, error) {
 	if err != nil {
 		return nil, err
 	}
-	pluginStore, err := pluginregistry.New(cfg.AgentDockHome)
+	pluginStore, err := pluginregistry.New(cfg.AgentDockHome, cfg.ContextBudget())
 	if err != nil {
 		return nil, err
 	}
+	initialized := false
+	defer func() {
+		if !initialized {
+			pluginStore.Close()
+		}
+	}()
 	mcpClients, err := mcpclient.NewManager(cfg.AgentDockHome, envs)
 	if err != nil {
 		return nil, err
 	}
-	if err := mcpClients.SetExternalServerProvider(func() (map[string]mcpclient.ServerConfig, error) {
-		members, providerErr := pluginStore.MCPServers()
+	defer func() {
+		if !initialized {
+			_ = mcpClients.Close()
+		}
+	}()
+	mcpClients.SetExternalServerPreparation(pluginStore.PrepareMCPData)
+	if err := mcpClients.SetExternalServerProvider(func(ctx context.Context) (map[string]mcpclient.ServerConfig, error) {
+		members, providerErr := pluginStore.MCPServersContext(ctx)
 		if providerErr != nil {
 			return nil, providerErr
 		}
@@ -152,7 +167,13 @@ func NewRuntime(cfg config.Config) (*Runtime, error) {
 		return nil, fmt.Errorf("initialize insertion queue: %w", err)
 	}
 	commandCtx, commandCancel := context.WithCancel(context.Background())
+	defer func() {
+		if !initialized {
+			commandCancel()
+		}
+	}()
 	runtime := &Runtime{
+		pluginStore: pluginStore, contextSnapshots: newContextSnapshots(cfg),
 		display:           config.NewDisplayPreferences(cfg.AgentDockHome, cfg.MCPAppsEnabled),
 		executionInstance: instance, insertions: insertions, capabilityManager: mcpClients,
 		conversations: conversations, permissions: permissions, tasks: tasks,
@@ -162,6 +183,11 @@ func NewRuntime(cfg config.Config) (*Runtime, error) {
 		toolNames: toolNames, toolValidators: toolValidators,
 		commandCtx: commandCtx, commandCancel: commandCancel,
 	}
+	defer func() {
+		if !initialized {
+			runtime.contextSnapshots.Close()
+		}
+	}()
 	if err := runtime.skills.SetPluginSkillProvider(
 		func(name string) (toolskill.PluginSkill, bool, error) {
 			member, found, lookupErr := pluginStore.Skill(name)
@@ -186,7 +212,17 @@ func NewRuntime(cfg config.Config) (*Runtime, error) {
 		_ = mcpClients.Close()
 		return nil, fmt.Errorf("initialize plugin Skill provider: %w", err)
 	}
-	runtime.command = toolcommand.New(func() config.Config { return runtime.cfg }, ws, envs, skills.ResolveActive, runtime.commandExecutionContext)
+	runtime.command = toolcommand.New(func() config.Config { return runtime.cfg }, ws, envs, func(ctx context.Context, ref string) (toolcommand.SkillLease, error) {
+		resolved, release, err := skills.Acquire(ctx, ref)
+		if err != nil {
+			return toolcommand.SkillLease{}, err
+		}
+		envName := ""
+		if resolved.SourceType == "managed" {
+			envName = resolved.Name
+		}
+		return toolcommand.SkillLease{PluginName: resolved.PluginName, Name: resolved.Name, Root: resolved.Root, EnvName: envName, Release: release}, nil
+	}, runtime.commandExecutionContext)
 	runtime.command.SetActivityStore(activityStore)
 	runtime.files = toolfile.New(ws, skills.ResolveResource, runtime.command.CommandEnv)
 	mcpClients.SetCallObserver(runtime.observeRemoteTool)
@@ -282,6 +318,7 @@ func NewRuntime(cfg config.Config) (*Runtime, error) {
 		return nil, fmt.Errorf("recover execution state: %w", err)
 	}
 	runtime.startExecutionMaintenance()
+	initialized = true
 	return runtime, nil
 }
 
@@ -335,6 +372,12 @@ func (r *Runtime) Close() error {
 		if err := r.drainExecutionsOnClose(); err != nil {
 			closeErrors = append(closeErrors, err)
 		}
+		if r.contextSnapshots != nil {
+			r.contextSnapshots.Close()
+		}
+		if r.pluginStore != nil {
+			r.pluginStore.Close()
+		}
 		r.closeErr = errors.Join(closeErrors...)
 	})
 	return r.closeErr
@@ -370,6 +413,12 @@ func (r *Runtime) ToolDefinition(name string) (ToolDefinition, bool) {
 }
 
 func (r *Runtime) Call(ctx context.Context, name string, args map[string]any) (Result, error) {
+	if name == "agentdock_context" || name == "workspace_context" {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, r.cfg.ContextBudget())
+		defer cancel()
+	}
+
 	if args == nil {
 		args = map[string]any{}
 	}

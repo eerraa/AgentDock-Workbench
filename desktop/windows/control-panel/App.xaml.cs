@@ -48,19 +48,9 @@ public partial class App : System.Windows.Application
             Environment.Exit(TaskAdminService.Run(e.Args));
             return;
         }
-        if (e.Args.Any(argument => string.Equals(argument, "--run-core-task", StringComparison.OrdinalIgnoreCase)))
-        {
-            ShutdownMode = ShutdownMode.OnExplicitShutdown;
-            if (TryGetStartupRuntimeRoot(e.Args, "--run-core-task", out var taskRuntimeRoot))
-            {
-                _ = RunCoreTaskAndExitAsync(taskRuntimeRoot);
-            }
-            else
-            {
-                Environment.Exit(2);
-            }
-            return;
-        }
+        // Task Scheduler's --run-core-task action is owned by the stable native shim.
+        // A direct generation WPF launch must never create a competing runtime host.
+        if (e.Args.Contains("--run-core-task", StringComparer.OrdinalIgnoreCase)) { Environment.Exit(2); return; }
         if (TryGetStartupRuntimeRoot(e.Args, "--start-core", out var coreRuntimeRoot))
         {
             ShutdownMode = ShutdownMode.OnExplicitShutdown;
@@ -75,13 +65,19 @@ public partial class App : System.Windows.Application
         }
 
         if (TryStartActivityWindow(e.Args)) return;
+        var background = e.Args.Any(arg => string.Equals(arg, "--background", StringComparison.OrdinalIgnoreCase));
 
         _singleInstanceMutex = new Mutex(true, MutexName, out var createdNew);
         _ownsSingleInstanceMutex = createdNew;
         if (!createdNew)
         {
-            using var existingEvent = new EventWaitHandle(false, EventResetMode.AutoReset, ShowEventName);
-            existingEvent.Set();
+            // 后台启动只保证 Tray 常驻，不能把已经运行的控制面板主动弹到前台。
+            // 用户从开始菜单、快捷方式或安装完成页显式打开时才发送 ShowEvent。
+            if (!background)
+            {
+                using var existingEvent = new EventWaitHandle(false, EventResetMode.AutoReset, ShowEventName);
+                existingEvent.Set();
+            }
             Shutdown();
             return;
         }
@@ -96,7 +92,6 @@ public partial class App : System.Windows.Application
         StartShowEventListener();
         StartCompletionNotifications();
 
-        var background = e.Args.Any(arg => string.Equals(arg, "--background", StringComparison.OrdinalIgnoreCase));
         if (!background)
         {
             ShowControlPanel();
@@ -121,24 +116,6 @@ public partial class App : System.Windows.Application
             }
         }
         return !string.IsNullOrWhiteSpace(runtimeRoot);
-    }
-
-    private async Task RunCoreTaskAndExitAsync(string runtimeRoot)
-    {
-        var exitCode = 1;
-        try
-        {
-            using var runtime = new RuntimeService(runtimeRoot);
-            exitCode = await runtime.RunElevatedCoreTaskAsync();
-        }
-        catch (Exception ex)
-        {
-            RecordBackgroundStartupFailure(runtimeRoot, "elevated-core", ex);
-        }
-        finally
-        {
-            Environment.Exit(exitCode);
-        }
     }
 
     private async Task StartRuntimeComponentAndExitAsync(string runtimeRoot, string component)
@@ -184,6 +161,17 @@ public partial class App : System.Windows.Application
     {
         Dispatcher.Invoke(() =>
         {
+            // A standalone activity monitor first activates the existing tray
+            // instance. It never launches another process or starts a runtime.
+            if (ControlPanelWindow is null)
+            {
+                if (EventWaitHandle.TryOpenExisting(ShowEventName, out var existing))
+                {
+                    using (existing) existing.Set();
+                    return;
+                }
+                ControlPanelWindow = new MainWindow(Runtime);
+            }
             if (!ControlPanelWindow.IsVisible)
             {
                 ControlPanelWindow.Show();
@@ -305,13 +293,12 @@ public partial class App : System.Windows.Application
         }
 
         _traySnapshotRefreshInProgress = true;
+        var observationStarted = DateTimeOffset.Now;
         try
         {
             _traySnapshot = await Runtime.GetSnapshotAsync();
-            if (ControlPanelWindow.IsVisible)
-            {
-                ControlPanelWindow.ApplyLiveRuntimeStatus(_traySnapshot);
-            }
+            if (_exitRequested) return;
+            ControlPanelWindow?.ApplyLiveRuntimeStatus(_traySnapshot);
             if (_notifyIcon is not null)
             {
                 _notifyIcon.Text = TruncateNotifyIconText($"AgentDock: {GetTrayStatusText(_traySnapshot)}");
@@ -323,6 +310,7 @@ public partial class App : System.Windows.Application
         }
         catch
         {
+            ControlPanelWindow?.ApplyRuntimeStatusUnavailable(observationStarted);
             if (_notifyIcon is not null)
             {
                 _notifyIcon.Text = $"AgentDock: {UiText.Get("StatusUnavailable")}";
@@ -406,15 +394,7 @@ public partial class App : System.Windows.Application
 
     private static string GetTrayStatusText(RuntimeSnapshot snapshot)
     {
-        if (snapshot.PublicTunnelDown)
-        {
-            return UiText.Get("PublicTunnelDown");
-        }
-        if (snapshot.Healthy)
-        {
-            return UiText.Get("RunningNormally");
-        }
-        return snapshot.CoreRunning ? UiText.Get("ServiceError") : UiText.Get("Stopped");
+        return UiText.Get(RuntimeDisplayStatus.From(snapshot).HeaderKey);
     }
 
     private static void OpenDocumentation()

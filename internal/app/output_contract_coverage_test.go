@@ -16,6 +16,7 @@ type outputContractCoverageEntry struct {
 // ToolDefinitions 是公开工具定义的单一事实源，tools/list 从同一 registry 派生；新增工具但忘记补契约测试时，门禁会直接失败。
 var outputContractCoverageInventory = map[string]outputContractCoverageEntry{
 	"agentdock_context": {Variants: []string{"success"}},
+	"workspace_context": {Variants: []string{"success"}},
 	"read_file":         {Variants: []string{"success"}},
 	"list_dir":          {Variants: []string{"success"}},
 	"search_text":       {Variants: []string{"success"}},
@@ -36,6 +37,7 @@ var outputContractCoverageInventory = map[string]outputContractCoverageEntry{
 	"skill_package":            {Variants: []string{"validate", "install", "uninstall", "enable", "disable", "env_list"}},
 	"mcp_manage":               {Variants: []string{"list", "add"}},
 	"mcp_tool_search":          {Variants: []string{"success"}},
+	"mcp_tool_list":            {Variants: []string{"success"}},
 	"mcp_tool_inspect":         {Variants: []string{"success"}},
 	"mcp_tool_call":            {Variants: []string{"success"}},
 	"view_image":               {Variants: []string{"success"}},

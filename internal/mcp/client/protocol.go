@@ -10,9 +10,11 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	sdkjsonrpc "github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/uvwt/agentdock/internal/activity"
 	"github.com/uvwt/agentdock/internal/buildinfo"
 	"github.com/uvwt/agentdock/internal/config"
 	"github.com/uvwt/agentdock/internal/envstore"
@@ -30,13 +32,17 @@ type protocolClient interface {
 }
 
 type sdkProtocolClient struct {
-	cfg        ServerConfig
-	session    *mcpsdk.ClientSession
-	command    *exec.Cmd
-	controller *processcontrol.Controller
-	stderr     *tailBuffer
-	closeOnce  sync.Once
-	closeErr   error
+	progressSequence atomic.Uint64
+	progressMu       sync.Mutex
+	progressSinks    map[string]activity.ProgressSink
+	toolsRevision    atomic.Uint64
+	cfg              ServerConfig
+	session          *mcpsdk.ClientSession
+	command          *exec.Cmd
+	controller       *processcontrol.Controller
+	stderr           *tailBuffer
+	closeOnce        sync.Once
+	closeErr         error
 }
 
 func newStreamableHTTPClient(cfg ServerConfig) *sdkProtocolClient {
@@ -54,8 +60,17 @@ func (c *sdkProtocolClient) initialize(ctx context.Context) error {
 	}
 	client := mcpsdk.NewClient(
 		&mcpsdk.Implementation{Name: config.ServerName, Version: buildinfo.Version},
-		&mcpsdk.ClientOptions{Capabilities: &mcpsdk.ClientCapabilities{}},
+		&mcpsdk.ClientOptions{Capabilities: &mcpsdk.ClientCapabilities{}, ProgressNotificationHandler: c.receiveProgress},
 	)
+	client.AddSendingMiddleware(c.validateDiscoveryResponse)
+	client.AddReceivingMiddleware(func(next mcpsdk.MethodHandler) mcpsdk.MethodHandler {
+		return func(ctx context.Context, method string, request mcpsdk.Request) (mcpsdk.Result, error) {
+			if method == "notifications/tools/list_changed" {
+				c.toolsRevision.Add(1)
+			}
+			return next(ctx, method, request)
+		}
+	})
 	session, err := client.Connect(ctx, transport, nil)
 	if err != nil {
 		_ = c.cleanupProcess()
@@ -134,7 +149,7 @@ func (c *sdkProtocolClient) listTools(ctx context.Context) ([]Tool, error) {
 		}
 		tool, err := convertSDKTool(remote)
 		if err != nil {
-			return nil, newError("MCP_INVALID_RESPONSE", "decode MCP tool definition", false, map[string]any{"server": c.cfg.Name, "tool": remote.Name}, err)
+			return nil, newError("MCP_INVALID_RESPONSE", "decode MCP tool definition", false, map[string]any{"server": c.cfg.Name}, err)
 		}
 		tools = append(tools, tool)
 	}
@@ -145,7 +160,10 @@ func (c *sdkProtocolClient) callTool(ctx context.Context, name string, arguments
 	if c.session == nil {
 		return nil, newError("MCP_CONNECTION_FAILED", "MCP session is not initialized", true, map[string]any{"server": c.cfg.Name}, nil)
 	}
-	result, err := c.session.CallTool(ctx, &mcpsdk.CallToolParams{Name: name, Arguments: arguments})
+	params := &mcpsdk.CallToolParams{Name: name, Arguments: arguments}
+	unregister := c.registerProgress(ctx, name, params)
+	defer unregister()
+	result, err := c.session.CallTool(ctx, params)
 	if err != nil {
 		return nil, c.wrapSDKError("call MCP tool", err)
 	}
@@ -187,6 +205,10 @@ func (c *sdkProtocolClient) cleanupProcess() error {
 func (c *sdkProtocolClient) wrapSDKError(operation string, err error) error {
 	if err == nil {
 		return nil
+	}
+	var local *Error
+	if errors.As(err, &local) {
+		return err
 	}
 	details := map[string]any{"server": c.cfg.Name}
 	if c.stderr != nil && c.stderr.String() != "" {
@@ -230,13 +252,21 @@ func convertSDKTool(remote *mcpsdk.Tool) (Tool, error) {
 	if err != nil {
 		return Tool{}, fmt.Errorf("decode annotations: %w", err)
 	}
+	metadata, err := jsonObject(remote)
+	if err != nil {
+		return Tool{}, err
+	}
+	for _, key := range []string{"name", "title", "description", "inputSchema", "outputSchema", "annotations"} {
+		delete(metadata, key)
+	}
 	return Tool{
-		Name:         remote.Name,
-		Title:        remote.Title,
-		Description:  remote.Description,
-		InputSchema:  input,
-		OutputSchema: output,
-		Annotations:  annotations,
+		StandardMetadata: metadata,
+		Name:             remote.Name,
+		Title:            remote.Title,
+		Description:      remote.Description,
+		InputSchema:      input,
+		OutputSchema:     output,
+		Annotations:      annotations,
 	}, nil
 }
 
@@ -262,22 +292,22 @@ func jsonObject(value any) (map[string]any, error) {
 func stdioEnvironment(cfg ServerConfig) ([]string, error) {
 	environment := envstore.MinimalSystemEnv()
 	for childName, hostName := range cfg.EnvFromEnv {
-		value, ok := os.LookupEnv(hostName)
+		value, ok := cfg.RuntimeEnv[hostName]
 		if !ok {
-			return nil, newError(
-				"MCP_AUTH_REQUIRED",
-				"required MCP stdio environment variable is missing",
-				false,
-				map[string]any{"server": cfg.Name, "env": hostName},
-				nil,
-			)
+			value, ok = os.LookupEnv(hostName)
 		}
-		environment[childName] = value
+		if !ok {
+			return nil, newError("MCP_AUTH_REQUIRED", "required MCP stdio environment variable is missing", false, map[string]any{"server": cfg.Name, "env": hostName}, nil)
+		}
+		setProcessEnvironmentValue(environment, childName, value)
 	}
-	// 独立 MCP 环境文件属于该服务的明确配置，覆盖最小系统环境和 env_from_env 映射。
+	// Scoped values override the minimal inherited environment.
 	for key, value := range cfg.RuntimeEnv {
-		environment[key] = value
+		setProcessEnvironmentValue(environment, key, value)
 	}
+	// Preserve the raw portable package precedence used by the fork. Explicit
+	// adapter bindings have already been removed from PackageEnv, so scoped
+	// secrets are resolved separately and never replaced by placeholder text.
 	for key, value := range cfg.PackageEnv {
 		setProcessEnvironmentValue(environment, key, value)
 	}
@@ -300,7 +330,7 @@ func resolveHTTPHeaders(cfg ServerConfig) (http.Header, error) {
 	headers.Set("User-Agent", config.ServerName+"/"+buildinfo.Version)
 	for header, envName := range cfg.HeaderEnv {
 		value, ok := cfg.RuntimeEnv[envName]
-		if !ok {
+		if !ok && cfg.SourceType != "plugin" {
 			value, ok = os.LookupEnv(envName)
 		}
 		if !ok || value == "" {
@@ -372,6 +402,8 @@ func (b *tailBuffer) String() string {
 }
 
 // ServerVersion reports initialize metadata, never a version parsed from prose.
+func (c *sdkProtocolClient) ToolsRevision() uint64 { return c.toolsRevision.Load() }
+
 func (c *sdkProtocolClient) ServerVersion() string {
 	if c.session == nil {
 		return ""
@@ -381,4 +413,37 @@ func (c *sdkProtocolClient) ServerVersion() string {
 		return ""
 	}
 	return info.ServerInfo.Version
+}
+
+// Validate before the SDK's ListTools filters header annotations. The pinned
+// SDK dereferences each remote Tool there, so validating only convertSDKTool
+// is too late. Optional request params (including typed nil) are left alone.
+func (c *sdkProtocolClient) validateDiscoveryResponse(next mcpsdk.MethodHandler) mcpsdk.MethodHandler {
+	return func(ctx context.Context, method string, request mcpsdk.Request) (mcpsdk.Result, error) {
+		result, err := next(ctx, method, request)
+		if err != nil || method != "tools/list" {
+			return result, err
+		}
+		if err := validDiscoveryResult(result); err != nil {
+			return nil, newError("MCP_INVALID_RESPONSE", "invalid MCP tools/list response", false, map[string]any{"server": c.cfg.Name}, err)
+		}
+		return result, nil
+	}
+}
+
+func validDiscoveryResult(result mcpsdk.Result) error {
+	list, ok := result.(*mcpsdk.ListToolsResult)
+	if !ok || list == nil || list.Tools == nil {
+		return errors.New("tools/list requires a result object with a tools array")
+	}
+	for _, remote := range list.Tools {
+		if remote == nil {
+			return errors.New("tools/list contains a null tool")
+		}
+		input, err := jsonMap(remote.InputSchema)
+		if err != nil || input == nil {
+			return errors.New("tool inputSchema must be an object")
+		}
+	}
+	return nil
 }

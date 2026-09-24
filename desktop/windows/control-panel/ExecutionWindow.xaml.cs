@@ -46,8 +46,6 @@ public partial class ExecutionWindow : Window
     private bool _initialized, _updating, _tickRunning, _closed, _following = true, _preferencesWritable = true;
     private bool _streamConnected;
     private long _lastPending;
-    private string _warningCode = "";
-    private string _infoDetailsCode = "";
     private string[] _menuSelection = [];
     private string[]? _frozenSelection;
     public ObservableCollection<ExecutionObject> Objects { get; } = [];
@@ -63,7 +61,8 @@ public partial class ExecutionWindow : Window
         DesktopTheme.Initialize(runtime.RuntimeRoot);
         InitializeComponent(); DataContext = this;
         InitializeComposer();
-        _activityClock.Changed += (_, _) => UpdateStopButton();
+		InitializeSidebar();
+		_activityClock.Changed += (_, _) => { UpdateStopButton(); RefreshAutoProjectExpansion(); };
         CollectionViewSource.GetDefaultView(Objects).GroupDescriptions.Add(new PropertyGroupDescription(nameof(ExecutionObject.WorkspaceKey)));
         _filterTimer.Tick += async (_, _) => { _filterTimer.Stop(); await GuardAsync(() => LoadObjectsAsync()); };
         _callSearchTimer.Tick += async (_, _) => { _callSearchTimer.Stop(); await GuardAsync(() => LoadCallsAsync(false)); };
@@ -84,16 +83,12 @@ public partial class ExecutionWindow : Window
         catch (Exception ex) when (ex is HttpRequestException or IOException or JsonException or InvalidOperationException or UnauthorizedAccessException or ArgumentException)
         { if (!_closed) Warn(ex.Message); }
     }
+    private string _warningCode = "";
     private void Warn(string text, string code = "")
     {
-        if (code == "activity_retention_gap" && _preferences.DismissedNotices.Contains(code)) return;
+        if (code.Length > 0 && _preferences.DismissedNotices.Contains(code)) return;
         _warningCode = code;
         WarningText.Text = text; WarningPanel.Visibility = string.IsNullOrWhiteSpace(text) ? Visibility.Collapsed : Visibility.Visible;
-    }
-    private void WarnTerminatedConversation()
-    {
-        Warn(UiText.Get("ExecutionConversationTerminated"));
-        _warningCode = "conversation-terminated";
     }
     private static string Escape(string value) => Uri.EscapeDataString(value);
     private static string ComboValue(ComboBox combo) => (combo.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "";
@@ -112,7 +107,9 @@ public partial class ExecutionWindow : Window
     }
     private async Task RefreshOverviewAsync()
     {
-        var value = await _client.ExecutionGetAsync("/internal/runtime/execution", _lifetime.Token);
+        var overview = await _client.ReadExecutionOverviewAsync(_lifetime.Token);
+        if (_closed) return;
+        var value = overview.Value;
         var activities = value.Field("conversation_activity");
         foreach (var item in ActivityItems())
         {
@@ -122,9 +119,10 @@ public partial class ExecutionWindow : Window
             var changed = facts.Date("last_activity_at");
             if (changed is not null && (item.LastActivityAt is null || changed > item.LastActivityAt)) item.LastActivityAt = changed;
             item.PendingCount = facts.Number("pending"); item.RunningCount = facts.Number("running");
+			item.InFlight = value.Field("in_flight").Flag(item.Id); item.RefreshActivity();
         }
         _activityClock.Synchronize(value.Date("server_now"));
-        var pending = value.Field("statistics").Number("pending");
+        var pending = overview.Summary.Pending;
         AttentionButton.Visibility = pending > 0 ? Visibility.Visible : Visibility.Collapsed;
         AttentionButton.Content = UiText.Format("ExecutionAttentionCount", pending);
         if (_initialized && _preferences.Notifications && pending > _lastPending && _lastPending > 0 && WarningPanel.Visibility != Visibility.Visible) Warn(UiText.Format("ExecutionNewApprovals", pending - _lastPending));
@@ -157,7 +155,7 @@ public partial class ExecutionWindow : Window
             var value = await _client.ExecutionGetAsync("/internal/runtime/conversations/" + Escape(item.Id), SelectionToken);
             if (generation != _generation) return;
             _conversationSnapshot = value.Field("conversation");
-            if (_conversationSnapshot.HasDate("terminated_at")) WarnTerminatedConversation();
+            if (_conversationSnapshot.HasDate("terminated_at")) Warn(UiText.Get("ExecutionConversationTerminated"));
             await GuardAsync(() => LoadConversationTasksAsync(generation));
         }
         await LoadCallsAsync(false);
@@ -254,13 +252,19 @@ public partial class ExecutionWindow : Window
         if (_selected is null) return;
         var query = CallScopeQuery(); var generation = _generation;
         var epoch = older ? _streamEpoch : ++_streamEpoch;
-        if (!older) _streamCancellation?.Cancel();
+        if (!older) { _streamCancellation?.Cancel(); _historyReadFailed = false; HistoryRetryButton.Visibility = Visibility.Collapsed; }
         var value = await _client.ExecutionGetAsync("/internal/runtime/calls?" + query + "&limit=100" + (older && _before > 0 ? "&before=" + _before : ""), SelectionToken);
         if (generation != _generation || epoch != _streamEpoch || query != CallScopeQuery()) return;
-        if (!older) { Calls.Clear(); _callsById.Clear(); }
-        foreach (var call in value.Array("calls").Reverse()) UpsertCall(call);
+        var previousUpdating = _updating;
+        _updating = true;
+        try
+        {
+            if (!older) { Calls.Clear(); _callsById.Clear(); }
+            foreach (var call in value.Array("calls").Reverse()) UpsertCall(call);
+        }
+        finally { _updating = previousUpdating; }
         _before = (ulong)value.Number("next_before");
-        OlderCallsButton.IsEnabled = value.Flag("has_more");
+		_hasOlderCalls = value.Flag("has_more");
         if (value.Flag("gap")) Warn(UiText.Get("ExecutionHistoryRetentionGap"), "activity_retention_gap");
         UpdateEmpty();
         if (!older)
@@ -269,7 +273,7 @@ public partial class ExecutionWindow : Window
             _streamCancellation?.Dispose(); _streamCancellation = CancellationTokenSource.CreateLinkedTokenSource(SelectionToken);
             _streamTask = _client.ObserveExecutionsAsync(query, _cursor, message => Dispatcher.InvokeAsync(() => ApplyStreamAsync(message, generation, epoch)).Task.Unwrap(), _streamCancellation.Token);
         }
-        if (_following && Calls.Count > 0) await Dispatcher.InvokeAsync(() => CallsList.ScrollIntoView(Calls[^1]), DispatcherPriority.Loaded);
+        if (!older && _following && Calls.Count > 0) await Dispatcher.InvokeAsync(() => CallsList.ScrollIntoView(Calls[^1]), DispatcherPriority.Loaded);
     }
     private bool MatchesScope(ExecutionCallRow row)
     {
@@ -280,15 +284,12 @@ public partial class ExecutionWindow : Window
     private void UpsertCall(JsonElement value)
     {
         var incoming = new ExecutionCallRow(value);
-        if (incoming.RequestReceivedAt is { } received)
+        var activeItem = ActivityItems().FirstOrDefault(candidate => candidate.Id == incoming.ConversationId);
+        if (activeItem is not null)
         {
-            var item = ActivityItems().FirstOrDefault(candidate => candidate.Id == incoming.ConversationId);
-            if (item is not null)
-            {
-                if (item.LastToolCallAt is null || received > item.LastToolCallAt) item.LastToolCallAt = received;
-                if (incoming.LastActivityAt is { } changed && (item.LastActivityAt is null || changed > item.LastActivityAt)) item.LastActivityAt = changed;
-                _activityClock.Refresh();
-            }
+            if (incoming.RequestReceivedAt is { } received && (activeItem.LastToolCallAt is null || received > activeItem.LastToolCallAt)) activeItem.LastToolCallAt = received;
+            if (incoming.LastActivityAt is { } changed && (activeItem.LastActivityAt is null || changed > activeItem.LastActivityAt)) activeItem.LastActivityAt = changed;
+            activeItem.RefreshActivity(); _activityClock.Refresh();
         }
         if (!MatchesScope(incoming)) return;
         var status = ComboValue(CallStatusCombo);
@@ -312,14 +313,14 @@ public partial class ExecutionWindow : Window
     private async Task ApplyStreamAsync(ExecutionStreamMessage message, int generation, int epoch)
     {
         if (_closed || generation != _generation || epoch != _streamEpoch) return;
-        if (message.Kind == "connected") { _streamConnected = true; ConnectionButton.ToolTip = UiText.Get("ExecutionStreamConnected"); }
-        else if (message.Kind == "disconnected") { _streamConnected = false; ConnectionButton.ToolTip = UiText.Get("ExecutionStreamReconnectingPrefix") + message.Message; }
+		if (message.Kind == "connected") { _streamConnected = true; FollowButton.ToolTip = UiText.Get("ExecutionFollowLatest"); }
+		else if (message.Kind == "disconnected") { _streamConnected = false; FollowButton.ToolTip = UiText.Get("ExecutionStreamReconnectingPrefix") + message.Message; }
         else if (message.Kind == "call")
         {
             _cursor = Math.Max(_cursor, message.Seq); UpsertCall(message.Value); UpdateEmpty();
             if (_following && Calls.Count > 0) CallsList.ScrollIntoView(Calls[^1]);
         }
-        else if (message.Kind is "gap" or "warning") Warn(UiText.Get("ExecutionHistoryUnavailable") + (message.Message.Length > 0 ? "\n\n" + UiText.Get("ExecutionOriginalDiagnostic") + "\n" + message.Message : ""), message.Kind == "gap" ? "activity_retention_gap" : "");
+        else if (message.Kind is "gap" or "warning") Warn(message.Message.Length > 0 ? message.Message : UiText.Get("ExecutionHistoryUnavailable"), message.Kind == "gap" ? "activity_retention_gap" : "");
         else if (message.Kind == "reset") await GuardAsync(() => LoadCallsAsync(false));
     }
     private async Task LoadCallDetailAsync(ExecutionCallRow row)
@@ -328,7 +329,11 @@ public partial class ExecutionWindow : Window
         try
         {
             var value = await _client.ExecutionGetAsync("/internal/runtime/calls/" + Escape(row.Id), SelectionToken);
-            if (!_closed && _detailCall?.Id == row.Id) row.ApplyDetail(value);
+			if (!_closed && ReferenceEquals(_detailCall, row))
+			{
+				row.ApplyDetail(value);
+				await Task.WhenAll(LoadPayloadPageAsync(row, "request", false, true), LoadPayloadPageAsync(row, "response", false, true));
+			}
         }
         finally { _detailReads.Remove(row.Id); }
     }
@@ -339,7 +344,7 @@ public partial class ExecutionWindow : Window
         try
         {
             var value = await _client.ExecutionGetAsync("/internal/runtime/conversations/" + Escape(row.ConversationId), SelectionToken);
-            row.SetSource(ExecutionObject.From(value.Field("conversation"), "conversation").Title, "resolved");
+            row.SetSource(value.Field("conversation").Text("title"), "resolved");
         }
         catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Gone) { row.SetSource("", "deleted"); }
         catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound) { row.SetSource("", "unavailable"); }
@@ -357,9 +362,9 @@ public partial class ExecutionWindow : Window
         {
             _ticks++;
             if (_ticks % 3 == 0) await GuardAsync(RefreshOverviewAsync);
-            if (_detailCall is { } row && CallDetailsTabs.Visibility == Visibility.Visible && row.CanStop) await GuardAsync(() => LoadCallDetailAsync(row));
+			if (_detailCall is { } row && CallDetailsTabs.Visibility == Visibility.Visible && (row.CanStop || !row.DetailLoaded || row.RequestPayload.NeedsLoad || row.ResponsePayload.NeedsLoad)) await GuardAsync(() => LoadCallDetailAsync(row));
             if (_ticks % 5 == 0 && _selectedTaskId.Length > 0 && TaskDetailsPanel.Visibility != Visibility.Visible) await GuardAsync(() => LoadTaskAsync(_selectedTaskId, "", false));
-            if (System.Diagnostics.Stopwatch.GetElapsedTime(_lastSidebarRefresh) >= TimeSpan.FromSeconds(60) && ObjectsList.SelectedItems.Count <= 1 && _frozenSelection is null && _openMenus == 0 && _sidebarPaging.Count == 0) await GuardAsync(() => LoadObjectsAsync());
+			if (System.Diagnostics.Stopwatch.GetElapsedTime(_lastSidebarRefresh) >= TimeSpan.FromSeconds(_streamConnected ? 60 : 3) && ObjectsList.SelectedItems.Count <= 1 && _frozenSelection is null && _openMenus == 0 && _sidebarPaging.Count == 0 && !_sidebarLoading) await GuardAsync(() => LoadObjectsAsync());
             if (_ticks % 3 == 0) await GuardAsync(RefreshInsertionsAsync);
             UpdateStopButton();
         }
@@ -370,7 +375,6 @@ public partial class ExecutionWindow : Window
     private void UpdateFollowButton() { FollowButton.Content = _following ? UiText.Get("ExecutionFollow") : UiText.Get("ExecutionResumeFollowing"); FollowButton.SetResourceReference(Button.BackgroundProperty, _following ? "SelectionBackground" : "PanelBackground"); }
     private void OpenDetails(string title, FrameworkElement pane)
     {
-        _infoDetailsCode = "";
         DetailsPanel.Height = pane == InsertionPanel ? double.NaN : Math.Clamp(ActualHeight * 0.36, 180, 300);
         DetailsPanel.Visibility = Visibility.Visible; DetailsTitle.Text = title;
         DetailsHeader.Visibility = pane == InsertionPanel ? Visibility.Collapsed : Visibility.Visible;
@@ -383,11 +387,6 @@ public partial class ExecutionWindow : Window
         UpdateComposerAvailability();
     }
     private void ShowInfo(string title, string text) { InfoDetailsText.Text = text; OpenDetails(title, InfoDetailsText); }
-    private void ShowConnectionInfo(string text)
-    {
-        ShowInfo(UiText.Get("ExecutionConnection"), text);
-        _infoDetailsCode = "connection";
-    }
     private async void Objects_Changed(object sender, SelectionChangedEventArgs e)
     {
         if (_updating || !_initialized) return;
@@ -396,7 +395,7 @@ public partial class ExecutionWindow : Window
     }
     private async void Calls_Changed(object sender, SelectionChangedEventArgs e)
     {
-        if (e.Source != CallsList || CallsList.SelectedItem is not ExecutionCallRow row) return;
+		if (_updating || e.Source != CallsList || CallsList.SelectedItem is not ExecutionCallRow row) return;
         _detailCall = row; CallDetailsTabs.DataContext = row; CallDetailsTabs.SelectedIndex = 0;
         OpenDetails(row.Title, CallDetailsTabs); await GuardAsync(() => LoadCallDetailAsync(row));
     }
@@ -420,7 +419,6 @@ public partial class ExecutionWindow : Window
     private void CallSearch_Changed(object sender, TextChangedEventArgs e) { if (!_initialized) return; _callSearchTimer.Stop(); _callSearchTimer.Start(); }
     private async void CallFilter_Changed(object sender, SelectionChangedEventArgs e) { if (_initialized) await GuardAsync(() => LoadCallsAsync(false)); }
     private async void MoreObjects_Click(object sender, RoutedEventArgs e) => await GuardAsync(() => LoadObjectsAsync(true));
-    private async void OlderCalls_Click(object sender, RoutedEventArgs e) { _following = false; UpdateFollowButton(); await GuardAsync(() => LoadCallsAsync(true)); }
     private void Follow_Click(object sender, RoutedEventArgs e) { _following = !_following; UpdateFollowButton(); if (_following && Calls.Count > 0) CallsList.ScrollIntoView(Calls[^1]); }
     private async void LinkTask_Click(object sender, RoutedEventArgs e)
     {
@@ -432,27 +430,37 @@ public partial class ExecutionWindow : Window
         var detailed = _preferences.DetailedCalls;
         CallsList.ItemTemplate = (DataTemplate)Resources[detailed ? "DetailedCallRowTemplate" : "CallRowTemplate"];
         DetailedCallsHeader.Visibility = detailed ? Visibility.Visible : Visibility.Collapsed;
-        CompactCallsChoice.IsChecked = !detailed;
-        DetailedCallsChoice.IsChecked = detailed;
+		CallPresentationButton.Content = detailed ? UiText.Get("ExecutionDetailed") : UiText.Get("ExecutionCompact");
+		CallPresentationButton.ToolTip = detailed ? UiText.Get("ExecutionSwitchCompact") : UiText.Get("ExecutionSwitchDetailed");
     }
-    private void CallPresentation_Changed(object sender, RoutedEventArgs e)
+	private async void CallPresentation_Click(object sender, RoutedEventArgs e)
     {
-        if (!_initialized || sender is not RadioButton choice) return;
-        var detailed = choice.Tag?.ToString() == "detailed";
-        if (_preferences.DetailedCalls == detailed) return;
-        _preferences.DetailedCalls = detailed;
+		if (!_initialized) return;
+		var anchor = CaptureCallAnchor();
+		_preferences.DetailedCalls = !_preferences.DetailedCalls;
         SavePreferences();
         ApplyCallPresentation();
+		await RestoreCallAnchorAsync(anchor);
     }
-    private void Calls_Wheel(object sender, MouseWheelEventArgs e) { if (e.Delta > 0) { _following = false; UpdateFollowButton(); } }
-    private void Calls_ScrollChanged(object sender, ScrollChangedEventArgs e) { if (e.VerticalChange < 0 && e.ExtentHeightChange == 0) { _following = false; UpdateFollowButton(); } }
+	private async void Calls_Wheel(object sender, MouseWheelEventArgs e)
+	{
+		if (e.Delta <= 0) return;
+		_following = false; UpdateFollowButton();
+		await TryLoadOlderCallsAsync();
+	}
+	private async void Calls_ScrollChanged(object sender, ScrollChangedEventArgs e)
+	{
+		if (_restoringCallScroll || _loadingOlderCalls || _updating || e.ExtentHeightChange != 0 || e.VerticalChange >= 0) return;
+		_following = false; UpdateFollowButton();
+		await TryLoadOlderCallsAsync();
+	}
     private async void Refresh_Click(object sender, RoutedEventArgs e) => await GuardAsync(async () => { await LoadWorkspacesAsync(); await LoadObjectsAsync(); await LoadCallsAsync(false); await RefreshOverviewAsync(); });
     private void CloseDetails_Click(object sender, RoutedEventArgs e) => CloseDetails();
     private void DismissWarning_Click(object sender, RoutedEventArgs e)
     {
         var code = _warningCode;
         Warn("");
-        if (code == "activity_retention_gap") { _preferences.DismissedNotices.Add(code); SavePreferences(); }
+        if (code.Length > 0) { _preferences.DismissedNotices.Add(code); SavePreferences(); }
     }
     private void Window_SizeChanged(object sender, SizeChangedEventArgs e) { ShowTimestamps = ActualWidth >= 1050; if (DetailsPanel is not null && DetailsPanel.Visibility == Visibility.Visible && _bottomPane != InsertionPanel) DetailsPanel.Height = Math.Clamp(ActualHeight * 0.36, 180, 300); }
     private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
@@ -464,7 +472,7 @@ public partial class ExecutionWindow : Window
         {
             var path = Path.Combine(_runtime.RuntimeRoot, "execution-center-settings.json"); if (!File.Exists(path)) return;
             if (new FileInfo(path).Length > 131072) throw new IOException(UiText.Get("ExecutionPreferencesTooLarge"));
-            _preferences = JsonSerializer.Deserialize<ExecutionPreferences>(File.ReadAllText(path), ActivityClient.JsonOptions) ?? throw new JsonException(UiText.Get("ExecutionPreferencesInvalid"));
+            _preferences = JsonSerializer.Deserialize<ExecutionPreferences>(File.ReadAllText(path), ActivityClient.JsonOptions) ?? new();
             _preferences.FontSize = Math.Clamp(_preferences.FontSize, 12, 20); _preferences.RetentionDays = Math.Clamp(_preferences.RetentionDays, 1, 3650);
             _preferences.CollapsedWorkspaces ??= []; _preferences.SavedFilters ??= [];
             _preferences.DismissedNotices ??= []; _preferences.AdditionalPreferences ??= [];
@@ -479,12 +487,11 @@ public partial class ExecutionWindow : Window
         _preferences.Theme = DesktopTheme.Preference;
         var path = Path.Combine(_runtime.RuntimeRoot, "execution-center-settings.json"); var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try { if (File.Exists(path)) {
-            if (new FileInfo(path).Length > 131072) throw new IOException(UiText.Get("ExecutionPreferencesTooLarge"));
+            if (new FileInfo(path).Length > 131072) throw new IOException(UiText.Get("ThemePreferencesTooLarge"));
             var current = JsonSerializer.Deserialize<ExecutionPreferences>(File.ReadAllText(path), ActivityClient.JsonOptions);
-            if (current is null || current.SchemaVersion < 1) throw new JsonException(UiText.Get("ExecutionPreferencesInvalid"));
             if (current is { SchemaVersion: > 3 }) throw new IOException(UiText.Get("ExecutionPreferencesNewer"));
             if (current?.DismissedNotices is { } dismissed) _preferences.DismissedNotices.UnionWith(dismissed);
-            if (current?.AdditionalPreferences is { } additional) foreach (var pair in additional) _preferences.AdditionalPreferences[pair.Key] = pair.Value;
+            if (current?.AdditionalPreferences is { } additional) foreach (var pair in additional) _preferences.AdditionalPreferences.TryAdd(pair.Key, pair.Value);
         }
         _preferences.SchemaVersion = 3; _preferences.LastView = _conversationView; _preferences.LastKind = "conversation"; Directory.CreateDirectory(_runtime.RuntimeRoot); File.WriteAllText(temporary, JsonSerializer.Serialize(_preferences, ActivityClient.JsonOptions)); File.Move(temporary, path, true); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException) { if (!_closed) Warn(UiText.Get("ExecutionPreferencesSaveFailedPrefix") + ex.Message); }
@@ -501,6 +508,7 @@ public partial class ExecutionWindow : Window
         if (_closed) return; _closed = true; SavePreferences();
         DesktopTheme.Changed -= Theme_Changed;
         _activityClock.Dispose();
+		StopSidebar();
         _filterTimer.Stop(); _callSearchTimer.Stop(); _pulse.Stop(); _lifetime.Cancel(); _selectionCancellation?.Cancel(); _streamCancellation?.Cancel();
         _client.Dispose(); _selectionCancellation?.Dispose(); _streamCancellation?.Dispose(); _lifetime.Dispose();
         // Closing an observer window never stops tasks or command processes.

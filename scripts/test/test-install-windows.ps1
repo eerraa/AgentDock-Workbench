@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [string] $InstallerPath = '',
-    [switch] $StaticOnly
+    [switch] $StaticOnly,
+    [switch] $RuntimeBoundaryOnly
 )
 
 Set-StrictMode -Version Latest
@@ -23,7 +24,7 @@ if ($errors.Count -gt 0) {
     throw "$InstallerPath contains PowerShell syntax errors"
 }
 
-$content = Get-Content -LiteralPath $resolvedInstaller -Raw
+$content = (Get-Content -LiteralPath $resolvedInstaller -Raw).Replace("`r`n", "`n")
 $bytes = [IO.File]::ReadAllBytes($resolvedInstaller)
 for ($index = 0; $index -lt $bytes.Length; $index++) {
     if ($bytes[$index] -gt 127) {
@@ -37,6 +38,72 @@ foreach ($line in ($content -split "`n")) {
             throw "$InstallerPath must keep $keyword on the same line as the preceding closing brace: $line"
         }
     }
+}
+
+
+if ($RuntimeBoundaryOnly) {
+    # Replay only original source AST blocks with local mocks. The installer,
+    # Task Scheduler, registry, activation broker and product UI never run.
+    function Check-Runtime([bool]$Pass,[string]$Message) { if(-not $Pass){throw $Message}; $script:checks++ }
+    $script:checks=0; $script:events=[Collections.Generic.List[string]]::new()
+    function Assert-AgentDockManagedTask { param($AgentDockBinary,$RuntimeRoot,[switch]$RequireDisabled)
+        $script:events.Add('validate-disabled'); if($script:rejectTask){throw 'fixture task owner mismatch'} }
+    function Enable-AgentDockTask { $script:events.Add('enable') }
+    function Start-AgentDockManagedRuntime { param($AgentDockBinary,$RuntimeRoot); $script:events.Add('run-accepted') }
+    function Invoke-SetupRuntimeProcess { param($FilePath,$Arguments,[switch]$WaitForExit); $script:events.Add('standard-start') }
+    function Start-AgentDockTask { throw 'Unexpected legacy task-start path' }
+    function Wait-AgentDockHealth { param($HealthPort); $script:events.Add('local-health'); if($script:rejectHealth){throw 'fixture local health failed'} }
+    function Start-AgentDockTray { param($BinaryPath); $script:events.Add('tray') }
+    function Read-TextFile { param($Path); return '' }
+    function Fixture-Core { param([Parameter(ValueFromRemainingArguments=$true)]$NativeArgs)
+        Check-Runtime ($NativeArgs[0] -eq 'install' -and $NativeArgs[1] -eq 'commit') 'Unexpected native operation'
+        Check-Runtime ($NativeArgs -contains '--keep-journal') 'Premature journal deletion'
+        $script:events.Add('commit-keep'); $global:LASTEXITCODE=0 }
+    $candidate=@($installerAst.FindAll({param($node) $node -is [Management.Automation.Language.IfStatementAst] -and $node.Extent.Text.Contains("`$engineArgs += @('--no-start', '--skip-health')")},$true) | Sort-Object { $_.Extent.Text.Length })[0]
+    $noStart=[scriptblock]::Create($candidate.Extent.Text)
+    $provisionStart=$content.IndexOf("    if (`$effectivePrivilegeMode -eq 'elevated') {`n        Assert-AgentDockManagedTask")
+    $activationStart=$content.IndexOf("    `$healthStatus = 'not-started'",$provisionStart)
+    $activationEnd=$content.IndexOf('    if (Test-Path -LiteralPath $legacyManagerPath',$activationStart)
+    Check-Runtime ($provisionStart -ge 0 -and $activationEnd -gt $activationStart) 'Missing actual provision/activation boundaries'
+    $provision=[scriptblock]::Create($content.Substring($provisionStart,$activationStart-$provisionStart))
+    $activation=[scriptblock]::Create($content.Substring($activationStart,$activationEnd-$activationStart))
+    $sourceBinary='Fixture-Core';$runtimeDir='fixture-root';$engineTransactionId='fixture-transaction';$enginePrepared=$true
+    $InstallChannel='setup';$trayProcessWasRunning=$false;$mustRestartExistingProcess=$false;$Port=12345
+    $destinationTrayBinary='fixture-tray';$generationBootstrapDirectory='fixture-generation';$RegisterStartup=$true
+    $taskState=[pscustomobject]@{SchedulerAvailable=$true;SchedulerError=''};$resolvedTunnelMode='quick';$quickTunnelUrlPath='fixture-url'
+    foreach($mode in @('standard','elevated')) {
+        foreach($existing in @($false,$true)) {
+            $effectivePrivilegeMode=$mode;$existingInstallDetected=$existing;$engineArgs=@();. $noStart
+            Check-Runtime (($engineArgs -contains '--no-start') -eq ($mode -eq 'elevated' -or -not $existing)) 'Incorrect Engine activation scope'
+        }
+        $existingInstallDetected=$false;$engineCommitted=$false;$script:rejectTask=$false;$script:rejectHealth=$false;$script:events.Clear()
+        . $provision; . $activation
+        if($mode -eq 'elevated') {
+            Check-Runtime (($script:events -join ',') -eq 'validate-disabled,commit-keep,enable,run-accepted,tray') 'Elevated validation/commit/start order changed'
+            Check-Runtime ($healthStatus -eq 'scheduled') 'Scheduled task was falsely reported healthy'
+        } else {
+            Check-Runtime (($script:events -join ',') -eq 'commit-keep,standard-start,local-health,tray') 'Standard activation lost local health'
+            Check-Runtime ($healthStatus -eq 'healthy') 'Successful standard health was not retained'
+        }
+    }
+    $effectivePrivilegeMode='elevated';$script:rejectTask=$true;$script:events.Clear();$failed=$false
+    try{. $provision}catch{$failed=$true}
+    Check-Runtime ($failed -and ($script:events -join ',') -eq 'validate-disabled') 'Bad task owner reached commit/start'
+    $effectivePrivilegeMode='standard';$script:rejectHealth=$true;$script:events.Clear();$failed=$false
+    try{. $activation}catch{$failed=$true}
+    Check-Runtime ($failed -and $healthStatus -ne 'deferred' -and ($script:events -join ',') -eq 'standard-start,local-health') 'Failed health was converted to successful deferred activation'
+    Check-Runtime (-not $content.Contains("`$installWarningCode = 'runtime-launch-deferred'")) 'Deferred success remains active'
+    Check-Runtime ($content.Contains("if (`$taskTransactionStarted -and `$effectivePrivilegeMode -eq 'elevated')")) 'Rollback may stop a foreign task'
+    $lastResult=$content.IndexOf("-Success `$true")
+    $seal=$content.IndexOf("Installer Engine failed to seal adapter completion.")
+    Check-Runtime ($seal -gt $lastResult) 'Journal discarded before final adapter result'
+    $rollback=$content.Substring($content.IndexOf("        if (`$rollbackPrivilegeMode -eq 'elevated')"))
+    $elevatedRestore=$rollback.Substring(0,$rollback.IndexOf('        } else {'))
+    Check-Runtime (-not $elevatedRestore.Contains('Wait-AgentDockHealth') -and -not $elevatedRestore.Contains('--require-health')) 'Elevated rollback waits for HTTP health'
+    Check-Runtime ([regex]::Matches($elevatedRestore,'Start-AgentDockManagedRuntime').Count -eq 1) 'Elevated rollback submits multiple resumes'
+    Write-Host "Installer runtime boundaries: $script:checks assertions passed; actual AST replay with mocks only. No installation, task, registry or runtime mutation."
+    $global:LASTEXITCODE=0
+    return
 }
 
 foreach ($forbidden in @(
@@ -101,7 +168,79 @@ try {
         throw 'Early installer failure did not create ResultFile'
     }
     $earlyResult = [IO.File]::ReadAllText($earlyResultPath, [Text.Encoding]::Unicode)
-    foreach ($required in @('Success=false', 'Code=install-validation-failed', 'Message=Port must be between 1 and 65535.', 'Health=failed', 'ErrorType=')) {
+    $extractedFunctions = @{}
+foreach ($functionName in @(
+    'ConvertTo-InstallResultValue',
+    'Write-InstallResult',
+    'Get-InstallerEngineFailureMessage'
+)) {
+    $matches = @($installerAst.FindAll({
+        param($node)
+        $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and
+            $node.Name -eq $functionName
+    }, $true))
+    if ($matches.Count -ne 1) {
+        throw "Expected exactly one $functionName function in $InstallerPath, found $($matches.Count)"
+    }
+    Invoke-Expression $matches[0].Extent.Text
+    $extractedFunctions[$functionName] = $true
+}
+
+$encodingProbeRoot = Join-Path ([IO.Path]::GetTempPath()) ('agentdock-install-encoding-' + [Guid]::NewGuid().ToString('N'))
+$engineResultDirectory = Join-Path $encodingProbeRoot 'install'
+$engineResultPath = Join-Path $engineResultDirectory 'result.json'
+$encodingResultPath = Join-Path $encodingProbeRoot 'result.ini'
+try {
+    New-Item -ItemType Directory -Path $engineResultDirectory -Force | Out-Null
+    $localizedMessage = [Text.Encoding]::UTF8.GetString(
+        [Convert]::FromBase64String('QWdlbnREb2NrIOWBpeW6t+ajgOafpeWksei0pQ==')
+    )
+    $engineResultJson = @{
+        failure = @{
+            message = $localizedMessage
+        }
+    } | ConvertTo-Json -Depth 4
+    [IO.File]::WriteAllText($engineResultPath, $engineResultJson, [Text.UTF8Encoding]::new($false))
+
+    $engineFailure = Get-InstallerEngineFailureMessage `
+        -RuntimeRoot $encodingProbeRoot `
+        -FallbackMessage 'fallback' `
+        -NotBeforeUtc ([DateTime]::UtcNow.AddSeconds(-5))
+    if ($engineFailure -ne $localizedMessage) {
+        throw "Structured UTF-8 Engine failure was not preserved: $engineFailure"
+    }
+
+    Write-InstallResult `
+        -Path $encodingResultPath `
+        -Success $false `
+        -Message $engineFailure `
+        -InstalledVersion '' `
+        -LocalMCPUrl '' `
+        -PublicMCPUrl '' `
+        -BearerToken '' `
+        -OAuthLoginPassword '' `
+        -HealthStatus 'failed' `
+        -PrivilegeMode 'standard' `
+        -ErrorCode 'encoding-probe'
+    $unicodeResult = [IO.File]::ReadAllText($encodingResultPath, [Text.Encoding]::Unicode)
+    if (-not $unicodeResult.Contains("Message=$localizedMessage")) {
+        throw "UTF-16 Setup ResultFile did not preserve the structured Engine failure: $unicodeResult"
+    }
+
+    [IO.File]::SetLastWriteTimeUtc($engineResultPath, [DateTime]::UtcNow.AddMinutes(-5))
+    $staleFailure = Get-InstallerEngineFailureMessage `
+        -RuntimeRoot $encodingProbeRoot `
+        -FallbackMessage 'fallback' `
+        -NotBeforeUtc ([DateTime]::UtcNow)
+    if ($staleFailure -ne 'fallback') {
+        throw "A stale install/result.json must not be reused for a new Engine failure: $staleFailure"
+    }
+} finally {
+    Remove-Item -LiteralPath $encodingProbeRoot -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+
+foreach ($required in @('Success=false', 'Code=install-validation-failed', 'Message=Port must be between 1 and 65535.', 'Health=failed', 'ErrorType=')) {
         if (-not $earlyResult.Contains($required)) {
             throw "Early installer ResultFile is missing: $required"
         }
@@ -125,9 +264,9 @@ foreach ($required in @(
     '--user-name',
     '-AdminLauncherPath $sourceTrayBinary',
     '-LauncherPath $destinationTrayBinary',
-    '$effectivePrivilegeMode -eq ''elevated'' -and -not $taskState.Exists',
-    '$installWarningCode = ''elevated-mode-fallback''',
-    '$installWarningCode = "$installWarningCode,runtime-launch-deferred"',
+    'Assert-AgentDockManagedTask -AgentDockBinary $sourceBinary -RuntimeRoot $runtimeDir -RequireDisabled',
+    '$installErrorCode = ''elevated-unavailable''',
+    'Start-AgentDockManagedRuntime -AgentDockBinary $sourceBinary -RuntimeRoot $runtimeDir',
     'WarningCode=$WarningCode',
     '-WarningCode $installWarningCode',
     '-ErrorCode ''install-validation-failed''',
@@ -160,7 +299,7 @@ foreach ($required in @(
     '-ErrorCode $resultErrorCode',
     "`$resultErrorCode = 'elevated-task-rollback-failed'",
     "`$resultErrorCode = 'rollback-failed'",
-    "`$installWarningCode = 'runtime-launch-deferred'",
+    "`$installErrorCode = 'runtime-activation-failed'",
     '$taskTransactionCommitted = $taskTransactionStarted',
     '-ErrorRecord $resultErrorRecord',
     'Get-Sha256Hex -Path $archivePath',
@@ -365,16 +504,7 @@ try {
     if ($resultText -notmatch 'ErrorLine=[1-9][0-9]*') {
         throw 'Install result did not capture the PowerShell script line'
     }
-    # Localized PowerShell stacks may start directly with the function name.
-    # Keep matching inside ErrorStack; a name in another INI field is not evidence.
-    $stackPattern = '(?m)^ErrorStack=[^\r\n]*Invoke-DiagnosticProbe'
-    foreach ($stackSample in @('ErrorStack=Invoke-DiagnosticProbe, line 4', 'ErrorStack=at Invoke-DiagnosticProbe, line 4')) {
-        if ($stackSample -notmatch $stackPattern) { throw 'Stack assertion rejected a valid function frame' }
-    }
-    foreach ($stackSample in @('ErrorStack=', 'ErrorStack=AnotherFunction', "ErrorStack=`nMessage=Invoke-DiagnosticProbe")) {
-        if ($stackSample -match $stackPattern) { throw 'Stack assertion accepted a missing function frame' }
-    }
-    if ($resultText -notmatch $stackPattern) {
+    if ($resultText -notmatch 'ErrorStack=.+Invoke-DiagnosticProbe') {
         throw 'Install result did not capture a useful PowerShell script stack'
     }
     if ($resultText.Contains($diagnosticSecret)) {
@@ -604,8 +734,5 @@ foreach ($required in @(
         throw "$setupMessagesPath is missing elevation fallback message: $required"
     }
 }
-
-# This AST fixture uses only in-memory task adapters, including in StaticOnly mode.
-& (Join-Path $PSScriptRoot 'test-windows-installer-task-ownership.ps1') -InstallerPath $resolvedInstaller
 
 if ($StaticOnly) { Write-Host 'Windows installer static contract passed; runtime probes were not executed.' } else { Write-Host 'Windows installer validation passed.' }

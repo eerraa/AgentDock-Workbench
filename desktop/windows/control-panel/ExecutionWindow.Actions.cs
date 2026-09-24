@@ -152,7 +152,6 @@ public partial class ExecutionWindow
         var warnings = result.Array("warnings").Select(value => value.GetString()).Where(value => !string.IsNullOrWhiteSpace(value));
         var text = result.Flag("has_remaining_activity") ? UiText.Get("ExecutionTerminationNeedsVerification") : stopping ? UiText.Get("ExecutionConversationExecutionBlocked") : UiText.Get("ExecutionConversationResumed");
         Warn(text + string.Join("\n", warnings.Prepend("")));
-        if (stopping && !result.Flag("has_remaining_activity")) _warningCode = "conversation-terminated";
     }
     private async void Terminate_Click(object sender, RoutedEventArgs e) { if (_selected is { } selected) await GuardAsync(() => ChangeLifecycleAsync(selected.Id, "terminate")); }
     private async Task LinkTaskAsync(string conversation)
@@ -171,42 +170,6 @@ public partial class ExecutionWindow
         var change = ExecutionDialogs.Permissions(this, detail);
         if (change is not null) { await _client.ExecutionPostAsync("/internal/runtime/permissions", change, _lifetime.Token); await RefreshOverviewAsync(); Warn(UiText.Get("ExecutionPermissionsSaved")); }
     });
-    private async void Connection_Click(object sender, RoutedEventArgs e) => await GuardAsync(async () =>
-    {
-        ConnectionButton.IsEnabled = false;
-        try
-        {
-            var value = await _client.ExecutionGetAsync("/internal/runtime/execution/connection", _lifetime.Token);
-            var text = UiText.Get("ExecutionLocalStreamPrefix") + (_streamConnected ? UiText.Get("ExecutionConnected") : UiText.Get("ExecutionReconnecting")) + "\n" + value.Text("summary") + "\n" + value.Text("detail");
-            ShowConnectionInfo(text + "\n\n" + UiText.Get("ExecutionCheckingPublicAccess"));
-            var manifestPath = Path.Combine(_runtime.RuntimeRoot, "runtime.json");
-            var publicState = UiText.Get("ExecutionNoPublicAddress");
-            if (File.Exists(manifestPath))
-            {
-                if (new FileInfo(manifestPath).Length > 1048576) throw new IOException(UiText.Get("ExecutionRuntimeConfigTooLarge"));
-                using var manifest = JsonDocument.Parse(await File.ReadAllTextAsync(manifestPath, _lifetime.Token));
-                var origin = manifest.RootElement.Text("public_url", manifest.RootElement.Text("public_access_url"));
-                if (!string.IsNullOrWhiteSpace(origin))
-                {
-                    var probe = await _runtime.TestUrlAsync(origin, _lifetime.Token);
-                    publicState = (probe.Success ? UiText.Get("ExecutionPublicReachable") : UiText.Get("ExecutionPublicProbeFailed")) + "\n" + probe.Message;
-                }
-            }
-            // Public discovery is independent of the latest authenticated client
-            // evidence. A successful anonymous probe never means reauthorization.
-            value = await _client.ExecutionGetAsync("/internal/runtime/execution/connection", _lifetime.Token);
-            if (InfoDetailsText.Visibility == Visibility.Visible && _infoDetailsCode == "connection")
-                InfoDetailsText.Text = UiText.Get("ExecutionLocalStreamPrefix") + (_streamConnected ? UiText.Get("ExecutionConnected") : UiText.Get("ExecutionReconnecting")) + "\n" + value.Text("summary") + "\n" + value.Text("detail") + "\n\n" + publicState;
-        }
-        finally { ConnectionButton.IsEnabled = true; }
-    });
-    private void Theme_Click(object sender, RoutedEventArgs e)
-    {
-        var menu = Menu(Anchor(sender, ConversationHeader));
-        foreach (var choice in new[] { ("system", UiText.Get("ExecutionSystemTheme")), ("light", UiText.Get("ExecutionLightTheme")), ("dark", UiText.Get("ExecutionDarkTheme")) })
-            ChoiceMenu(menu, choice.Item2, _preferences.Theme == choice.Item1, () => { ApplyTheme(choice.Item1); SavePreferences(); return Task.CompletedTask; });
-        OpenMenu(menu);
-    }
     private void SettingsMenu_Click(object sender, RoutedEventArgs e)
     {
         var menu = Menu(Anchor(sender, ConversationHeader));
@@ -241,7 +204,7 @@ public partial class ExecutionWindow
         if (_callView == "archived") ActionMenu(menu, UiText.Get("ExecutionUnarchiveSelected"), () => BatchAsync("call", fixedIds, "unarchive"), fixedIds.Length > 0);
         OpenMenu(menu);
     }
-    private void CopyCommand_Click(object sender, RoutedEventArgs e) { if (_detailCall is { } row) CopyText(row.Command); }
+    private void CopyCommand_Click(object sender, RoutedEventArgs e) { if (_detailCall is { } row) CopyText(row.RequestText); }
     private void CopyOutput_Click(object sender, RoutedEventArgs e) { if (_detailCall is { } row) CopyText(row.Output); }
     private void CopyText(string value) { try { Clipboard.SetText(value); } catch (System.Runtime.InteropServices.ExternalException) { Warn(UiText.Get("ExecutionClipboardBusy")); } }
     private async void StopCall_Click(object sender, RoutedEventArgs e) { if (_detailCall is { CanStop:true } row) await GuardAsync(async () => { await _client.ExecutionPostAsync("/internal/runtime/calls/" + Escape(row.Id) + "/stop", new { }, _lifetime.Token); await LoadCallDetailAsync(row); }); }

@@ -10,6 +10,24 @@ public sealed record ExecutionStreamMessage(string Kind, ulong Seq, JsonElement 
 
 internal sealed partial class ActivityClient
 {
+    internal async Task<ExecutionOverview> ReadExecutionOverviewAsync(CancellationToken token)
+    {
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(token);
+        deadline.CancelAfter(TimeSpan.FromSeconds(4));
+        var connection = await runtime.GetActivityConnectionAsync(deadline.Token).ConfigureAwait(false);
+        using var request = Request(HttpMethod.Get, new Uri(connection.Origin, "/internal/runtime/execution"), connection.BearerToken);
+        using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, deadline.Token).ConfigureAwait(false);
+        var data = await ReadBoundedAsync(response.Content, 8 * 1024 * 1024, deadline.Token).ConfigureAwait(false);
+        if (!response.IsSuccessStatusCode) throw ResponseError(response, data);
+        using var document = JsonDocument.Parse(data);
+        var value = document.RootElement.Clone();
+        var summary = ExecutionSummarySnapshot.Parse(value);
+        // Never publish a response from the previous port/authentication binding.
+        var current = await runtime.GetActivityConnectionAsync(deadline.Token).ConfigureAwait(false);
+        if (connection != current) throw new InvalidDataException("Execution overview connection changed during the request.");
+        return new(value, summary);
+    }
+
     internal Task<JsonElement> ExecutionGetAsync(string path, CancellationToken token) => SendAsync<JsonElement>(HttpMethod.Get, path, null, token);
     internal Task<JsonElement> ExecutionPostAsync(string path, object value, CancellationToken token) => SendAsync<JsonElement>(HttpMethod.Post, path, value, token);
     internal async Task ObserveExecutionsAsync(string query, ulong after, Func<ExecutionStreamMessage, Task> received, CancellationToken token)
@@ -65,11 +83,11 @@ internal sealed class ExecutionSseReader(TextReader reader)
         while (true)
         {
             var line = await ReadLineAsync(token).ConfigureAwait(false); if (line is null) return null;
-            characters += line.Length; if (characters > MaximumEventCharacters) throw new IOException(UiText.Get("ExecutionEventTooLarge"));
+            characters += line.Length; if (characters > MaximumEventCharacters) throw new IOException(UiText.Get("ExecutionStreamSizeLimit"));
             if (line.Length == 0)
             {
                 if (data.Length == 0) return new("heartbeat", 0, default);
-                if (!ulong.TryParse(id, out var sequence)) throw new IOException(UiText.Get("ExecutionEventSequenceInvalid"));
+                if (!ulong.TryParse(id, out var sequence)) throw new IOException(UiText.Get("ExecutionStreamInvalidSequence"));
                 using var parsed = JsonDocument.Parse(data.ToString());
                 return new(kind, sequence, parsed.RootElement.Clone());
             }
@@ -78,7 +96,7 @@ internal sealed class ExecutionSseReader(TextReader reader)
             switch (key)
             {
                 case "event": kind = value; break;
-                case "id": if (value.Contains('\0')) throw new IOException(UiText.Get("ExecutionEventIdInvalid")); id = value; break;
+                case "id": if (value.Contains('\0')) throw new IOException(UiText.Get("ExecutionStreamInvalidId")); id = value; break;
                 case "data": if (data.Length > 0) data.Append('\n'); data.Append(value); break;
             }
         }
@@ -94,7 +112,7 @@ internal sealed class ExecutionSseReader(TextReader reader)
                 if (_count == 0) return line.Length == 0 ? null : line.ToString();
             }
             var end = Array.IndexOf(_buffer, '\n', _offset, _count - _offset); var length = (end < 0 ? _count : end) - _offset;
-            if (line.Length + length > MaximumEventCharacters) throw new IOException(UiText.Get("ExecutionEventLineTooLarge"));
+            if (line.Length + length > MaximumEventCharacters) throw new IOException(UiText.Get("ExecutionStreamLineLimit"));
             line.Append(_buffer, _offset, length); _offset += length;
             if (end >= 0) { _offset++; if (line.Length > 0 && line[^1] == '\r') line.Length--; return line.ToString(); }
         }

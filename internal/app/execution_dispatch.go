@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"maps"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/uvwt/agentdock/internal/activity"
@@ -51,6 +52,10 @@ func (r *Runtime) callObserved(ctx context.Context, spec ToolSpec, original map[
 	if initial.Label == "" {
 		created.LabelSource = "tool"
 	}
+	if parent.CallID == "" {
+		created.Request = &activity.Payload{State: "pending"}
+		created.Response = &activity.Payload{State: "pending"}
+	}
 	if parent.CallID == "" && resolveErr == nil && !activity.IsDiagnostic(ctx) && !activity.IsLocalManagement(ctx) && initial.ConversationID != "" {
 		stamp := received.UTC()
 		created.RequestReceivedAt = &stamp
@@ -70,17 +75,31 @@ func (r *Runtime) callObserved(ctx context.Context, spec ToolSpec, original map[
 				returnErr = errors.Join(returnErr, fmt.Errorf("panic outcome could not be persisted: %w", auditErr))
 			}
 		}
-		if auditErr := r.recordRPCReturn(binding, spec.Name, received, result, returnErr); auditErr != nil {
+		redactor := r.executionRedactor(original)
+		// SDK and Bridge adapters persist the final envelope once, after adding the
+		// service catalog and trusted user insertions. Direct Runtime callers have
+		// no adapter and retain their actual returned result here.
+		if !bindResponseAudit(ctx, binding, spec.Name, redactor, received, rpcReturnStatus(result, returnErr)) {
+			value := map[string]any{"result": result, "isError": returnErr != nil || resultReportsFailure(result)}
 			if returnErr != nil {
-				returnErr = errors.Join(returnErr, fmt.Errorf("RPC audit persistence failed; verify side effects before retrying: %w", auditErr))
-			} else {
-				if result == nil {
-					result = Result{}
+				value["error"] = returnErr.Error()
+			}
+			r.recordExecutionPayload(binding, spec.Name, "response", value, redactor)
+			if auditErr := r.recordRPCReturn(binding, spec.Name, received, result, returnErr); auditErr != nil {
+				if returnErr != nil {
+					returnErr = errors.Join(returnErr, fmt.Errorf("RPC audit persistence failed; verify side effects before retrying: %w", auditErr))
+				} else {
+					if result == nil {
+						result = Result{}
+					}
+					result["activity_warning"] = "RPC returned, but its timing record could not be saved. Verify side effects before retrying."
 				}
-				result["activity_warning"] = "RPC returned, but its timing record could not be saved. Verify side effects before retrying."
 			}
 		}
 	}()
+	if resolveErr == nil {
+		r.recordExecutionPayload(initial, spec.Name, "request", original, r.executionRedactor(original))
+	}
 	fail := func(failure error) (Result, error) {
 		event := activity.Event{Binding: state.binding, Kind: "call.completed", Status: "failed", ToolName: spec.Name, Title: spec.Title, ElapsedMS: time.Since(state.started).Milliseconds(), Summary: r.executionRedactor(original).Text(failure.Error(), 4096)}
 		if event.Binding.Validate() != nil {
@@ -165,7 +184,7 @@ func (r *Runtime) callObserved(ctx context.Context, spec ToolSpec, original map[
 	}
 	r.updateConversationName(ctx, state.binding.ConversationID, spec.Name, args)
 	description := r.describeExecution(spec.Name, args, state)
-	if err = r.appendExecution(activity.Event{Binding: state.binding, LabelSource: labelSource, Kind: "call.bound", ToolName: spec.Name, Title: description, ParameterSummary: r.executionParameters(args), DisplayCommand: r.executionRedactor(args).Text(stringArg(args, "cmd"), 4096), Summary: description}); err != nil {
+	if err = r.appendExecution(activity.Event{Binding: state.binding, LabelSource: labelSource, TitleText: executionDescriptionText(spec.Name, description), SummaryText: executionDescriptionText(spec.Name, description), Kind: "call.bound", ToolName: spec.Name, Title: description, ParameterSummary: r.executionParameters(args), DisplayCommand: r.executionRedactor(args).Text(stringArg(args, "cmd"), 4096), Summary: description}); err != nil {
 		return fail(err)
 	}
 	if spec.Name == "file_edit" {
@@ -256,6 +275,7 @@ func cloneExecutionArguments(input map[string]any) (map[string]any, error) {
 	return result, nil
 }
 func (r *Runtime) appendExecution(event activity.Event) error {
+	event = describeOwnedManagement(event)
 	if event.OwnerInstance == "" {
 		event.OwnerPID = os.Getpid()
 		event.OwnerInstance = r.executionInstance
@@ -306,8 +326,8 @@ func (r *Runtime) describeExecution(name string, args map[string]any, state exec
 	if name == "mcp_tool_call" {
 		return r.executionRedactor(args).Text(stringArg(args, "name"), 512)
 	}
-	descriptions := map[string]string{"agentdock_context": "加载上下文", "read_file": "读取文件", "list_dir": "列出目录", "search_text": "搜索文本", "exec_command": "运行命令", "file_edit": "EDIT_FILE", "task_manage": "任务管理", "workspace_manage": "工作区管理", "mcp_tool_search": "发现动态工具", "mcp_tool_inspect": "加载工具 Schema", "mcp_tool_call": "调用动态工具", "plugin_load": "展开插件", "session_observe": "查看命令会话", "session_act": "控制命令会话"}
-	title := descriptions[name]
+
+	title := executionDescriptions[name]
 	if title == "" {
 		title = name
 	}
@@ -321,6 +341,19 @@ func (r *Runtime) describeExecution(name string, args map[string]any, state exec
 		}
 	}
 	return r.executionRedactor(args).Text(title, 512)
+}
+
+var executionDescriptions = map[string]string{"agentdock_context": "加载上下文", "workspace_context": "读取工作区规则", "read_file": "读取文件", "list_dir": "列出目录", "search_text": "搜索文本", "exec_command": "运行命令", "file_edit": "file_edit", "task_manage": "任务管理", "workspace_manage": "工作区管理", "mcp_tool_search": "发现动态工具", "mcp_tool_list": "读取工具目录", "mcp_tool_inspect": "加载工具 Schema", "mcp_tool_call": "调用动态工具", "plugin_load": "展开插件", "session_observe": "查看命令会话", "session_act": "控制命令会话"}
+
+func executionDescriptionText(name, raw string) *activity.LocalizedText {
+	if name == "mcp_tool_call" {
+		return nil
+	}
+	prefix := executionDescriptions[name]
+	if prefix == "" || !strings.HasPrefix(raw, prefix) {
+		return nil
+	}
+	return activity.NewLocalizedText("tool."+name, raw, strings.TrimPrefix(raw, prefix))
 }
 
 // Persist only bounded operational selectors, not file bodies, credentials or
@@ -363,7 +396,7 @@ func (r *Runtime) executionScope(p *preparedExecution) string {
 func (r *Runtime) executionFacts(name string, args map[string]any, state executionObservation) permission.Facts {
 	f := permission.Facts{Binding: state.binding, Tool: name, Action: stringArg(args, "action")}
 	switch name {
-	case "agentdock_context", "read_file", "list_dir", "search_text", "view_image", "mcp_tool_search", "mcp_tool_inspect", "plugin_load", "session_observe", "browser_snapshot":
+	case "agentdock_context", "workspace_context", "read_file", "list_dir", "search_text", "view_image", "mcp_tool_search", "mcp_tool_list", "mcp_tool_inspect", "plugin_load", "session_observe", "browser_snapshot":
 		f.ReadOnly = true
 	case "task_manage":
 		switch f.Action {
@@ -469,6 +502,19 @@ func (r *Runtime) validateSessionOwnership(ctx context.Context, name string, arg
 
 func (r *Runtime) executePrepared(ctx context.Context, p *preparedExecution) (result Result, returnErr error) {
 	defer r.executionWG.Done()
+	ctx, finishProgress := r.observeExecutionProgress(ctx, p.state.binding, p.spec.Name, r.executionRedactor(p.args))
+	defer finishProgress()
+	defer func() {
+		// The approval response has already returned. Preserve the eventual
+		// outcome of the fixed approved operation on its original root call.
+		if p.approvalID != "" {
+			value := map[string]any{"result": result, "isError": returnErr != nil || resultReportsFailure(result)}
+			if returnErr != nil {
+				value["error"] = returnErr.Error()
+			}
+			r.recordExecutionPayload(p.state.binding, p.spec.Name, "response", value, r.executionRedactor(p.args))
+		}
+	}()
 	defer func() {
 		r.executionMu.Lock()
 		if live := r.activeCalls[p.state.binding.CallID]; live != nil {
@@ -573,6 +619,10 @@ func (r *Runtime) finishPrepared(p *preparedExecution, result Result, err error,
 		}
 	}
 	event := activity.Event{Binding: p.state.binding, Kind: "call.completed", Status: status, ToolName: p.spec.Name, Title: r.describeExecution(p.spec.Name, p.args, p.state), ApprovalID: p.approvalID, PermissionMode: p.decision.Mode, RuleID: p.decision.RuleID, ElapsedMS: time.Since(p.state.started).Milliseconds(), Summary: summary}
+	event.TitleText = executionDescriptionText(p.spec.Name, event.Title)
+	if err == nil && !(p.spec.Name == "task_manage" && stringArg(p.args, "summary") != "") {
+		event.SummaryText = executionDescriptionText(p.spec.Name, event.Summary)
+	}
 	event.OperationElapsedMS = &event.ElapsedMS
 	event.ExecutionElapsedMS, event.WaitElapsedMS = p.state.executionMS, p.state.waitMS
 	if p.spec.Name == "file_edit" {
@@ -600,6 +650,9 @@ func (r *Runtime) finishPrepared(p *preparedExecution, result Result, err error,
 		_, _ = r.permissions.Settle(context.Background(), p.approvalID, final, summary)
 	}
 	if err != nil {
+		if result != nil {
+			return r.decorateExecution(result, p), r.executionError(err, p.state)
+		}
 		return nil, r.executionError(err, p.state)
 	}
 	return r.decorateExecution(result, p), nil

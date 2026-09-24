@@ -21,6 +21,11 @@ var (
 )
 
 type ServerConfig struct {
+	SourceType  string `json:"-"`
+	PluginName  string `json:"-"`
+	DisplayName string `json:"-"`
+	StorageKey  string `json:"-"`
+
 	PluginVersion   string `json:"-"`
 	revision        string
 	overrideSource  string
@@ -45,16 +50,19 @@ type ServerConfig struct {
 }
 
 type Tool struct {
-	Name           string         `json:"name"`
-	Title          string         `json:"title,omitempty"`
-	Description    string         `json:"description,omitempty"`
-	InputSchema    map[string]any `json:"inputSchema"`
-	OutputSchema   map[string]any `json:"outputSchema,omitempty"`
-	Annotations    map[string]any `json:"annotations,omitempty"`
-	inputValidator *toolInputValidator
+	StandardMetadata map[string]any `json:"metadata,omitempty"`
+	Name             string         `json:"name"`
+	Title            string         `json:"title,omitempty"`
+	Description      string         `json:"description,omitempty"`
+	InputSchema      map[string]any `json:"inputSchema"`
+	OutputSchema     map[string]any `json:"outputSchema,omitempty"`
+	Annotations      map[string]any `json:"annotations,omitempty"`
+	inputValidator   *toolInputValidator
 }
 
 type ToolSummary struct {
+	SourceType    string `json:"source_type,omitempty"`
+	PluginName    string `json:"plugin_name,omitempty"`
 	Name          string `json:"name"`
 	QualifiedName string `json:"qualified_name"`
 	Title         string `json:"title,omitempty"`
@@ -63,6 +71,10 @@ type ToolSummary struct {
 }
 
 type ServerSummary struct {
+	SourceType  string `json:"source_type,omitempty"`
+	PluginName  string `json:"plugin_name,omitempty"`
+	DisplayName string `json:"display_name,omitempty"`
+
 	Revision          string `json:"revision"`
 	OverrideSource    string `json:"override_source"`
 	ToolCountKnown    bool   `json:"tool_count_known"`

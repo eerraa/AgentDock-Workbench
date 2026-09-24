@@ -44,6 +44,12 @@ begin
     Result := GetLocalizedMessage('StaleRollbackRecoveryFailed')
   else if ErrorCode = 'elevated-task-rollback-failed' then
     Result := GetLocalizedMessage('ElevatedTaskRollbackFailed')
+  else if ErrorCode = 'elevated-unavailable' then
+    Result := GetLocalizedMessage('ElevatedUnavailable')
+  else if ErrorCode = 'runtime-activation-failed' then
+    Result := GetLocalizedMessage('RuntimeActivationFailed')
+  else if ErrorCode = 'stale-rollback-recovery-required' then
+    Result := GetLocalizedMessage('AdapterRecoveryRequired')
   else if ErrorCode = 'rollback-failed' then
     Result := GetLocalizedMessage('InstallerRollbackFailed');
   Result := Result + #13#10 + GetLocalizedMessage('InstallerExitCode') + ' ' + IntToStr(ExitCode);
@@ -557,7 +563,7 @@ begin
     PurgeState := MsgBox(
       GetLocalizedMessage('PurgeStateQuestion'),
       mbConfirmation,
-      MB_YESNO or MB_DEFBUTTON2
+      MB_YESNO
     ) = IDYES;
   Result := True;
 end;

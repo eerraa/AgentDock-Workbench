@@ -58,6 +58,16 @@ func selectRGForExecutable(ctx context.Context, executable, goos, arch string, l
 		if !errors.Is(err, os.ErrNotExist) {
 			return rgSelection{}, err
 		}
+		// Compatibility is restricted to this executable's own legacy sidecar.
+		// A present corrupt canonical bundle never downgrades to this path.
+		legacy := filepath.Join(filepath.Dir(executable), "tools", "rg")
+		verified, err = bundledrg.OpenLegacy(ctx, legacy)
+		if err == nil {
+			return rgSelection{path: verified.Path, source: "compatibility_bundled", version: verified.Version, verified: verified}, nil
+		}
+		if !errors.Is(err, os.ErrNotExist) {
+			return rgSelection{}, err
+		}
 	}
 	path, err := lookPath("rg")
 	if err != nil {

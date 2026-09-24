@@ -58,22 +58,26 @@ type MCPHostConfig struct {
 // State is never imported from an untrusted plugin package. Heavy is a host
 // override; nil follows the default supplied in the namespaced extension.
 type State struct {
-	Enabled    bool            `json:"enabled"`
-	Heavy      *bool           `json:"heavy,omitempty"`
-	Skills     map[string]bool `json:"skills,omitempty"`
-	MCPServers map[string]bool `json:"mcpServers,omitempty"`
+	Source        *Source         `json:"source,omitempty"`
+	Compatibility *Compatibility  `json:"compatibility,omitempty"`
+	Enabled       bool            `json:"enabled"`
+	Heavy         *bool           `json:"heavy,omitempty"`
+	Skills        map[string]bool `json:"skills,omitempty"`
+	MCPServers    map[string]bool `json:"mcpServers,omitempty"`
 }
 
 type Definition struct {
-	Name        string   `json:"name"`
-	Description string   `json:"description"`
-	Version     string   `json:"version"`
-	Path        string   `json:"path"`
-	Enabled     bool     `json:"enabled"`
-	Heavy       bool     `json:"heavy"`
-	Skills      []string `json:"skills,omitempty"`
-	MCPServers  []string `json:"mcp_servers,omitempty"`
-	Diagnostics []string `json:"diagnostics,omitempty"`
+	Source        *Source        `json:"source,omitempty"`
+	Compatibility *Compatibility `json:"compatibility,omitempty"`
+	Name          string         `json:"name"`
+	Description   string         `json:"description"`
+	Version       string         `json:"version"`
+	Path          string         `json:"path"`
+	Enabled       bool           `json:"enabled"`
+	Heavy         bool           `json:"heavy"`
+	Skills        []string       `json:"skills,omitempty"`
+	MCPServers    []string       `json:"mcp_servers,omitempty"`
+	Diagnostics   []string       `json:"diagnostics,omitempty"`
 }
 
 type Membership struct {
@@ -83,10 +87,12 @@ type Membership struct {
 }
 
 type SkillMember struct {
-	Name    string `json:"name"`
-	Plugin  string `json:"plugin"`
-	Path    string `json:"path"`
-	Enabled bool   `json:"enabled"`
+	Heavy       bool   `json:"heavy,omitempty"`
+	Description string `json:"description,omitempty"`
+	Name        string `json:"name"`
+	Plugin      string `json:"plugin"`
+	Path        string `json:"path"`
+	Enabled     bool   `json:"enabled"`
 }
 
 type MCPMember struct {

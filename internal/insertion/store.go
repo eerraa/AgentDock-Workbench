@@ -2,14 +2,12 @@
 package insertion
 
 import (
-	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -51,6 +49,7 @@ type Item struct {
 	SubmissionID string    `json:"submission_id"`
 	Sequence     uint64    `json:"sequence"`
 	Text         string    `json:"text"`
+	Summary      string    `json:"summary,omitempty"`
 	Status       string    `json:"status"`
 	ExpiredFrom  string    `json:"expired_from,omitempty"`
 	CreatedAt    time.Time `json:"created_at"`
@@ -117,18 +116,10 @@ func (s *Store) change(ctx context.Context, fn func(*diskState, time.Time) (bool
 		if err != nil {
 			return err
 		}
-		// Defaults apply only to a missing file, never to null or incomplete
-		// existing state. Unknown data must remain intact for its owning version.
-		state = diskState{}
-		decoder := json.NewDecoder(bytes.NewReader(data))
-		decoder.DisallowUnknownFields()
-		if err = decoder.Decode(&state); err != nil {
+		if err = json.Unmarshal(data, &state); err != nil {
 			return fmt.Errorf("read insertion store; original preserved: %w", err)
 		}
-		if err = decoder.Decode(new(any)); !errors.Is(err, io.EOF) {
-			return errors.New("insertion store has trailing data; original preserved")
-		}
-		if state.SchemaVersion != 1 || state.Items == nil || len(state.Items) > MaxRecords {
+		if state.SchemaVersion != 1 || len(state.Items) > MaxRecords {
 			return errors.New("unsupported insertion store; original preserved")
 		}
 		ids := map[string]bool{}
@@ -144,6 +135,11 @@ func (s *Store) change(ctx context.Context, fn func(*diskState, time.Time) (bool
 	dirty, err := fn(&state, s.now().UTC())
 	if err != nil || !dirty {
 		return err
+	}
+	// Summary is an API projection. Persist the original text only once;
+	// legacy readers and absolute delivery deadlines keep the existing schema.
+	for index := range state.Items {
+		state.Items[index].Summary = ""
 	}
 	data, err := json.MarshalIndent(state, "", "  ")
 	if err != nil {
@@ -172,11 +168,8 @@ func expire(state *diskState, now time.Time) bool {
 
 func (s *Store) Add(ctx context.Context, target Target, submissionID, text string) (Item, error) {
 	var result Item
-	if !validID.MatchString(target.Conversation) || target.Owner == "" || !validID.MatchString(submissionID) || strings.TrimSpace(text) == "" || !utf8.ValidString(text) {
+	if !validID.MatchString(target.Conversation) || target.Owner == "" || !validID.MatchString(submissionID) || strings.TrimSpace(text) == "" || !utf8.ValidString(text) || len(text) > MaxTextBytes {
 		return result, errors.New("insertion requires a valid target, submission id and 1–8192 UTF-8 bytes")
-	}
-	if len(text) > MaxTextBytes {
-		return result, fmt.Errorf("%w: text exceeds %d UTF-8 bytes", ErrLimit, MaxTextBytes)
 	}
 	err := s.change(ctx, func(state *diskState, now time.Time) (bool, error) {
 		dirty := expire(state, now)
@@ -188,6 +181,7 @@ func (s *Store) Add(ctx context.Context, target Target, submissionID, text strin
 						return false, ErrConflict
 					}
 					result = item
+					result.Summary = Summarize(item.Text)
 					return dirty, nil
 				}
 				if waiting(item.Status) || item.Status == "reserved" {
@@ -214,7 +208,7 @@ func (s *Store) Add(ctx context.Context, target Target, submissionID, text strin
 			return false, err
 		}
 		state.Sequence++
-		result = Item{Target: target, ID: "ins_" + hex.EncodeToString(raw), SubmissionID: submissionID, Sequence: state.Sequence, Text: text, Status: "pending", CreatedAt: now, ExpiresAt: now.Add(Lifetime), UpdatedAt: now}
+		result = Item{Target: target, ID: "ins_" + hex.EncodeToString(raw), SubmissionID: submissionID, Sequence: state.Sequence, Text: text, Summary: Summarize(text), Status: "pending", CreatedAt: now, ExpiresAt: now.Add(Lifetime), UpdatedAt: now}
 		state.Items = append(state.Items, result)
 		return true, nil
 	})
@@ -319,6 +313,8 @@ func (s *Store) List(ctx context.Context, owner, conversation string) ([]Item, e
 		for _, item := range state.Items {
 			if item.Owner == owner && item.Conversation == conversation {
 				copy := item
+				// Derive legacy/missing previews without rewriting the original text.
+				copy.Summary = Summarize(item.Text)
 				copy.Owner = ""
 				copy.RunID = ""
 				result = append(result, copy)

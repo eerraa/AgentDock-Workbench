@@ -59,14 +59,12 @@ jobs:
         run: |
           go test -race ./internal/acp \
             -run 'Test(StartPromptWaitsForPromptDispatchBeforeSteering|ClaudeSteeringFallbackCancelsOldRunAndStartsObservableTurn|CodexSteeringFallbackCancelsOldRunAndStartsObservableTurn)$' \
-            -count=1 \
+            -count=20 \
             -timeout=90s
 
-      - name: Scoped concurrency race
+      - name: Race
         if: runner.os == 'Linux'
-        # Keep the complete deterministic suite above. Instrument only the new
-        # insertion/completion/managed-MCP paths once for this candidate.
-        run: go test -race -p 2 ./internal/insertion ./internal/taskstate ./internal/mcp/client ./internal/app -run 'Test(Insertion|CompletionNotification|Managed|MetadataUpdate|SameManagerConcurrentRegistryUpdates)' -count=1 -timeout=3m
+        run: go test -race ./... -count=1 -timeout=3m
 
       - name: Vet
         run: go vet ./...
@@ -87,7 +85,7 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          & .\scripts\test\test-install-windows.ps1 -StaticOnly
+          & .\scripts\test\test-install-windows.ps1
 
       - name: Test Windows PowerShell DPAPI round trip
         if: runner.os == 'Windows'

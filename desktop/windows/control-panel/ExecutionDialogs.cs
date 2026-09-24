@@ -31,7 +31,7 @@ internal static class ExecutionDialogs
         return button;
     }
     private static TextBlock Label(string value) => new() { Text = value, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 6) };
-    private static TextBox Readonly(string value) => new() { Text = value, IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Padding = new Thickness(10), FontFamily = new FontFamily("Consolas, Malgun Gothic, Microsoft YaHei UI") };
+    private static TextBox Readonly(string value) => new() { Text = value, IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Padding = new Thickness(10), FontFamily = new FontFamily("Consolas, Microsoft YaHei UI") };
     internal static void ShowText(Window owner, string title, string text)
     {
         var ui = Create(owner, title); var close = Action(UiText.Get("ExecutionClose")); close.Click += (_, _) => ui.Window.Close(); ui.Actions.Children.Add(close); ui.Root.Children.Add(Readonly(text)); ui.Window.ShowDialog();

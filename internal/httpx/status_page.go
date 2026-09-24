@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	agentDockRepositoryURL = "https://github.com/eerraa/agentdock"
-	agentDockDocsURL       = "https://github.com/eerraa/agentdock/tree/main/docs"
+	agentDockRepositoryURL = "https://github.com/uvwt/agentdock"
+	agentDockDocsURL       = "https://uvwt.github.io/agentdock-docs/"
 	agentDockQQGroup       = "1081337019"
 	agentDockQQGroupURL    = "https://qun.qq.com/universal-share/share?ac=1&authKey=Rp86bSzI7vqm87KoYlKawgsPZ440Ubhyezw6Qkgcn3JISwX3zXxsXkbS5598RrY5&busi_data=eyJncm91cENvZGUiOiIxMDgxMzM3MDE5IiwidG9rZW4iOiJ0Mlg1bUU1ZWtuZzF3SHJDT3pSaGsrOURIMlNYaXBlYllOUjNLZ1BUb1hzM2lJSTZjeVNldzU0ajl0SjRVZkx2IiwidWluIjoiMzIwMjA4ODAzMiJ9&data=W28mWvuqaLf_Fwnf0CgAJXuDs6l3A78V7AoWZnizPboCpKoQMzHzZ-UlluYo47U3tmIBHK2xIgWEVEJbTiGsPQ&svctype=4&tempid=h5_group_info"
 	statusPageCSP          = "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'"
@@ -89,11 +89,11 @@ var statusPageEnglish = statusPageText{
 	EndpointHint:      "Use this endpoint to connect AgentDock with an MCP client.",
 	Resources:         "Resources",
 	Repository:        "GitHub Repository",
-	RepositoryDesc:    "Eerraa downstream source and issue tracking. Updates use verified offline installers.",
+	RepositoryDesc:    "Source code, releases and issue tracking.",
 	Documentation:     "Documentation",
 	DocumentationDesc: "Installation, configuration and usage guides.",
-	QQGroup:           "Upstream QQ community",
-	QQGroupDesc:       "Upstream community in Chinese; Eerraa builds are maintained separately.",
+	QQGroup:           "QQ Group",
+	QQGroupDesc:       "Community discussion, support and feedback.",
 	OpenSource:        "AgentDock · Open Source",
 	License:           "MIT License",
 	DocumentationURL:  agentDockDocsURL,
@@ -124,14 +124,14 @@ var statusPageChinese = statusPageText{
 	EndpointHint:      "使用此端点将 AgentDock 连接到 MCP 客户端。",
 	Resources:         "资源",
 	Repository:        "GitHub 仓库",
-	RepositoryDesc:    "Eerraa 下游源代码与问题反馈。更新使用经验证的离线安装程序。",
+	RepositoryDesc:    "源代码、版本发布与问题反馈。",
 	Documentation:     "文档",
 	DocumentationDesc: "安装、配置与使用指南。",
-	QQGroup:           "上游 QQ 社区",
-	QQGroupDesc:       "上游中文社区；Eerraa 构建由下游独立维护。",
+	QQGroup:           "QQ 群",
+	QQGroupDesc:       "社区交流、使用支持与反馈。",
 	OpenSource:        "AgentDock · 开源",
 	License:           "MIT 许可证",
-	DocumentationURL:  agentDockDocsURL,
+	DocumentationURL:  agentDockDocsURL + "zh-CN/",
 }
 
 var statusPageKorean = statusPageText{
@@ -143,10 +143,10 @@ var statusPageKorean = statusPageText{
 	MCPEndpoint: "MCP 엔드포인트", Copy: "복사", Copied: "복사됨", CopyFailed: "복사 실패",
 	EndpointHint: "이 엔드포인트로 MCP 클라이언트를 AgentDock에 연결하세요.",
 	Resources:    "참고 자료", Repository: "GitHub 저장소",
-	RepositoryDesc: "Eerraa 독자 배포 소스와 문제 추적. 업데이트에는 검증된 오프라인 설치파일을 사용합니다.",
+	RepositoryDesc: "소스 코드, 배포 버전과 문제 추적.",
 	Documentation:  "문서", DocumentationDesc: "설치·구성·사용 안내.",
-	QQGroup: "업스트림 QQ 커뮤니티", QQGroupDesc: "중국어 업스트림 커뮤니티입니다. Eerraa 빌드는 별도로 유지보수됩니다.",
-	OpenSource: "AgentDock Eerraa · 오픈 소스", License: "MIT 라이선스", DocumentationURL: agentDockDocsURL,
+	QQGroup: "QQ 커뮤니티", QQGroupDesc: "중국어 커뮤니티의 사용 지원과 의견 교환.",
+	OpenSource: "AgentDock · 오픈 소스", License: "MIT 라이선스", DocumentationURL: agentDockDocsURL,
 }
 
 type statusPageData struct {

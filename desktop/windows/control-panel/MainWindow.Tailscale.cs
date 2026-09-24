@@ -19,16 +19,15 @@ public partial class MainWindow
         TailscaleTargetText.Text = status.LocalOrigin;
         TailscaleFunnelText.Text = status.Phase switch
         {
-            "CheckingLocal" => UiText.Get("FunnelCheckingLocal"), "NeedsApproval" => UiText.Get("FunnelNeedsApproval"),
-            "LocalReady" => UiText.Get("FunnelLocalReady"), "VerifyingPublic" => UiText.Get("FunnelVerifyingPublic"),
-            "Degraded" => UiText.Get("FunnelDegraded"), "Failed" => UiText.Get("FunnelVerificationFailed"),
-            "Ready" => UiText.Get("FunnelReady"),
-            _ => status.Ready ? UiText.Get("FunnelReady") : status.Running ? UiText.Get("TailscalePending") : UiText.Get("Disabled")
+            "CheckingLocal" => UiText.Get("TunnelPhaseCheckingLocal"), "NeedsApproval" => UiText.Get("TunnelPhaseNeedsApproval"),
+            "LocalReady" => UiText.Get("TunnelPhaseLocalReady"), "VerifyingPublic" => UiText.Get("TunnelPhaseVerifyingPublic"),
+            "Degraded" => UiText.Get("TunnelPhaseDegraded"), "Failed" => UiText.Get("TunnelPhaseFailed"),
+            "Ready" => UiText.Get("TunnelPhaseReady"),
+            _ => status.Ready ? UiText.Get("TunnelPhaseReady") : status.Running ? UiText.Get("TailscalePending") : UiText.Get("Disabled")
         };
         TailscaleKeyExpiryText.Text = status.KeyExpiry is { Year: > 1 } expiry
             ? expiry.ToLocalTime().ToString("yyyy-MM-dd HH:mm") : UiText.Get("TailscaleNoKeyExpiry");
-        TailscaleDiagnosticText.Text = status.DisplayDiagnostic;
-        TailscaleDiagnosticText.ToolTip = status.OriginalDiagnostic;
+        TailscaleDiagnosticText.Text = status.Diagnostic;
         TailscaleAuthorizeButton.IsEnabled = status.DiagnosticCode == "funnel_permission_required";
     }
 
@@ -90,7 +89,7 @@ public partial class MainWindow
                     mode == "named" ? ServerUrlTextBox.Text.Trim() : "",
                     mode == "named" ? TunnelTokenPasswordBox.Password : ""), TunnelActionStatusText);
             FinishAccessApply(success, mode);
-            if (success && mode == "funnel") TunnelActionStatusText.Text = UiText.Get("FunnelLocalSubmitted");
+            if (success && mode == "funnel") TunnelActionStatusText.Text = UiText.Get("TunnelPhaseCommitted");
         }
         finally
         {

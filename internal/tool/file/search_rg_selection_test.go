@@ -26,7 +26,7 @@ func TestRGSelectionFallbackAndIntegrityBoundary(t *testing.T) {
 	if err != nil || selection.source != "path" || calls != 1 {
 		t.Fatalf("missing bundle must use allowed PATH: %+v, %v, %d", selection, err, calls)
 	}
-	if err := os.MkdirAll(filepath.Join(root, "tools", "rg"), 0700); err != nil {
+	if err := os.MkdirAll(filepath.Join(root, "share", "agentdock", "bin"), 0700); err != nil {
 		t.Fatal(err)
 	}
 	calls = 0
@@ -50,5 +50,15 @@ func TestRGSelectionFallbackAndIntegrityBoundary(t *testing.T) {
 	calls = 0
 	if _, err := selectRGForExecutable(ctx, executable, "windows", "amd64", lookup); !errors.Is(err, context.Canceled) || calls != 0 {
 		t.Fatalf("cancelled selection has side effects: %v", err)
+	}
+}
+
+func TestRGOutputBudgetCancelsWithoutGrowingPastLimit(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	output := rgBoundedOutput{limit: 4, cancel: cancel}
+	n, err := output.Write([]byte("123456"))
+	if n != 4 || !errors.Is(err, errSearchResourceLimit) || !output.exceeded || output.Len() != 4 || ctx.Err() == nil {
+		t.Fatalf("unbounded output: n=%d err=%v len=%d", n, err, output.Len())
 	}
 }

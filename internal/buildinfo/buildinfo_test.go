@@ -15,7 +15,7 @@ func TestDownstreamIdentityAndCompleteSourceSHA(t *testing.T) {
 	if info.SourceCommit != Commit || info.Commit != Commit[:12] {
 		t.Fatalf("source identity lost: %+v", info)
 	}
-	if info.Distribution != "eerraa" || info.UpstreamVersion != "1.1.5" || info.DownstreamRevision != 11 {
+	if info.Distribution != "eerraa" || info.UpstreamVersion != "1.1.6" || info.DownstreamRevision != DownstreamRevision {
 		t.Fatalf("downstream identity: %+v", info)
 	}
 	if _, err := json.Marshal(info); err != nil {
@@ -32,7 +32,11 @@ func TestDownstreamIdentityAndCompleteSourceSHA(t *testing.T) {
 		}
 	}
 	patch, _ := strconv.Atoi(parts[2])
-	if patch != 5*1000+DownstreamRevision {
+	expected := 6
+	if DownstreamRevision != 0 {
+		expected = 6*1000 + DownstreamRevision
+	}
+	if patch != expected {
 		t.Fatalf("downstream revision encoding: %s", Version)
 	}
 }

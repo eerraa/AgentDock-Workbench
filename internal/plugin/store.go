@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"sort"
 	"strings"
 	"time"
@@ -32,26 +33,33 @@ const (
 var identifierPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._+-]{0,127}$`)
 
 type packageRecord struct {
-	root       string
-	manifest   Manifest
-	state      State
-	definition Definition
-	skillPaths map[string]string
-	mcpConfigs map[string]mcpclient.ServerConfig
+	root              string
+	manifest          Manifest
+	state             State
+	definition        Definition
+	skillDescriptions map[string]string
+	skillPaths        map[string]string
+	mcpConfigs        map[string]mcpclient.ServerConfig
 }
 
 type Store struct {
-	root     string
-	lockPath string
-	tempRoot string
+	snapshots *storeSnapshots
+	budget    time.Duration
+	root      string
+	lockPath  string
+	tempRoot  string
 }
 
-func New(agentDockHome string) (*Store, error) {
+func New(agentDockHome string, budgets ...time.Duration) (*Store, error) {
+	budget := 5 * time.Second
+	if len(budgets) > 0 && budgets[0] > 0 {
+		budget = budgets[0]
+	}
 	if strings.TrimSpace(agentDockHome) == "" {
 		return nil, newError("PLUGIN_STORE_INVALID", "AgentDock home is required for the plugin store", nil, nil)
 	}
 	root := filepath.Join(agentDockHome, "plugins")
-	store := &Store{
+	store := &Store{budget: budget,
 		root:     root,
 		lockPath: filepath.Join(root, ".locks", "store.lock"),
 		tempRoot: filepath.Join(root, ".tmp"),
@@ -59,7 +67,10 @@ func New(agentDockHome string) (*Store, error) {
 	if err := store.EnsureLayout(); err != nil {
 		return nil, err
 	}
+	store.snapshots = newStoreSnapshots(root, budget)
+	runtime.AddCleanup(store, func(resources *storeSnapshots) { resources.Close() }, store.snapshots)
 	if _, err := store.scan(); err != nil {
+		store.Close()
 		return nil, err
 	}
 	return store, nil
@@ -131,6 +142,10 @@ func (s *Store) Install(source string, replace bool) (Definition, error) {
 	if err != nil {
 		return Definition{}, err
 	}
+	return s.installPrepared(root, replace, nil, false)
+}
+
+func (s *Store) installPrepared(root string, replace bool, candidate *PreparedSource, confirmSourceChange bool) (Definition, error) {
 	sourceRecord, err := readPackage(root, false)
 	if err != nil {
 		return Definition{}, err
@@ -140,7 +155,7 @@ func (s *Store) Install(source string, replace bool) (Definition, error) {
 	if err != nil {
 		return Definition{}, err
 	}
-	defer release()
+	defer func() { s.Invalidate(); release() }()
 	installed, err := s.scanUnlocked()
 	if err != nil {
 		return Definition{}, err
@@ -172,11 +187,30 @@ func (s *Store) Install(source string, replace bool) (Definition, error) {
 
 	state := defaultState(sourceRecord)
 	destination := filepath.Join(s.root, sourceRecord.manifest.Name)
+	if info, err := os.Lstat(destination); err == nil {
+		if info.Mode()&os.ModeSymlink != 0 {
+			return Definition{}, newError("PLUGIN_INSTALL_FAILED", "plugin destination must not be a symlink", map[string]any{"name": sourceRecord.manifest.Name}, nil)
+		}
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return Definition{}, newError("PLUGIN_INSTALL_FAILED", "inspect plugin destination", map[string]any{"name": sourceRecord.manifest.Name}, err)
+	}
 	var oldRecord packageRecord
 	var hadOld bool
 	if existing, ok := installed[sourceRecord.manifest.Name]; ok {
 		oldRecord, hadOld = existing, true
 		state = mergeState(existing.state, sourceRecord)
+	}
+	if candidate != nil {
+		if candidate.Enabled != nil {
+			state.Enabled = *candidate.Enabled
+		}
+		if hadOld && oldRecord.state.Source != nil && !samePluginSourceBinding(*oldRecord.state.Source, candidate.Source) && !confirmSourceChange {
+			return Definition{}, pluginError("PLUGIN_SOURCE_CHANGE_CONFIRMATION_REQUIRED", "update.source", errors.New("Plugin source binding changed; set confirmed_source_change=true to rebind"))
+		}
+		source := candidate.Source
+		compatibility := candidate.Compatibility
+		state.Source = &source
+		state.Compatibility = &compatibility
 	}
 	if _, err := readPackage(staged, false); err != nil {
 		return Definition{}, err
@@ -239,7 +273,7 @@ func (s *Store) Remove(name string) error {
 	if err != nil {
 		return err
 	}
-	defer release()
+	defer func() { s.Invalidate(); release() }()
 	path := filepath.Join(s.root, name)
 	if _, err := os.Lstat(path); errors.Is(err, os.ErrNotExist) {
 		return newError("PLUGIN_NOT_FOUND", "plugin is not installed", map[string]any{"name": name}, nil)
@@ -300,7 +334,7 @@ func (s *Store) updateState(name string, mutate func(packageRecord, *State) erro
 	if err != nil {
 		return Definition{}, err
 	}
-	defer release()
+	defer func() { s.Invalidate(); release() }()
 	record, err := s.readInstalledUnlocked(name)
 	if err != nil {
 		return Definition{}, err
@@ -320,91 +354,70 @@ func (s *Store) updateState(name string, mutate func(packageRecord, *State) erro
 }
 
 func (s *Store) SkillMembership(name string) (Membership, bool, error) {
-	records, err := s.scan()
+	ctx, cancel := context.WithTimeout(context.Background(), s.budget)
+	defer cancel()
+	directory, _, err := s.Snapshot(ctx)
 	if err != nil {
 		return Membership{}, false, err
 	}
-	name = strings.TrimSpace(name)
-	for _, record := range records {
-		if _, ok := record.skillPaths[name]; ok {
-			return Membership{Plugin: record.manifest.Name, Heavy: record.definition.Heavy, Enabled: record.state.Enabled && memberEnabled(record.state.Skills, name)}, true, nil
-		}
-	}
-	return Membership{}, false, nil
+	value, found := directory.skillMembership[strings.TrimSpace(name)]
+	return value, found, nil
 }
 
 func (s *Store) MCPMembership(name string) (Membership, bool, error) {
-	records, err := s.scan()
+	ctx, cancel := context.WithTimeout(context.Background(), s.budget)
+	defer cancel()
+	directory, _, err := s.Snapshot(ctx)
 	if err != nil {
 		return Membership{}, false, err
 	}
-	name = strings.TrimSpace(name)
-	for _, record := range records {
-		if cfg, ok := record.mcpConfigs[name]; ok {
-			enabled := record.state.Enabled && memberEnabled(record.state.MCPServers, name) && cfg.Enabled
-			return Membership{Plugin: record.manifest.Name, Heavy: record.definition.Heavy, Enabled: enabled}, true, nil
-		}
-	}
-	return Membership{}, false, nil
+	value, found := directory.mcpMembership[strings.TrimSpace(name)]
+	return value, found, nil
 }
 
 func (s *Store) Skill(name string) (SkillMember, bool, error) {
-	records, err := s.scan()
+	ctx, cancel := context.WithTimeout(context.Background(), s.budget)
+	defer cancel()
+	directory, _, err := s.Snapshot(ctx)
 	if err != nil {
 		return SkillMember{}, false, err
 	}
-	name = strings.TrimSpace(name)
-	for _, record := range records {
-		if path, ok := record.skillPaths[name]; ok {
-			return SkillMember{Name: name, Plugin: record.manifest.Name, Path: path, Enabled: record.state.Enabled && memberEnabled(record.state.Skills, name)}, true, nil
-		}
-	}
-	return SkillMember{}, false, nil
+	value, found := directory.skills[strings.TrimSpace(name)]
+	return value, found, nil
 }
 
 func (s *Store) Skills() ([]SkillMember, error) {
-	records, err := s.scan()
+	ctx, cancel := context.WithTimeout(context.Background(), s.budget)
+	defer cancel()
+	directory, _, err := s.Snapshot(ctx)
 	if err != nil {
 		return nil, err
 	}
-	items := make([]SkillMember, 0)
-	for _, pluginName := range sortedPackageNames(records) {
-		record := records[pluginName]
-		names := sortedKeys(record.skillPaths)
-		for _, name := range names {
-			items = append(items, SkillMember{
-				Name: name, Plugin: pluginName, Path: record.skillPaths[name],
-				Enabled: record.state.Enabled && memberEnabled(record.state.Skills, name),
-			})
-		}
-	}
-	return items, nil
+	return directory.Skills(), nil
 }
 
 // MCPServers returns plugin-owned server definitions with package-relative
 // executable and working-directory paths resolved against the installed plugin
 // root. Effective Enabled combines manifest, plugin, and member switches.
 func (s *Store) MCPServers() (map[string]MCPMember, error) {
-	records, err := s.scan()
+	ctx, cancel := context.WithTimeout(context.Background(), s.budget)
+	defer cancel()
+	return s.MCPServersContext(ctx)
+}
+
+func (s *Store) MCPServersContext(ctx context.Context) (map[string]MCPMember, error) {
+	directory, _, err := s.Snapshot(ctx)
 	if err != nil {
 		return nil, err
 	}
 	items := make(map[string]MCPMember)
-	for _, record := range records {
+	for _, record := range directory.records {
 		for name, config := range record.mcpConfigs {
+			if err := ctx.Err(); err != nil {
+				return nil, err
+			}
 			config.PluginVersion = record.manifest.Version
 			config.Enabled = config.Enabled && record.state.Enabled && memberEnabled(record.state.MCPServers, name)
-			if config.Enabled && config.PluginData != "" {
-				if _, err := containedPath(s.root, config.PluginData, true); err != nil {
-					return nil, err
-				}
-				if err := os.MkdirAll(config.PluginData, 0o700); err != nil {
-					return nil, err
-				}
-				if err := securepath.EnsurePrivate(config.PluginData); err != nil {
-					return nil, err
-				}
-			}
 			items[name] = MCPMember{Plugin: record.manifest.Name, Config: config}
 		}
 	}
@@ -428,12 +441,13 @@ func (s *Store) getRecord(name string) (packageRecord, error) {
 }
 
 func (s *Store) scan() (map[string]packageRecord, error) {
-	release, err := s.acquire()
+	ctx, cancel := context.WithTimeout(context.Background(), s.budget)
+	defer cancel()
+	directory, _, err := s.Snapshot(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer release()
-	return s.scanUnlocked()
+	return directory.records, nil
 }
 
 func (s *Store) scanUnlocked() (map[string]packageRecord, error) {
@@ -576,6 +590,8 @@ func mergeState(previous State, next packageRecord) State {
 	state := defaultState(next)
 	state.Enabled = previous.Enabled
 	state.Heavy = previous.Heavy
+	state.Source = previous.Source
+	state.Compatibility = previous.Compatibility
 	for name := range state.Skills {
 		if enabled, ok := previous.Skills[name]; ok {
 			state.Skills[name] = enabled
@@ -791,6 +807,17 @@ func sortedKeys[V any](values map[string]V) []string {
 }
 
 func cloneDefinition(value Definition) Definition {
+	if value.Source != nil {
+		copy := *value.Source
+		value.Source = &copy
+	}
+	if value.Compatibility != nil {
+		copy := *value.Compatibility
+		copy.Supported = append([]string(nil), copy.Supported...)
+		copy.Unsupported = append([]string(nil), copy.Unsupported...)
+		copy.Warnings = append([]string(nil), copy.Warnings...)
+		value.Compatibility = &copy
+	}
 	value.Diagnostics = append([]string(nil), value.Diagnostics...)
 	value.Skills = append([]string(nil), value.Skills...)
 	value.MCPServers = append([]string(nil), value.MCPServers...)

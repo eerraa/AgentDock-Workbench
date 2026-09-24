@@ -45,15 +45,17 @@ def read_identity(skill_root: Path, expected_name: str) -> tuple[str, str]:
 
     fields: dict[str, str] = {}
     for line in match.group(1).splitlines():
+        if not line or line[0].isspace():
+            continue
         key, separator, value = line.partition(":")
         if separator:
-            fields[key.strip()] = value.strip()
+            fields[key.strip()] = value.strip().strip("\"'")
     name = fields.get("name", "")
-    version = fields.get("version", "")
     if name != expected_name:
         raise ValueError(f"expected Skill name {expected_name!r}, got {name!r}")
+    version = fields.get("version", "").strip()
     if not version:
-        raise ValueError(f"{expected_name} has no version")
+        raise ValueError(f"{skill_root}/SKILL.md version is required for a core Skill Bundle")
     return name, version
 
 

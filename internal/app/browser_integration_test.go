@@ -4,7 +4,6 @@ package app
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -143,12 +142,10 @@ func TestBrowserIntegrationRuntimeCloseClosesBrowserService(t *testing.T) {
 		t.Fatal(err)
 	}
 	afterClose, err := runtime.Call(context.Background(), "browser_snapshot", map[string]any{"session_id": sessionID, "timeout_ms": 1000})
-	var closing *ToolError
-	if !errors.As(err, &closing) || closing.Code != "RUNTIME_CLOSING" || afterClose != nil {
-		t.Fatalf("closed runtime must reject new browser dispatch: result=%#v err=%v", afterClose, err)
+	if err != nil {
+		t.Fatal(err)
 	}
-	serviceResult, serviceErr := runtime.browser.HandleSnapshot(context.Background(), map[string]any{"session_id": sessionID, "timeout_ms": 1000})
-	if serviceErr != nil || serviceResult["browser_ok"] != false || serviceResult["code"] != "SESSION_NOT_FOUND" {
-		t.Fatalf("runtime close left its browser service session addressable: result=%#v err=%v", serviceResult, serviceErr)
+	if afterClose["browser_ok"] != false || afterClose["code"] != "SESSION_NOT_FOUND" {
+		t.Fatalf("runtime close left browser session addressable: %#v", afterClose)
 	}
 }

@@ -524,6 +524,39 @@ function Write-InstallResult {
     [IO.File]::WriteAllLines($Path, $lines, [Text.Encoding]::Unicode)
 }
 
+function Get-InstallerEngineFailureMessage {
+    param(
+        [string] $RuntimeRoot,
+        [string] $FallbackMessage,
+        [DateTime] $NotBeforeUtc = [DateTime]::MinValue
+    )
+
+    $engineResultPath = Join-Path $RuntimeRoot 'install\result.json'
+    if (-not (Test-Path -LiteralPath $engineResultPath -PathType Leaf)) {
+        return $FallbackMessage
+    }
+
+    try {
+        $engineResultInfo = Get-Item -LiteralPath $engineResultPath -ErrorAction Stop
+        if ($NotBeforeUtc -ne [DateTime]::MinValue -and
+            $engineResultInfo.LastWriteTimeUtc -lt $NotBeforeUtc) {
+            return $FallbackMessage
+        }
+
+        # Engine results are UTF-8 JSON. Read failure text from the structured file instead of
+        # letting Windows PowerShell 5.1 reinterpret native UTF-8 stderr through an OEM code page.
+        $engineResultText = [IO.File]::ReadAllText($engineResultPath, [Text.Encoding]::UTF8)
+        $engineResult = $engineResultText | ConvertFrom-Json
+        if ($null -ne $engineResult.failure -and
+            -not [string]::IsNullOrWhiteSpace([string] $engineResult.failure.message)) {
+            return [string] $engineResult.failure.message
+        }
+    } catch {
+        Write-Warning "Unable to read Installer Engine failure result: $($_.Exception.Message)"
+    }
+    return $FallbackMessage
+}
+
 function Get-ProcessesByPath {
     param(
         [string] $ProcessName,
@@ -641,30 +674,26 @@ function Get-AgentDockTaskState {
         return $state
     }
     $owned = $false
-    $normalizedRoot = [IO.Path]::GetFullPath($RuntimeRoot).TrimEnd('\')
-    $normalizedCore = [IO.Path]::GetFullPath($StableCorePath)
-    $normalizedTray = [IO.Path]::GetFullPath($StableTrayPath)
-    $normalizedLegacyLauncher = [IO.Path]::GetFullPath($LegacyLauncherPath)
-    foreach ($action in @($task.Actions)) {
-        $executePath = [string] $action.Execute
-        $arguments = [string] $action.Arguments
+    $actions = @($task.Actions)
+    $currentSid = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+    $taskSid = [string]$task.Principal.UserId
+    if ($taskSid -and -not $taskSid.StartsWith('S-1-', [StringComparison]::OrdinalIgnoreCase)) {
+        try { $taskSid = (New-Object Security.Principal.NTAccount($taskSid)).Translate([Security.Principal.SecurityIdentifier]).Value } catch { $taskSid = '' }
+    }
+    if ($actions.Count -eq 1 -and $taskSid -eq $currentSid -and
+        [string]$task.Principal.LogonType -eq 'Interactive' -and [string]$task.Principal.RunLevel -eq 'Highest') {
+        $action = $actions[0]
         try {
-            if (-not [string]::IsNullOrWhiteSpace($executePath)) {
-                $normalizedExecute = [IO.Path]::GetFullPath($executePath)
-                if ([string]::Equals($normalizedExecute, $normalizedCore, [StringComparison]::OrdinalIgnoreCase) -or
-                    [string]::Equals($normalizedExecute, $normalizedTray, [StringComparison]::OrdinalIgnoreCase)) {
-                    $owned = $true
-                    break
-                }
-            }
-        } catch {
-        }
-        if (-not [string]::IsNullOrWhiteSpace($arguments) -and
-            ($arguments.IndexOf($normalizedRoot, [StringComparison]::OrdinalIgnoreCase) -ge 0 -or
-             $arguments.IndexOf($normalizedLegacyLauncher, [StringComparison]::OrdinalIgnoreCase) -ge 0)) {
-            $owned = $true
-            break
-        }
+            $execute = [IO.Path]::GetFullPath([string]$action.Execute)
+            $root = [IO.Path]::GetFullPath($RuntimeRoot).TrimEnd('\')
+            $arguments = [string]$action.Arguments
+            $working = [string]$action.WorkingDirectory
+            $owned = ([string]::IsNullOrWhiteSpace($working) -or [string]::Equals([IO.Path]::GetFullPath($working).TrimEnd('\'), $root, [StringComparison]::OrdinalIgnoreCase)) -and
+                (([string]::Equals($execute, [IO.Path]::GetFullPath($StableTrayPath), [StringComparison]::OrdinalIgnoreCase) -and
+                  [string]::Equals($arguments, "--run-core-task --runtime-root `"$root`"", [StringComparison]::OrdinalIgnoreCase)) -or
+                 ([string]::Equals($execute, [IO.Path]::GetFullPath($StableCorePath), [StringComparison]::OrdinalIgnoreCase) -and
+                  [string]::Equals($arguments, "service launch-core --runtime-root `"$root`"", [StringComparison]::OrdinalIgnoreCase)))
+        } catch { $owned = $false }
     }
     if (-not $owned) {
         $state.Conflicting = $true
@@ -756,17 +785,6 @@ function Enable-AgentDockTask {
     Enable-ScheduledTask -TaskName 'AgentDock' -TaskPath '\' -ErrorAction Stop | Out-Null
 }
 
-function Stop-AgentDockScheduledTask {
-    $task = Get-ScheduledTask -TaskName 'AgentDock' -TaskPath '\' -ErrorAction SilentlyContinue
-    if ($null -eq $task) {
-        return
-    }
-    if ($task.State -ne 'Running') {
-        return
-    }
-    Stop-ScheduledTask -TaskName 'AgentDock' -TaskPath '\' -ErrorAction Stop
-}
-
 function Start-AgentDockTask {
     param(
         [Parameter(Mandatory = $true)][string] $AgentDockBinary,
@@ -784,6 +802,22 @@ function Start-AgentDockTask {
     if ($LASTEXITCODE -ne 0) {
         throw "AgentDock native task-start failed with exit code $LASTEXITCODE."
     }
+}
+
+function Assert-AgentDockManagedTask {
+    param([string] $AgentDockBinary, [string] $RuntimeRoot, [switch] $RequireDisabled)
+    $json = (& $AgentDockBinary service task-validate --runtime-root $RuntimeRoot | Out-String).Trim()
+    if ($LASTEXITCODE -ne 0) { throw 'elevated_unavailable: managed task validation failed.' }
+    $state = $json | ConvertFrom-Json
+    if ($state.validated -ne $true -or ($RequireDisabled -and ($state.enabled -ne $false -or $state.running -ne $false))) {
+        throw 'elevated_unavailable: task must match the expected owner and remain disabled until commit.'
+    }
+}
+
+function Start-AgentDockManagedRuntime {
+    param([string] $AgentDockBinary, [string] $RuntimeRoot)
+    & $AgentDockBinary service start --runtime-root $RuntimeRoot | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'elevated_unavailable: managed runtime start was not accepted.' }
 }
 
 function Stop-ProcessesForUpgrade {
@@ -942,69 +976,6 @@ function Wait-AgentDockHealth {
     throw "AgentDock was installed, but health check failed at $healthUrl"
 }
 
-function Wait-CloudflaredRunning {
-    param([string] $BinaryPath)
-
-    $deadline = [DateTime]::UtcNow.AddSeconds(20)
-    do {
-        Start-Sleep -Milliseconds 500
-        if (@(Get-CloudflaredProcesses -BinaryPath $BinaryPath).Count -gt 0) {
-            return
-        }
-    } while ([DateTime]::UtcNow -lt $deadline)
-    throw "cloudflared did not stay running: $BinaryPath"
-}
-
-function Wait-QuickTunnelUrl {
-    param([string[]] $LogPaths)
-
-    $deadline = [DateTime]::UtcNow.AddSeconds(30)
-    do {
-        Start-Sleep -Milliseconds 500
-        foreach ($logPath in $LogPaths) {
-            try {
-                if (Test-Path -LiteralPath $logPath -PathType Leaf) {
-                    $content = Get-Content -LiteralPath $logPath -Raw -ErrorAction Stop
-                    # Provisioning failures also print the trycloudflare API URL; require the creation marker first.
-                    $match = [Regex]::Match(
-                        $content,
-                        '(?s)Your quick Tunnel has been created! Visit it at.*?(https://[A-Za-z0-9-]+\.trycloudflare\.com)'
-                    )
-                    if ($match.Success) {
-                        return $match.Groups[1].Value
-                    }
-                }
-            } catch {
-            }
-        }
-    } while ([DateTime]::UtcNow -lt $deadline)
-    throw "cloudflared started, but no temporary trycloudflare.com URL appeared in: $($LogPaths -join ', ')"
-}
-
-function Wait-QuickTunnelReady {
-    param(
-        [string] $Path,
-        [string] $ExpectedUrl
-    )
-
-    $deadline = [DateTime]::UtcNow.AddSeconds(35)
-    do {
-        Start-Sleep -Milliseconds 500
-        try {
-            if ((Test-Path -LiteralPath $Path -PathType Leaf) -and
-                [string]::Equals(
-                    [IO.File]::ReadAllText($Path).Trim(),
-                    $ExpectedUrl,
-                    [StringComparison]::OrdinalIgnoreCase
-                )) {
-                return
-            }
-        } catch {
-        }
-    } while ([DateTime]::UtcNow -lt $deadline)
-    throw "Quick Tunnel generated $ExpectedUrl, but AgentDock did not finish adopting it."
-}
-
 function Backup-FileState {
     param(
         [string] $Path,
@@ -1084,6 +1055,7 @@ function Set-RunValue {
 }
 
 $effectivePrivilegeMode = $CorePrivilegeMode
+$existingPrivilegeMode = ''
 $installWarningCode = ''
 $installWarningMessage = ''
 $installErrorCode = ''
@@ -1289,7 +1261,7 @@ try {
     if ($effectivePrivilegeMode -eq 'elevated' -and -not $taskState.Eligible) {
         throw 'Elevated AgentDock mode requires the default Windows startup names.'
     }
-    if ($effectivePrivilegeMode -eq 'elevated' -and $taskState.Conflicting) {
+    if ($taskState.Conflicting) {
         throw 'The AgentDock scheduled task belongs to another installation root. Remove or repair that installation before enabling elevated mode here.'
     }
 
@@ -1536,56 +1508,8 @@ try {
     # its exact version is already healthy, Setup can safely perform the same
     # explicit confirmation an operator would otherwise run by hand.
     if ([bool] $installInspection.requires_adapter_rollback_confirmation) {
-        $failedTransactionId = [string] $installInspection.transaction_id
-        $failedSourceVersion = [string] $installInspection.source_version
-        $pointerActiveVersion = [string] $installInspection.pointer_active_version
-        $sourceMatchesPointer =
-            -not [string]::IsNullOrWhiteSpace($failedSourceVersion) -and
-            -not [string]::IsNullOrWhiteSpace($pointerActiveVersion) -and
-            [string]::Equals(
-                $failedSourceVersion.TrimStart('v'),
-                $pointerActiveVersion.TrimStart('v'),
-                [StringComparison]::OrdinalIgnoreCase
-            )
-        if ([string]::IsNullOrWhiteSpace($failedTransactionId) -or
-            $pointerState -ne 'committed' -or
-            -not $sourceMatchesPointer) {
-            $installErrorCode = 'stale-rollback-recovery-unsafe'
-            throw 'AgentDock found an incomplete OS adapter rollback, but the committed runtime does not match its recorded source version. Setup left the transaction untouched.'
-        }
-
-        Write-Host 'Confirming the healthy restored AgentDock runtime before Setup retries the upgrade...'
-        $adapterRecoveryOutput = @(& $sourceBinary install abandon `
-            --install-root $runtimeDir `
-            --runtime-root $runtimeDir `
-            --transaction-id $failedTransactionId `
-            --require-health 2>&1)
-        $adapterRecoveryExitCode = $LASTEXITCODE
-        if ($adapterRecoveryExitCode -ne 0) {
-            $installErrorCode = 'stale-rollback-recovery-failed'
-            $adapterRecoveryText = (($adapterRecoveryOutput | Out-String).Trim())
-            throw "AgentDock could not confirm the previous restored runtime (exit $adapterRecoveryExitCode). $adapterRecoveryText"
-        }
-
-        $reinspectJson = (& $sourceBinary install inspect --state-root $runtimeDir 2>$null | Out-String).Trim()
-        if ($LASTEXITCODE -ne 0) {
-            $installErrorCode = 'stale-rollback-recovery-failed'
-            throw 'AgentDock install inspect failed after confirming the previous restored runtime.'
-        }
-        try {
-            $installInspection = $reinspectJson | ConvertFrom-Json
-        } catch {
-            $installErrorCode = 'stale-rollback-recovery-failed'
-            throw "AgentDock install inspect returned invalid JSON after rollback confirmation: $($_.Exception.Message)"
-        }
-        $pointerState = [string] $installInspection.pointer_state
-        if ([string] $installInspection.state -ne 'rolled_back' -or
-            [bool] $installInspection.requires_adapter_rollback_confirmation -or
-            $pointerState -ne 'committed') {
-            $installErrorCode = 'stale-rollback-recovery-failed'
-            throw 'AgentDock did not converge the previous failed rollback to a healthy rolled_back state. Setup left the runtime unchanged.'
-        }
-        Write-Host 'Previous failed rollback was verified and closed; Setup can retry the upgrade.'
+        $installErrorCode = 'stale-rollback-recovery-required'
+        throw 'A previous OS adapter rollback is incomplete. Repair its recorded Task/Registry/service state and explicitly confirm with install abandon before retrying Setup. The recovery journal was not changed.'
     }
 
     if ($pointerState -ne 'missing' -and $pointerState -ne 'committed') {
@@ -1694,6 +1618,7 @@ try {
         }
         $legacyBootstrapPrepared = $true
     }
+    $cloudflaredProcessWasRunning = @(Get-CloudflaredProcesses -BinaryPath $cloudflaredBinary).Count -gt 0
     if ($effectivePrivilegeMode -eq 'elevated' -or $taskState.Exists) {
         $taskAction = if ($effectivePrivilegeMode -eq 'elevated') { 'prepare-elevated' } else { 'prepare-standard' }
         $taskActionResult = Start-ElevatedAgentDockTaskAction `
@@ -1704,16 +1629,8 @@ try {
             -RuntimeRoot $runtimeDir `
             -TaskUser $taskUser
         if (-not $taskActionResult.Started) {
-            if ($effectivePrivilegeMode -eq 'elevated' -and -not $taskState.Exists) {
-                # No scheduled-task state changed because RunAs never started. A fresh install can
-                # therefore continue safely without administrator-enhanced core mode.
-                $effectivePrivilegeMode = 'standard'
-                $installWarningCode = 'elevated-mode-fallback'
-                $installWarningMessage = 'Windows did not start the administrator approval request. AgentDock continued in standard user mode.'
-                Write-Warning "$installWarningMessage Details: $($taskActionResult.ErrorMessage)"
-            } else {
-                throw "Administrator approval for AgentDock was not completed: $($taskActionResult.ErrorMessage)"
-            }
+            $installErrorCode = 'elevated-unavailable'
+            throw "Administrator approval for AgentDock was not completed: $($taskActionResult.ErrorMessage)"
         } else {
             # Once the elevated helper actually started, task state may have changed even if the helper
             # later reports failure. Mark the transaction before checking its exit status so rollback runs.
@@ -1725,9 +1642,6 @@ try {
         }
     }
     $agentDockStopAttempted = $true
-    if ($effectivePrivilegeMode -eq 'elevated') {
-        Stop-AgentDockScheduledTask
-    }
     if ($generationLayoutDetected) {
         [void] (Stop-AgentDockForUpgrade -BinaryPath $existingGenerationCore)
         # Also stop a legacy stable Core left by a crash between source-pointer commit and shim install.
@@ -1782,7 +1696,22 @@ try {
         New-Item -ItemType Directory -Path $directory -Force | Out-Null
     }
 
-    $cloudflaredProcessWasRunning = @(Get-CloudflaredProcesses -BinaryPath $cloudflaredBinary).Count -gt 0
+    # Windows Tunnel has a long-lived supervisor that will immediately restart cloudflared after
+    # an external process kill. Stop that supervisor through the currently committed generation
+    # before replacing cloudflared or changing its protected Token. Legacy installs without a
+    # supervisor PID keep the old process-only migration path below.
+    $tunnelSupervisorPidPath = Join-Path $runtimeDir 'tunnel-supervisor.pid'
+    if ($generationLayoutDetected -and
+        (Test-Path -LiteralPath $tunnelSupervisorPidPath -PathType Leaf) -and
+        (Test-Path -LiteralPath $existingGenerationCore -PathType Leaf)) {
+        $tunnelStopOutput = @(& $existingGenerationCore tunnel stop --runtime-root $runtimeDir 2>&1)
+        if ($LASTEXITCODE -ne 0) {
+            $tunnelStopDetail = ($tunnelStopOutput | Out-String).Trim()
+            throw "Unable to stop the existing AgentDock Tunnel supervisor before update. $tunnelStopDetail"
+        }
+    }
+
+    $cloudflaredProcessWasRunning = $cloudflaredProcessWasRunning -or (@(Get-CloudflaredProcesses -BinaryPath $cloudflaredBinary).Count -gt 0)
     $cloudflaredStopAttempted = $true
     [void] (Stop-CloudflaredForUpgrade -BinaryPath $cloudflaredBinary)
     if (Test-Path -LiteralPath $cloudflaredBinary -PathType Leaf) {
@@ -1895,7 +1824,7 @@ exit `$LASTEXITCODE
         if ($preserveTailscale) { $publicUrl = $preservedTailscaleOrigin }
         if ($effectivePrivilegeMode -eq 'elevated') {
             Remove-ItemProperty -LiteralPath $runKey -Name $runValueName -ErrorAction SilentlyContinue
-            Enable-AgentDockTask
+            # The newly registered task remains disabled until Engine commit.
         } else {
             $startupCommand = "`"$destinationTrayBinary`" --start-core --runtime-root `"$runtimeDir`""
             Set-RunValue -RegistryPath $runKey -Name $runValueName -Value $startupCommand
@@ -1918,7 +1847,11 @@ exit `$LASTEXITCODE
             [IO.File]::WriteAllText($cloudflaredStderrLogPath, '', $Utf8NoBom)
 
             $cloudflaredStartupCommand = "`"$destinationTrayBinary`" --start-tunnel --runtime-root `"$runtimeDir`""
+            if ($effectivePrivilegeMode -eq 'elevated') {
+                Remove-ItemProperty -LiteralPath $runKey -Name $cloudflaredRunValueName -ErrorAction SilentlyContinue
+            } else {
             Set-RunValue -RegistryPath $runKey -Name $cloudflaredRunValueName -Value $cloudflaredStartupCommand
+            }
             $tunnelStartupRegistrationChanged = $true
         } else {
             Remove-ItemProperty -LiteralPath $runKey -Name $cloudflaredRunValueName -ErrorAction SilentlyContinue
@@ -1954,8 +1887,8 @@ exit `$LASTEXITCODE
             $engineArgs += @('--task-name', 'AgentDock')
         }
         if ($effectivePrivilegeMode -eq 'elevated' -or (-not $RegisterStartup) -or ($InstallChannel -eq 'setup' -and -not $existingInstallDetected)) {
-            # An elevated install commits when the scheduled task owns the new generation.
-            # The unelevated installer does not start that task or wait for its port.
+            # Setup always leaves Core activation to the Windows adapter below so fresh, repair,
+            # and upgrade launches all happen outside the Inno RedirectionGuard process tree.
             $engineArgs += @('--no-start', '--skip-health')
         }
         if (-not [string]::IsNullOrWhiteSpace($payloadVersion)) {
@@ -1970,6 +1903,7 @@ exit `$LASTEXITCODE
         # Engine may replace stable shim/icon before returning an error; mark this before invocation so catch can restore them.
         $stableFilesMayBeReplaced = $true
         $engineInvoked = $true
+        $engineInvocationStartedAt = [DateTime]::UtcNow
         if ($InstallChannel -eq 'setup' -and $existingInstallDetected -and $RegisterStartup) {
             # The upgrade Engine starts and verifies Core/Tunnel during its trial.
             # Use the native GUI worker while retaining the Engine transaction
@@ -1982,7 +1916,10 @@ exit `$LASTEXITCODE
             $engineJson = (& $sourceBinary @engineArgs 2>$engineErrorPath | Out-String).Trim()
             if ($LASTEXITCODE -ne 0) {
                 $engineDetails = (Get-Content -LiteralPath $engineErrorPath -Raw -ErrorAction SilentlyContinue)
-                throw "Installer Engine failed to write the runtime generation and manifest. $engineDetails"
+                $engineFailureMessage = Get-InstallerEngineFailureMessage -RuntimeRoot $runtimeDir `
+                    -FallbackMessage "Installer Engine failed to write the runtime generation and manifest. $engineDetails" `
+                    -NotBeforeUtc $engineInvocationStartedAt
+                throw $engineFailureMessage
             }
         }
         # Engine already left a trial. Catch must abandon even if the JSON handshake is unreadable.
@@ -2009,7 +1946,10 @@ exit `$LASTEXITCODE
     # Provision is complete here. A fresh Installer-owned generation must become committed before
     # the stable shim can be used for optional immediate activation; outer rollback can still abandon
     # this transaction because the committed pointer keeps the Installer transaction id.
-    if ($enginePrepared -and -not $existingInstallDetected) {
+    if ($effectivePrivilegeMode -eq 'elevated') {
+        Assert-AgentDockManagedTask -AgentDockBinary $sourceBinary -RuntimeRoot $runtimeDir -RequireDisabled
+    }
+    if ($enginePrepared -and ($effectivePrivilegeMode -eq 'elevated' -or -not $existingInstallDetected)) {
         & $sourceBinary install commit --install-root $runtimeDir --runtime-root $runtimeDir --transaction-id $engineTransactionId --keep-journal 1>$null
         if ($LASTEXITCODE -ne 0) {
             throw 'Installer Engine failed to commit the fresh install transaction.'
@@ -2017,10 +1957,10 @@ exit `$LASTEXITCODE
         $engineCommitted = $true
     }
 
-    # Immediate activation is a separate phase; only a fresh standard install may defer activation,
-    # because an upgrade must still be able to roll back to its prior runtime.
+    # Standard activation requires local health. Elevated activation reports only
+    # accepted scheduling after commit; its native host owns health and Tunnel startup.
     $healthStatus = 'not-started'
-    $engineOwnsActivation = -not ($InstallChannel -eq 'setup' -and -not $existingInstallDetected)
+    $engineOwnsActivation = $effectivePrivilegeMode -ne 'elevated' -and -not ($InstallChannel -eq 'setup' -and -not $existingInstallDetected)
     try {
         if ($InstallChannel -eq 'setup' -and -not $taskState.SchedulerAvailable -and
             ($RegisterStartup -or $mustRestartExistingProcess -or $trayProcessWasRunning)) {
@@ -2028,19 +1968,24 @@ exit `$LASTEXITCODE
         }
 
         if ($effectivePrivilegeMode -eq 'elevated') {
-            $healthStatus = 'not-started'
+            if ($RegisterStartup) { Enable-AgentDockTask }
+            if ($RegisterStartup -or $mustRestartExistingProcess) {
+                Start-AgentDockManagedRuntime -AgentDockBinary $sourceBinary -RuntimeRoot $runtimeDir
+                $healthStatus = 'scheduled'
+            }
         } elseif ($engineOwnsActivation -and $RegisterStartup) {
             $healthStatus = 'healthy'
             if ($resolvedTunnelMode -eq 'quick') {
+                # Tunnel/public readiness is a soft dependency. Record a URL only if it is already
+                # available; the control panel will show eventual readiness after install/update.
                 $publicUrl = Read-TextFile -Path $quickTunnelUrlPath
-                if ([string]::IsNullOrWhiteSpace($publicUrl)) {
-                    throw 'Installer Engine finished trial without a Quick Tunnel public address.'
-                }
             } elseif ($resolvedTunnelMode -eq 'named') {
                 $publicUrl = $ServerUrl
             }
         } elseif ($RegisterStartup) {
-            if ($InstallChannel -eq 'setup') {
+            if ($effectivePrivilegeMode -eq 'elevated') {
+                Start-AgentDockTask -AgentDockBinary $destinationBinary -ExpectedUserSid $taskUser.Sid
+            } elseif ($InstallChannel -eq 'setup') {
                 Invoke-SetupRuntimeProcess `
                     -FilePath $sourceBinary `
                     -Arguments "service start --runtime-root `"$runtimeDir`"" `
@@ -2054,29 +1999,10 @@ exit `$LASTEXITCODE
             Wait-AgentDockHealth -HealthPort $Port
             $healthStatus = 'healthy'
 
-            if ($resolvedTunnelMode -ne 'none') {
-                if ($InstallChannel -eq 'setup') {
-                    Invoke-SetupRuntimeProcess `
-                        -FilePath $sourceBinary `
-                        -Arguments "tunnel start --runtime-root `"$runtimeDir`"" `
-                        -WaitForExit
-                } else {
-                    & $destinationBinary tunnel start --runtime-root $runtimeDir
-                    if ($LASTEXITCODE -ne 0) {
-                        throw "AgentDock native Tunnel start failed with exit code $LASTEXITCODE."
-                    }
-                }
-
-                if ($resolvedTunnelMode -eq 'quick') {
-                    $publicUrl = Read-TextFile -Path $quickTunnelUrlPath
-                    if ([string]::IsNullOrWhiteSpace($publicUrl)) {
-                        $publicUrl = Wait-QuickTunnelUrl -LogPaths @($cloudflaredStdoutLogPath, $cloudflaredStderrLogPath)
-                    }
-                    Wait-QuickTunnelReady -Path $quickTunnelUrlPath -ExpectedUrl $publicUrl
-                } else {
-                    $publicUrl = $ServerUrl
-                    Wait-CloudflaredRunning -BinaryPath $cloudflaredBinary
-                }
+            if ($resolvedTunnelMode -eq 'quick') {
+                $publicUrl = Read-TextFile -Path $quickTunnelUrlPath
+            } elseif ($resolvedTunnelMode -eq 'named') {
+                $publicUrl = $ServerUrl
             }
         } elseif ($mustRestartExistingProcess) {
             if ($InstallChannel -eq 'setup') {
@@ -2102,23 +2028,8 @@ exit `$LASTEXITCODE
             Start-AgentDockTray -BinaryPath $activationTrayBinary
         }
     } catch {
-        if ($existingInstallDetected -or $effectivePrivilegeMode -ne 'standard') {
-            throw
-        }
-
-        $healthStatus = 'deferred'
-        $activationWarningMessage = 'AgentDock was installed and startup was configured, but immediate runtime activation or verification did not complete. Start AgentDock from the Start menu or sign in again to retry.'
-        if ([string]::IsNullOrWhiteSpace($installWarningMessage)) {
-            $installWarningMessage = $activationWarningMessage
-        } else {
-            $installWarningMessage = ($installWarningMessage + ' ' + $activationWarningMessage).Trim()
-        }
-        if ([string]::IsNullOrWhiteSpace($installWarningCode)) {
-            $installWarningCode = 'runtime-launch-deferred'
-        } else {
-            $installWarningCode = "$installWarningCode,runtime-launch-deferred"
-        }
-        Write-Warning "$activationWarningMessage Details: $($_.Exception.Message)"
+        $installErrorCode = 'runtime-activation-failed'
+        throw
     }
 
     if (Test-Path -LiteralPath $legacyManagerPath -PathType Leaf) {
@@ -2126,7 +2037,7 @@ exit `$LASTEXITCODE
     }
 
     if ($enginePrepared) {
-        $commitArgs = @('install', 'commit', '--install-root', $runtimeDir, '--runtime-root', $runtimeDir, '--transaction-id', $engineTransactionId)
+        $commitArgs = @('install', 'commit', '--install-root', $runtimeDir, '--runtime-root', $runtimeDir, '--transaction-id', $engineTransactionId, '--keep-journal')
         if ($healthStatus -eq 'healthy') { $commitArgs += '--require-health' }
         & $sourceBinary @commitArgs 1>$null
         if ($LASTEXITCODE -ne 0) {
@@ -2135,7 +2046,45 @@ exit `$LASTEXITCODE
         $engineCommitted = $true
     }
 
-    $taskTransactionCommitted = $taskTransactionStarted
+    # Core is authoritative for install/update success. Start Tunnel only after commit and do it
+    # asynchronously through the existing WinExe startup proxy so Cloudflare/network readiness
+    # cannot hold the transaction or its success UI open.
+    if ($effectivePrivilegeMode -ne 'elevated' -and $RegisterStartup -and $resolvedTunnelMode -ne 'none') {
+        try {
+            $tunnelStartupArguments = "--start-tunnel --runtime-root `"$runtimeDir`""
+            if ($InstallChannel -eq 'setup') {
+                Invoke-SetupRuntimeProcess `
+                    -FilePath $destinationTrayBinary `
+                    -Arguments $tunnelStartupArguments
+            } else {
+                Start-Process `
+                    -FilePath $destinationTrayBinary `
+                    -ArgumentList $tunnelStartupArguments `
+                    -WindowStyle Hidden | Out-Null
+            }
+        } catch {
+            # Network/public readiness stays a soft dependency, but failure to schedule the local
+            # Tunnel host is actionable. Keep Core committed and surface the degraded public state.
+            $tunnelWarningMessage = 'AgentDock was installed successfully, but public access could not be started in the background. Open the control panel or sign in again to retry.'
+            if ([string]::IsNullOrWhiteSpace($installWarningMessage)) {
+                $installWarningMessage = $tunnelWarningMessage
+            } else {
+                $installWarningMessage = ($installWarningMessage + ' ' + $tunnelWarningMessage).Trim()
+            }
+            if ([string]::IsNullOrWhiteSpace($installWarningCode)) {
+                $installWarningCode = 'tunnel-start-deferred'
+            } else {
+                $installWarningCode = "$installWarningCode,tunnel-start-deferred"
+            }
+            Write-Warning "$tunnelWarningMessage Details: $($_.Exception.Message)"
+        }
+        if ($resolvedTunnelMode -eq 'quick') {
+            $publicUrl = Read-TextFile -Path $quickTunnelUrlPath
+        } elseif ($resolvedTunnelMode -eq 'named') {
+            $publicUrl = $ServerUrl
+        }
+    }
+
     if ($preserveTailscale) { $publicUrl = $preservedTailscaleOrigin }
     $publicMCPUrl = ''
     if (-not [string]::IsNullOrWhiteSpace($publicUrl)) {
@@ -2155,6 +2104,14 @@ exit `$LASTEXITCODE
         -WarningCode $installWarningCode `
         -WarningMessage $installWarningMessage
 
+    # All fallible Windows adapter work and success-result writing is complete.
+    # Only now discard the journal; a preceding failure still has its source bytes.
+    if ($enginePrepared) {
+        & $sourceBinary install commit --install-root $runtimeDir --runtime-root $runtimeDir --transaction-id $engineTransactionId 1>$null
+        if ($LASTEXITCODE -ne 0) { throw 'Installer Engine failed to seal adapter completion.' }
+    }
+    $taskTransactionCommitted = $taskTransactionStarted
+
     Write-Host "AgentDock installed: $destinationBinary"
     Write-Host "Local MCP address: $localMCPUrl"
     Write-Host 'Open a new terminal if the updated user PATH is not visible yet.'
@@ -2163,10 +2120,15 @@ exit `$LASTEXITCODE
     }
     if ($resolvedTunnelMode -ne 'none') {
         Write-Host ''
-        Write-Host 'AgentDock public installation complete'
+        Write-Host 'AgentDock public access configured'
         Write-Host "Public mode: $resolvedTunnelMode"
-        Write-Host "Public address: $publicUrl"
-        Write-Host "MCP address: $publicUrl/mcp"
+        if (-not [string]::IsNullOrWhiteSpace($publicUrl)) {
+            Write-Host "Public address: $publicUrl"
+            Write-Host "MCP address: $publicUrl/mcp"
+        } else {
+            Write-Host 'Public access is starting in the background.'
+            Write-Host 'Open the AgentDock control panel to view the public address when it is ready.'
+        }
         Write-Host "Bearer Token: $AuthToken"
         Write-Host "OAuth login password: $OAuthPassword"
         Write-Host 'Authentication: Bearer Token and OAuth are both enabled.'
@@ -2174,9 +2136,9 @@ exit `$LASTEXITCODE
         Write-Host "cloudflared stderr log: $cloudflaredStderrLogPath"
         if ($resolvedTunnelMode -eq 'quick') {
             Write-Host 'The temporary address changes after cloudflared restarts.'
-            Write-Host 'Run the same installer command again to refresh the address; credentials are preserved.'
-            Write-Host 'Then replace the MCP URL in the client and complete OAuth again.'
+            Write-Host 'The control panel reports the current address after background startup completes.'
         } else {
+            Write-Host 'Tunnel startup continues in the background; readiness is shown in the control panel and logs.'
             Write-Host "Cloudflare Public Hostname service target: http://127.0.0.1:$Port"
         }
     }
@@ -2188,7 +2150,7 @@ exit `$LASTEXITCODE
     $rollbackError = $null
     $taskRecoveryPath = ''
     try {
-        if ($generationLayoutDetected -or $enginePrepared) {
+        if ($enginePrepared -or ($generationLayoutDetected -and ($agentDockStopAttempted -or $stableFilesMayBeReplaced))) {
             # Target Core runs as agentdock-core.exe after both bootstrap and Update Engine.
             # Stopping the CUI shim would miss the running generation and leave the new pointer live.
             $rollbackGenerationTray = Join-Path $generationBootstrapDirectory 'agentdock-tray.exe'
@@ -2206,8 +2168,7 @@ exit `$LASTEXITCODE
         if ($cloudflaredStopAttempted -or $cloudflaredReplacementStarted -or $tunnelStartupRegistrationChanged) {
             [void] (Stop-CloudflaredForUpgrade -BinaryPath $cloudflaredBinary)
         }
-        # Preflight rejection and a RunAs request that never started own no task mutation.
-        if ($effectivePrivilegeMode -eq 'elevated' -and $taskTransactionStarted) {
+        if ($taskTransactionStarted -and $effectivePrivilegeMode -eq 'elevated') {
             Stop-ScheduledTask -TaskName 'AgentDock' -TaskPath '\' -ErrorAction SilentlyContinue
             Start-Sleep -Milliseconds 500
         }
@@ -2280,6 +2241,7 @@ exit `$LASTEXITCODE
                     -BackupDirectory $taskBackupDirectory `
                     -AdminLauncherPath $sourceTrayBinary `
                     -LauncherPath '' `
+                    -RuntimeRoot $runtimeDir `
                     -TaskUser $taskUser
                 if (-not $restoreTaskActionResult.Started) {
                     throw "Administrator approval for AgentDock rollback was not completed: $($restoreTaskActionResult.ErrorMessage)"
@@ -2315,19 +2277,24 @@ exit `$LASTEXITCODE
         }
 
         $rollbackHealthPort = $Port
+        $rollbackPrivilegeMode = $existingPrivilegeMode
         if (Test-Path -LiteralPath $runtimeManifestPath -PathType Leaf) {
             $restoredManifest = Get-Content -LiteralPath $runtimeManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
             if ($restoredManifest.PSObject.Properties['port']) { $rollbackHealthPort = [int]$restoredManifest.port }
+            if ($restoredManifest.PSObject.Properties['privilege_mode']) { $rollbackPrivilegeMode = [string]$restoredManifest.privilege_mode }
         }
+        if ($rollbackPrivilegeMode -eq 'elevated') {
+            if ($null -ne $taskRollbackError) { throw $taskRollbackError }
+            if ($taskTransactionStarted -or $enginePrepared) {
+                Assert-AgentDockManagedTask -AgentDockBinary $sourceBinary -RuntimeRoot $runtimeDir
+                if ($processWasRunning -or $taskState.WasRunning) {
+                    Start-AgentDockManagedRuntime -AgentDockBinary $sourceBinary -RuntimeRoot $runtimeDir
+                }
+            }
+        } else {
         $taskWillRestartAgentDock = $false
-        if ($taskRestored -and $taskState.WasRunning -and $effectivePrivilegeMode -ne 'elevated') {
-            Start-AgentDockTask -AgentDockBinary $sourceBinary -ExpectedUserSid $taskUser.Sid
-            $taskWillRestartAgentDock = $true
-        }
-        if ($processWasRunning -and -not $taskWillRestartAgentDock) {
-            if ($effectivePrivilegeMode -eq 'elevated') {
-                Stop-AgentDockScheduledTask
-            } elseif (Test-Path -LiteralPath $destinationBinary -PathType Leaf) {
+        if ($processWasRunning -or $taskState.WasRunning) {
+            if (Test-Path -LiteralPath $destinationBinary -PathType Leaf) {
                 # The Engine transaction has restored the committed source generation. Wait for the
                 # source Core to become healthy before confirming the outer adapter rollback.
                 if ($InstallChannel -eq 'setup') {
@@ -2345,26 +2312,33 @@ exit `$LASTEXITCODE
             } elseif (Test-Path -LiteralPath $launcherPath -PathType Leaf) {
                 Start-AgentDockLauncher -LauncherPath $launcherPath
             }
-        } elseif ($taskWillRestartAgentDock) {
-            Wait-AgentDockHealth -HealthPort $rollbackHealthPort
         }
-        if ($cloudflaredProcessWasRunning) {
-            if (Test-Path -LiteralPath $destinationBinary -PathType Leaf) {
-                # Native tunnel start has authoritative Quick/Named readiness. Wait for it before
-                # abandon so a regenerated Quick URL is projected into the final rollback result.
-                if ($InstallChannel -eq 'setup') {
-                    Invoke-SetupRuntimeProcess `
-                        -FilePath $sourceBinary `
-                        -Arguments "tunnel start --runtime-root `"$runtimeDir`"" `
-                        -WaitForExit
-                } else {
-                    & $sourceBinary tunnel start --runtime-root $runtimeDir
-                    if ($LASTEXITCODE -ne 0) {
-                        throw "AgentDock rollback Tunnel start failed with exit code $LASTEXITCODE."
+        }
+        if ($rollbackPrivilegeMode -ne 'elevated' -and $cloudflaredProcessWasRunning) {
+            # Rollback success is anchored to the restored source Core + local health. Tunnel/public
+            # recovery is best-effort and must not turn Cloudflare/network delay into rollback_failed.
+            if (Test-Path -LiteralPath $destinationTrayBinary -PathType Leaf) {
+                try {
+                    $rollbackTunnelArguments = "--start-tunnel --runtime-root `"$runtimeDir`""
+                    if ($InstallChannel -eq 'setup') {
+                        Invoke-SetupRuntimeProcess `
+                            -FilePath $destinationTrayBinary `
+                            -Arguments $rollbackTunnelArguments
+                    } else {
+                        Start-Process `
+                            -FilePath $destinationTrayBinary `
+                            -ArgumentList $rollbackTunnelArguments `
+                            -WindowStyle Hidden | Out-Null
                     }
+                } catch {
+                    # Tunnel diagnostics remain available through panel/runtime logs.
                 }
             } elseif (Test-Path -LiteralPath $cloudflaredLauncherPath -PathType Leaf) {
-                Start-CloudflaredLauncher -LauncherPath $cloudflaredLauncherPath
+                try {
+                    Start-CloudflaredLauncher -LauncherPath $cloudflaredLauncherPath
+                } catch {
+                    # Legacy launcher recovery is also a soft dependency.
+                }
             }
         }
         if ($trayProcessWasRunning -and (Test-Path -LiteralPath $destinationTrayBinary -PathType Leaf)) {
@@ -2386,7 +2360,7 @@ exit `$LASTEXITCODE
         }
         if ($null -ne $rollbackError -or $null -ne $taskRollbackError) {
             $abandonArgs += '--rollback-failed'
-        } elseif ($processWasRunning -or $taskState.WasRunning) {
+        } elseif ($existingPrivilegeMode -ne 'elevated' -and ($processWasRunning -or $taskState.WasRunning)) {
             $abandonArgs += '--require-health'
         }
         & $sourceBinary @abandonArgs 1>$null

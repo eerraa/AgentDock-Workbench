@@ -139,7 +139,14 @@ func (svc *Service) searchTextSelectedRG(ctx context.Context, p workspace.Path, 
 		cmd.Dir = filepath.Dir(p.Abs)
 	}
 	processcontrol.Configure(cmd)
-	output, err := cmd.Output()
+	stdout := rgBoundedOutput{limit: 32 << 20, cancel: cancel}
+	stderr := rgBoundedOutput{limit: 64 << 10, cancel: cancel}
+	cmd.Stdout, cmd.Stderr = &stdout, &stderr
+	err := cmd.Run()
+	if stdout.exceeded || stderr.exceeded {
+		return nil, true, toolErrorCause("RESOURCE_LIMIT", "ripgrep exceeded its output budget", "runtime", map[string]any{"engine": "rg", "resource": "output"}, errSearchResourceLimit)
+	}
+	output := stdout.Bytes()
 	if err != nil {
 		if exit, ok := err.(*exec.ExitError); ok && exit.ExitCode() == 1 {
 			return selection.annotate(Result{"query": opts.Query, "engine": "rg", "matches": []map[string]any{}, "total_matches": 0, "truncated": false}), true, nil
@@ -416,4 +423,24 @@ func searchExecutionError(ctx context.Context, engine string, err error) error {
 		return toolErrorCause("RESOURCE_LIMIT", "text search exceeded its time limit", "runtime", map[string]any{"engine": engine, "resource": "time"}, err)
 	}
 	return toolErrorCause("SEARCH_FAILED", "text search failed", "runtime", map[string]any{"engine": engine}, err)
+}
+
+// The helper is specific to structured rg output. It neither alters process
+// supervision nor silently substitutes another search engine after a failure.
+type rgBoundedOutput struct {
+	bytes.Buffer
+	limit    int
+	exceeded bool
+	cancel   context.CancelFunc
+}
+
+func (output *rgBoundedOutput) Write(data []byte) (int, error) {
+	remaining := output.limit - output.Len()
+	if len(data) <= remaining {
+		return output.Buffer.Write(data)
+	}
+	n, _ := output.Buffer.Write(data[:remaining])
+	output.exceeded = true
+	output.cancel()
+	return n, errSearchResourceLimit
 }

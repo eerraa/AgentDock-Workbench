@@ -377,7 +377,7 @@ public partial class MainWindow
 
     private Border BuildMcpCapabilityRow(McpCapabilityInfo server, bool nested, string pluginName)
     {
-        var metadata = server.ToolCountKnown ? UiText.Format("McpStatusSummary", server.Status, server.ToolCount) : UiText.Format("McpStatusUnknownCount", server.Status);
+        var metadata = server.ToolCountKnown ? UiText.Format("McpStatusSummary", server.Status, server.ToolCount) : server.Status;
         if (!string.IsNullOrWhiteSpace(server.ServerVersion)) metadata += " · " + server.ServerVersion;
         var details = string.IsNullOrWhiteSpace(server.Description)
             ? metadata

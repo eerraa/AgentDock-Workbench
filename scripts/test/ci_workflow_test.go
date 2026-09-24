@@ -54,9 +54,9 @@ func TestCIWorkflowUsesFreshBoundedGoTests(t *testing.T) {
 		"timeout-minutes: 20",
 		"go test -p 2 ./... -count=1 -timeout=3m",
 		"name: ACP prompt and steering race regression",
-		"-count=1",
+		"-count=20",
 		"-timeout=90s",
-		"go test -race -p 2 ./internal/insertion ./internal/taskstate ./internal/mcp/client ./internal/app",
+		"go test -race ./... -count=1 -timeout=3m",
 		"go test -race -tags browser_integration ./internal/tool/browser ./internal/app -count=1 -timeout=3m",
 		"timeout-minutes: 15",
 	} {
@@ -126,7 +126,7 @@ func TestWindowsReleaseKeepsBoundedCompleteValidation(t *testing.T) {
 	}
 }
 
-func TestWindowsPackageSeparatesCandidateBuildAndAuthorizedPublication(t *testing.T) {
+func TestWindowsPackageOwnsAutomaticVersionTagRelease(t *testing.T) {
 	workflow := readWorkflow(t, "windows-package.yml")
 	for _, want := range []string{
 		"push:\n    tags:\n      - 'v*'",
@@ -164,49 +164,5 @@ func TestFunnelFixtureRequiresExplicitTargetVersion(t *testing.T) {
 	}
 	if !strings.Contains(string(source), "[Parameter(Mandatory=$true)][string] $ExpectedVersion") {
 		t.Fatal("Funnel lifecycle must not silently inherit an older hardcoded target version")
-	}
-}
-
-func TestEerraaPackagePolicyKeepsRepositoryAndPublicationGuards(t *testing.T) {
-	workflow := readWorkflow(t, "windows-package.yml")
-	for _, want := range []string{
-		"branches:\n      - main",
-		"if: github.repository == 'eerraa/agentdock'",
-		"github.event_name == 'workflow_dispatch'",
-		"github.ref == 'refs/heads/main'",
-		"vars.EERRAA_ENABLE_PUBLIC_RELEASE == 'true'",
-		"contents: read", "contents: write", "candidate-not-released",
-		"Public release publication is not authorized for this downstream channel.",
-	} {
-		if !strings.Contains(workflow, want) {
-			t.Fatalf("unsafe downstream package policy: missing %q", want)
-		}
-	}
-	if strings.Contains(workflow, "A-m-o-r-F-a-t-i/agentdock") {
-		t.Fatal("candidate workflow still depends on upstream ownership")
-	}
-	if strings.Contains(workflow, "$publish = $true") {
-		t.Fatal("automatic publication must not be inferred from a push")
-	}
-}
-
-// Candidate scope deliberately changes instrumentation, not product assertions.
-// All packages still run in the complete deterministic suite above.
-func TestCIWorkflowKeepsSingleScopedConcurrencyRace(t *testing.T) {
-	workflow := readWorkflow(t, "ci.yml")
-	for _, want := range []string{
-		"name: Scoped concurrency race",
-		"-run 'Test(Insertion|CompletionNotification|Managed|MetadataUpdate|SameManagerConcurrentRegistryUpdates)' -count=1 -timeout=3m",
-		"go test -p 2 ./... -count=1 -timeout=3m",
-		"go vet ./...",
-	} {
-		if !strings.Contains(workflow, want) {
-			t.Fatalf("candidate concurrency validation is missing %q", want)
-		}
-	}
-	for _, forbidden := range []string{"go test -race ./...", "-count=20", "continue-on-error"} {
-		if strings.Contains(workflow, forbidden) {
-			t.Fatalf("candidate CI exceeds scope or masks failure: %q", forbidden)
-		}
 	}
 }

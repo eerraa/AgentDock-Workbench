@@ -2,9 +2,6 @@
 param(
     [string] $InstallerPath = '',
     [string] $Version = 'latest',
-    [string] $OfflineArchive = '',
-    [string] $OfflineChecksumFile = '',
-    [string] $OfflineCloudflaredBinary = '',
     [string] $ReleaseBaseUrl = '',
     [int] $Port = 18765,
     [string] $CompletionFile = ''
@@ -18,14 +15,6 @@ if (-not $InstallerPath) {
     $InstallerPath = Join-Path $PSScriptRoot '..\install\install.ps1'
 }
 $resolvedInstaller = Resolve-Path -LiteralPath $InstallerPath
-# This downstream has no online update channel. Both clean install and repair
-# must use the same validated, caller-supplied local payload.
-foreach ($inputFile in @($OfflineArchive, $OfflineChecksumFile, $OfflineCloudflaredBinary)) {
-    if ([string]::IsNullOrWhiteSpace($inputFile) -or -not (Test-Path -LiteralPath $inputFile -PathType Leaf)) {
-        throw 'Windows installer E2E requires an existing offline archive, checksum and cloudflared binary.'
-    }
-}
-
 $testRoot = Join-Path ([IO.Path]::GetTempPath()) ('agentdock-installer-e2e-' + [Guid]::NewGuid().ToString('N'))
 $installDir = Join-Path $testRoot 'bin'
 $binaryPath = Join-Path $installDir 'agentdock.exe'
@@ -45,11 +34,6 @@ if ($ReleaseBaseUrl) {
 }
 
 function Stop-TestAgentDock {
-    # Stop the runtime owner before cleaning its fixture. Generation children
-    # are not necessarily named by the stable bin paths below.
-    if (Test-Path -LiteralPath $binaryPath -PathType Leaf) {
-        & $binaryPath service stop --runtime-root $testRoot 2>$null | Out-Null
-    }
     Get-Process -Name 'agentdock-tray' -ErrorAction SilentlyContinue | Where-Object {
         try {
             [string]::Equals([IO.Path]::GetFullPath($_.Path), [IO.Path]::GetFullPath($trayBinaryPath), [StringComparison]::OrdinalIgnoreCase)
@@ -215,9 +199,6 @@ if ($principal.IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administ
 try {
     & $resolvedInstaller `
         -Version $Version `
-        -OfflineArchive $OfflineArchive `
-        -OfflineChecksumFile $OfflineChecksumFile `
-        -OfflineCloudflaredBinary $OfflineCloudflaredBinary `
         -InstallDir $installDir `
         -RegisterStartup `
         -TunnelMode none `
@@ -230,9 +211,6 @@ try {
     # 第二次执行必须覆盖正在运行的二进制，并保留已有 DPAPI Token。
     & $resolvedInstaller `
         -Version $Version `
-        -OfflineArchive $OfflineArchive `
-        -OfflineChecksumFile $OfflineChecksumFile `
-        -OfflineCloudflaredBinary $OfflineCloudflaredBinary `
         -InstallDir $installDir `
         -RegisterStartup `
         -TunnelMode none `

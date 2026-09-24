@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -21,13 +22,12 @@ const (
 	PathModel       = "host"
 	RecallTimeoutMS = 30000
 
-	maxInstructionsFileBytes = 64 << 10
-
 	defaultOAuthAccessTokenTTLSeconds = int64(time.Hour / time.Second)
 	maxOAuthAccessTokenTTLSeconds     = int64(999999 * 24 * 60 * 60)
 )
 
 type Config struct {
+	ContextTimeoutMS             int
 	AgentDockHome                string
 	AgentDockDefaultDir          string
 	CommandEnvFromEnv            map[string]string
@@ -71,6 +71,14 @@ type ACPProfile struct {
 }
 
 func FromEnv() (Config, error) {
+	contextTimeoutMS, err := getenvInt("AGENTDOCK_CONTEXT_TIMEOUT_MS", 5000)
+	if err != nil {
+		return Config{}, err
+	}
+	if contextTimeoutMS < 100 || contextTimeoutMS > 30000 {
+		return Config{}, fmt.Errorf("AGENTDOCK_CONTEXT_TIMEOUT_MS must be between 100 and 30000")
+	}
+
 	agentsAutoLoad, err := getenvBool("AGENTDOCK_AGENTS_AUTOLOAD", true)
 	if err != nil {
 		return Config{}, err
@@ -142,6 +150,7 @@ func FromEnv() (Config, error) {
 		}
 	}
 	return Config{
+		ContextTimeoutMS:             contextTimeoutMS,
 		AgentDockHome:                strings.TrimSpace(os.Getenv("AGENTDOCK_HOME")),
 		AgentDockDefaultDir:          strings.TrimSpace(os.Getenv("AGENTDOCK_DEFAULT_DIR")),
 		CommandEnvFromEnv:            commandEnvFromEnv,
@@ -184,19 +193,38 @@ func (c *Config) Normalize() error {
 	if c.AgentDockDefaultDir == "" {
 		c.AgentDockDefaultDir = filepath.Join(home, "AgentDock")
 	}
-	homePath, err := prepareRuntimeDirectory("AgentDockHome", c.AgentDockHome, true)
-	if err != nil {
-		return err
+	paths := []struct {
+		label string
+		value *string
+	}{
+		{label: "AgentDockHome", value: &c.AgentDockHome},
+		{label: "AgentDockDefaultDir", value: &c.AgentDockDefaultDir},
 	}
-	c.AgentDockHome = homePath
-	// The default directory is the user's workspace. A protected inheritable DACL
-	// there is propagated to every existing child and blocks the listener until
-	// that walk finishes. Only the private home is secured.
-	defaultDir, err := prepareRuntimeDirectory("AgentDockDefaultDir", c.AgentDockDefaultDir, false)
-	if err != nil {
-		return err
+	for _, path := range paths {
+		cleaned := filepath.Clean(strings.TrimSpace(*path.value))
+		if !filepath.IsAbs(cleaned) {
+			return fmt.Errorf("%s must resolve to an absolute path: %s", path.label, cleaned)
+		}
+		if err := os.MkdirAll(cleaned, 0o700); err != nil {
+			return fmt.Errorf("create %s %s: %w", path.label, cleaned, err)
+		}
+		info, err := os.Stat(cleaned)
+		if err != nil {
+			return fmt.Errorf("stat %s %s: %w", path.label, cleaned, err)
+		}
+		if !info.IsDir() {
+			return fmt.Errorf("%s is not a directory: %s", path.label, cleaned)
+		}
+		// AgentDock owns its data home, not the selected Windows project.
+		// In particular, changing a parent DACL can rewrite inherited access on
+		// pre-existing descendants. Unix private-mode behavior is unchanged.
+		if path.label == "AgentDockHome" || runtime.GOOS != "windows" {
+			if err := securepath.EnsurePrivate(cleaned); err != nil {
+				return fmt.Errorf("secure %s %s: %w", path.label, cleaned, err)
+			}
+		}
+		*path.value = cleaned
 	}
-	c.AgentDockDefaultDir = defaultDir
 	c.BrowserExecutablePath = strings.TrimSpace(c.BrowserExecutablePath)
 	if c.BrowserExecutablePath != "" {
 		c.BrowserExecutablePath = filepath.Clean(c.BrowserExecutablePath)
@@ -281,29 +309,6 @@ func (c *Config) Normalize() error {
 	}
 	c.TrustedProxyCIDRs = networks
 	return nil
-}
-
-func prepareRuntimeDirectory(label, path string, secure bool) (string, error) {
-	cleaned := filepath.Clean(strings.TrimSpace(path))
-	if !filepath.IsAbs(cleaned) {
-		return "", fmt.Errorf("%s must resolve to an absolute path: %s", label, cleaned)
-	}
-	if err := os.MkdirAll(cleaned, 0o700); err != nil {
-		return "", fmt.Errorf("create %s %s: %w", label, cleaned, err)
-	}
-	info, err := os.Stat(cleaned)
-	if err != nil {
-		return "", fmt.Errorf("stat %s %s: %w", label, cleaned, err)
-	}
-	if !info.IsDir() {
-		return "", fmt.Errorf("%s is not a directory: %s", label, cleaned)
-	}
-	if secure {
-		if err := securepath.EnsurePrivate(cleaned); err != nil {
-			return "", fmt.Errorf("secure %s %s: %w", label, cleaned, err)
-		}
-	}
-	return cleaned, nil
 }
 
 func (c Config) AuthRequired() bool {
@@ -677,4 +682,13 @@ func validACPAgentName(value string) bool {
 		}
 	}
 	return true
+}
+
+// ContextBudget bounds preparation of read-only bootstrap contexts only. It
+// does not shorten command, browser, adapter or dynamic MCP business timeouts.
+func (c Config) ContextBudget() time.Duration {
+	if c.ContextTimeoutMS <= 0 {
+		return 5 * time.Second
+	}
+	return time.Duration(c.ContextTimeoutMS) * time.Millisecond
 }

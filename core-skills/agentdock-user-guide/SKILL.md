@@ -53,7 +53,7 @@ AgentDock 的用户文档独立维护在 [uvwt/agentdock-docs](https://github.co
 
 ### AgentDock Skills
 
-[AgentDock Skills](https://github.com/uvwt/agentdock-skills) 是 AgentDock 官方与社区 Skill 的源码、测试和发布仓库。普通业务集成、个人效率工具和社区 Skill 在这里独立维护和版本化，避免与 AgentDock Core 版本强耦合。
+[AgentDock Skills](https://github.com/uvwt/agentdock-skills) 是 AgentDock 官方与社区 Skill 的源码与测试仓库。普通业务集成、个人效率工具和社区 Skill 在这里独立维护，内容演进由 Git 历史追踪，避免与 AgentDock Core 版本强耦合。
 
 AgentDock 主仓库的 `core-skills/` 只保留必须随 AgentDock 运行时一起安装和升级的内置核心 Skill；需要查找、阅读、贡献或发布其他 Skill 时，应优先查看 AgentDock Skills 仓库。安装第三方或社区 Skill 前仍应进行来源和安全审查。
 
@@ -218,3 +218,7 @@ AgentDock Core 在启动时从**进程环境**读取运行配置。不同发行�
 - 如果发现当前环境与预期不一致，说明证据，而不是继续猜测。
 
 涉及修改时优先直接使用当前可用 AgentDock 工具检查和验证真实环境；只有缺少操作能力时，才让用户手工执行必要步骤。
+
+## 上下文复用
+
+首次缺少规则时调用一次 `agentdock_context`。同一规则作用域后续直接使用业务工具，无新增 AGENTS.md 的子目录操作不重载。后台命令继续观察原 session；普通失败或短暂网络错误先核对原调用；MCP 变化只定向刷新该服务。工作区/规则变化或模型压缩后缺少必要内容时可以再次请求，返回完整有效快照，不需要每次填写 conversation_id/task_id。

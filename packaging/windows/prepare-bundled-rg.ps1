@@ -9,7 +9,8 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 $repository = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-$spec = Get-Content -LiteralPath (Join-Path $repository 'internal\bundledrg\windows-amd64.json') -Raw | ConvertFrom-Json
+$specPath = Join-Path $repository 'internal\bundledrg\windows-amd64.json'
+$spec = Get-Content -LiteralPath $specPath -Raw | ConvertFrom-Json
 if ($spec.schema_version -ne 1 -or $spec.platform -ne 'windows/amd64' -or
     $spec.archive_sha256 -notmatch '^[0-9a-f]{64}$' -or $spec.url -match '/latest/' -or
     -not $spec.url.StartsWith('https://github.com/BurntSushi/ripgrep/releases/download/')) {
@@ -18,6 +19,11 @@ if ($spec.schema_version -ne 1 -or $spec.platform -ne 'windows/amd64' -or
 $destinationRoot = [IO.Path]::GetFullPath($Destination)
 
 function Assert-Bundle([string] $Root) {
+    $manifestPath = Join-Path $Root 'manifest.json'
+    $manifest = Get-Item -LiteralPath $manifestPath
+    if ($manifest.Length -gt 16384 -or ($manifest.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'Invalid bundled manifest.' }
+    $actual = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+    if (($actual | ConvertTo-Json -Depth 8 -Compress) -cne ($spec | ConvertTo-Json -Depth 8 -Compress)) { throw 'Bundled manifest differs from pinned specification.' }
     foreach ($file in $spec.files) {
         if ($file.path -notin @('rg.exe','COPYING','LICENSE-MIT','UNLICENSE')) { throw 'Unexpected ripgrep file name.' }
         $path = Join-Path $Root $file.path
@@ -75,6 +81,7 @@ if ($VerifyOnly -or (Test-Path -LiteralPath $destinationRoot)) {
                 [IO.Compression.ZipFileExtensions]::ExtractToFile($entries[0], (Join-Path $staging $file.path), $false)
             }
         } finally { $archive.Dispose() }
+        Copy-Item -LiteralPath $specPath -Destination (Join-Path $staging 'manifest.json')
         Assert-Bundle $staging
         Move-Item -LiteralPath $staging -Destination $destinationRoot
     } finally {

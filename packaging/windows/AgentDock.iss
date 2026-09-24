@@ -1,5 +1,5 @@
 #ifndef AppVersion
-#define AppVersion "0.0.0"
+#define AppVersion "1.1.6100"
 #endif
 
 #define AppIdValue "{D6788C7A-4104-48D4-B5C3-F4858B5606EA}"
@@ -24,7 +24,7 @@
 AppId={{D6788C7A-4104-48D4-B5C3-F4858B5606EA}
 AppName=AgentDock
 AppVersion={#AppVersion}
-AppPublisher=AgentDock Eerraa
+AppPublisher=Eerraa
 AppPublisherURL=https://github.com/eerraa/agentdock
 AppSupportURL=https://github.com/eerraa/agentdock/issues
 AppUpdatesURL=https://github.com/eerraa/agentdock/releases

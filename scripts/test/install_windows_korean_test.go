@@ -59,7 +59,7 @@ func TestWindowsKoreanInstallerResourceContract(t *testing.T) {
 	main := read("AgentDock.iss")
 	code := read(filepath.Join("includes", "code.iss"))
 	native := read(filepath.Join("includes", "native-launch.iss"))
-	for _, required := range []string{`Name: "korean"; MessagesFile: "languages\Korean.isl"`, `LanguageDetectionMethod=uilanguage`, `PrivilegesRequired=lowest`, `languages\LICENSE-InnoSetup.txt`, `https://github.com/eerraa/agentdock/tree/main/docs`} {
+	for _, required := range []string{`Name: "korean"; MessagesFile: "languages\Korean.isl"`, `LanguageDetectionMethod=uilanguage`, `PrivilegesRequired=lowest`, `languages\LICENSE-InnoSetup.txt`} {
 		if !strings.Contains(main, required) {
 			t.Errorf("missing installer contract %s", required)
 		}

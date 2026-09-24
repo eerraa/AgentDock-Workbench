@@ -23,20 +23,14 @@ func platformServiceStatus(ctx context.Context, runtimeRoot string) (ServiceStat
 	if err != nil {
 		return ServiceStatus{}, err
 	}
+	if manifest.UsesScheduledTask() {
+		return runtimeHostServiceStatus(ctx, runtimeRoot, manifest)
+	}
 	coreBinary := ActiveCoreBinary(runtimeRoot, manifest)
-	supervisorPID, err := activeTunnelSupervisorPID(runtimeRoot, coreBinary)
+	running, err := processRunningAtPath(coreBinary)
 	if err != nil {
 		return ServiceStatus{}, err
 	}
-	excluded := map[uint32]struct{}{}
-	if supervisorPID != 0 {
-		excluded[supervisorPID] = struct{}{}
-	}
-	coreProcesses, err := processIDsAtPathExcept(coreBinary, excluded)
-	if err != nil {
-		return ServiceStatus{}, err
-	}
-	running := len(coreProcesses) > 0
 	healthy := testHealth(ctx, manifest.HealthURL())
 	startupEnabled, err := coreAutostartEnabled(ctx, manifest)
 	if err != nil {
@@ -51,15 +45,16 @@ func platformServiceAction(ctx context.Context, runtimeRoot, action string) erro
 		return err
 	}
 
+	if manifest.UsesScheduledTask() {
+		return elevatedRuntimeAction(ctx, root, manifest, action)
+	}
+
 	switch action {
 	case "start":
 		return startCore(ctx, manifest, root)
 	case "stop":
 		return stopCore(ctx, manifest, root)
 	case "restart":
-		if manifest.UsesScheduledTask() {
-			return restartScheduledCore(ctx, manifest, root)
-		}
 		if err := stopCore(ctx, manifest, root); err != nil {
 			return err
 		}
@@ -82,94 +77,30 @@ func loadDesktopManifest(runtimeRoot string) (Manifest, string, error) {
 }
 
 func startCore(ctx context.Context, manifest Manifest, runtimeRoot string) error {
+	if manifest.UsesScheduledTask() {
+		return elevatedRuntimeActionLocked(ctx, runtimeRoot, manifest, "start")
+	}
 	if err := CheckExecutionCompatibility(ctx, runtimeRoot, ActiveCoreBinary(runtimeRoot, manifest)); err != nil {
 		return err
 	}
+	if testHealth(ctx, manifest.HealthURL()) {
+		return nil
+	}
+	recoverAbandonedCoreLocks(manifest, runtimeRoot)
 	if manifest.UsesScheduledTask() {
-		return startScheduledCore(ctx, manifest, runtimeRoot)
-	}
-	if testHealth(ctx, manifest.HealthURL()) {
-		return nil
-	}
-	recoverAbandonedCoreLocks(manifest, runtimeRoot)
-	if err := startDetachedCore(manifest, runtimeRoot); err != nil {
-		return err
-	}
-	return waitForHealth(ctx, manifest.HealthURL(), windowsCoreStartTimeout)
-}
-
-// The scheduled task is the only owner of an elevated core. Stop ends that
-// task and does not terminate an arbitrary matching image path. Restart fails
-// while the previous core still answers health, then starts the same task.
-func startScheduledCore(ctx context.Context, manifest Manifest, runtimeRoot string) error {
-	if testHealth(ctx, manifest.HealthURL()) {
-		return nil
-	}
-	recoverAbandonedCoreLocks(manifest, runtimeRoot)
-	if err := StartInteractiveScheduledTask(ctx, runtimeRoot, manifest.AgentDockTaskName); err != nil {
-		return err
-	}
-	return waitForHealth(ctx, manifest.HealthURL(), windowsCoreStartTimeout)
-}
-
-func restartScheduledCore(ctx context.Context, manifest Manifest, runtimeRoot string) error {
-	if err := stopScheduledCore(ctx, manifest, runtimeRoot); err != nil {
-		return err
-	}
-	if testHealth(ctx, manifest.HealthURL()) {
-		return fmt.Errorf("AgentDock 核心在计划任务结束后仍响应 %s", manifest.HealthURL())
-	}
-	return startScheduledCore(ctx, manifest, runtimeRoot)
-}
-
-// handOffScheduledCore ends the previous elevated core and starts the same
-// scheduled task. The caller does not wait for the port; that task owns the core.
-func handOffScheduledCore(ctx context.Context, manifest Manifest, runtimeRoot string) error {
-	if err := stopScheduledCore(ctx, manifest, runtimeRoot); err != nil {
-		return err
-	}
-	if testHealth(ctx, manifest.HealthURL()) {
-		return fmt.Errorf("AgentDock 核心在计划任务结束后仍响应 %s", manifest.HealthURL())
-	}
-	recoverAbandonedCoreLocks(manifest, runtimeRoot)
-	return StartInteractiveScheduledTask(ctx, runtimeRoot, manifest.AgentDockTaskName)
-}
-
-func stopScheduledCore(ctx context.Context, manifest Manifest, runtimeRoot string) error {
-	endErr := runScheduledTaskCommand(ctx, "/End", "/TN", scheduledTaskPath(manifest.AgentDockTaskName))
-	if endErr != nil && !scheduledTaskNotRunning(endErr) {
-		return endErr
-	}
-	coreBinary := ActiveCoreBinary(runtimeRoot, manifest)
-	deadline := time.Now().Add(15 * time.Second)
-	for {
-		running, err := processRunningAtPath(coreBinary)
-		if err != nil {
+		if err := StartInteractiveScheduledTask(ctx, runtimeRoot, manifest.AgentDockTaskName); err != nil {
 			return err
 		}
-		if !running && !testHealth(ctx, manifest.HealthURL()) {
-			return nil
-		}
-		if time.Now().After(deadline) {
-			return fmt.Errorf("计划任务结束后 AgentDock 核心仍在运行: %s", manifest.HealthURL())
-		}
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(250 * time.Millisecond):
-		}
+	} else if err := startDetachedCore(manifest, runtimeRoot); err != nil {
+		return err
 	}
-}
-
-func scheduledTaskNotRunning(err error) bool {
-	message := err.Error()
-	return strings.Contains(strings.ToLower(message), "no running instance") ||
-		strings.Contains(message, "没有运行") ||
-		strings.Contains(message, "현재 실행") ||
-		strings.Contains(message, "실행 중이지")
+	return waitForHealth(ctx, manifest.HealthURL(), windowsCoreStartTimeout)
 }
 
 func stopCore(ctx context.Context, manifest Manifest, runtimeRoot string) error {
+	if manifest.UsesScheduledTask() {
+		return elevatedRuntimeActionLocked(ctx, runtimeRoot, manifest, "stop")
+	}
 	coreBinary := ActiveCoreBinary(runtimeRoot, manifest)
 	excluded := map[uint32]struct{}{}
 	ancestorPIDs, err := ancestorProcessIDsAtPath(coreBinary)
@@ -190,7 +121,15 @@ func stopCore(ctx context.Context, manifest Manifest, runtimeRoot string) error 
 	}
 
 	if manifest.UsesScheduledTask() {
-		return stopScheduledCore(ctx, manifest, runtimeRoot)
+		// 先让任务计划程序正常结束最高权限进程，避免普通托盘立即申请 PROCESS_TERMINATE。
+		_ = runScheduledTaskCommand(ctx, "/End", "/TN", scheduledTaskPath(manifest.AgentDockTaskName))
+		stopped, waitErr := waitBinaryStoppedExcept(ctx, coreBinary, excluded, 5*time.Second)
+		if waitErr != nil {
+			return waitErr
+		}
+		if stopped {
+			return nil
+		}
 	}
 	if err := stopBinaryProcessesExcept(ctx, coreBinary, excluded, 15*time.Second); err != nil {
 		return fmt.Errorf("停止 AgentDock 核心失败: %w", err)

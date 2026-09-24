@@ -21,7 +21,7 @@ func realRGGeneration(t *testing.T, parent, version string) string {
 		t.Fatal("required real bundled ripgrep suite has no fixture; skipping is forbidden")
 	}
 	generation := filepath.Join(parent, "versions", version)
-	root := filepath.Join(generation, "tools", "rg")
+	root := filepath.Join(generation, "share", "agentdock", "bin")
 	if err := os.MkdirAll(root, 0700); err != nil {
 		t.Fatal(err)
 	}
@@ -33,6 +33,9 @@ func realRGGeneration(t *testing.T, parent, version string) string {
 		if err := os.WriteFile(filepath.Join(root, expected.Path), data, 0600); err != nil {
 			t.Fatal(err)
 		}
+	}
+	if err := os.WriteFile(filepath.Join(root, "manifest.json"), bundledrg.ManifestBytes(), 0600); err != nil {
+		t.Fatal(err)
 	}
 	return filepath.Join(generation, "agentdock-core.exe")
 }
@@ -53,7 +56,7 @@ func TestRequiredBundledRGWinsOverConflictingPATHAndTracksRunningGeneration(t *t
 		if err != nil {
 			t.Fatal(err)
 		}
-		if selection.path != filepath.Join(filepath.Dir(executable), "tools", "rg", "rg.exe") || selection.source != "bundled" || selection.version != "15.2.0" {
+		if selection.path != filepath.Join(filepath.Dir(executable), "share", "agentdock", "bin", "rg.exe") || selection.source != "bundled" || selection.version != "15.2.0" {
 			t.Fatalf("generation selection: %+v", selection)
 		}
 		selection.close()
@@ -96,11 +99,8 @@ func TestRequiredBundledRGActualSearchCases(t *testing.T) {
 					t.Fatalf("real bundled query %q: %#v %v", query, result, err)
 				}
 				matches := result["matches"].([]map[string]any)
-				expected, resolveErr := svc.ws.ResolveExisting(file)
-				if resolveErr != nil {
-					t.Fatal(resolveErr)
-				}
-				if matches[0]["path"] != expected.Display || matches[0]["line"] != 2 || matches[0]["column"] != 1 || matches[0]["match_text"] != query {
+				expected, _ := svc.ws.Relative(file)
+				if matches[0]["path"] != expected || matches[0]["line"] != 2 || matches[0]["column"] != 1 || matches[0]["match_text"] != query {
 					t.Fatalf("config/path/position corrupted: %#v", matches)
 				}
 			}
@@ -130,5 +130,35 @@ func TestRequiredBundledRGActualSearchCases(t *testing.T) {
 	_, _, err = svc.searchTextSelectedRG(expired, resolved, SearchOptions{Query: "needle"}, selection)
 	if !errors.As(err, &toolErr) || toolErr.Code != "RESOURCE_LIMIT" {
 		t.Fatalf("deadline: %v", err)
+	}
+}
+
+func TestRequiredLegacyBundleNeverOverridesCanonicalIntegrity(t *testing.T) {
+	executable := realRGGeneration(t, t.TempDir(), "v1.1.6")
+	canonical := filepath.Join(filepath.Dir(executable), filepath.FromSlash(bundledrg.RelativeDir))
+	legacy := filepath.Join(filepath.Dir(executable), "tools", "rg")
+	if err := os.MkdirAll(filepath.Dir(legacy), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(canonical, legacy); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(filepath.Join(legacy, "manifest.json")); err != nil {
+		t.Fatal(err)
+	}
+	lookup := func(string) (string, error) {
+		t.Fatal("compatibility bundle lost to PATH")
+		return "", exec.ErrNotFound
+	}
+	selected, err := selectRGForExecutable(context.Background(), executable, "windows", "amd64", lookup)
+	if err != nil || selected.source != "compatibility_bundled" {
+		t.Fatalf("legacy: %+v %v", selected, err)
+	}
+	selected.close()
+	if err := os.MkdirAll(canonical, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := selectRGForExecutable(context.Background(), executable, "windows", "amd64", lookup); !errors.Is(err, bundledrg.ErrIntegrity) {
+		t.Fatalf("corrupt canonical fell back: %v", err)
 	}
 }

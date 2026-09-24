@@ -15,7 +15,7 @@ internal sealed class TaskNotificationWindow : Window
         Title = "AgentDock"; Width = 360; Height = 116;
         WindowStyle = WindowStyle.None; ResizeMode = ResizeMode.NoResize;
         ShowInTaskbar = false; ShowActivated = false; Topmost = true;
-        FontFamily = new System.Windows.Media.FontFamily("Segoe UI, Malgun Gothic, Microsoft YaHei UI"); FontSize = 14;
+        FontFamily = new System.Windows.Media.FontFamily("Segoe UI, Microsoft YaHei UI"); FontSize = 14;
         SetResourceReference(BackgroundProperty, "PanelBackground");
         SetResourceReference(ForegroundProperty, "PrimaryText");
         var frame = new ThemeBorder { BorderResource = "SeparatorBrush", BackgroundResource = "PanelBackground", BorderThickness = new Thickness(1), Padding = new Thickness(14, 10, 10, 12) };
@@ -25,7 +25,7 @@ internal sealed class TaskNotificationWindow : Window
         var heading = new DockPanel();
         var close = new Button { Content = UiText.Get("ExecutionClose"), FontSize = 12, Padding = new Thickness(8, 2, 8, 2), MinHeight = 26 };
         DockPanel.SetDock(close, Dock.Right); close.Click += (_, _) => Close(); heading.Children.Add(close);
-        heading.Children.Add(new ThemeTextBlock { Text = UiText.Get("ExecutionTaskCompletedNotification"), ForegroundResource = "SecondaryText", VerticalAlignment = VerticalAlignment.Center });
+        heading.Children.Add(new ThemeTextBlock { Text = UiText.Get("ExecutionCompleted"), ForegroundResource = "SecondaryText", VerticalAlignment = VerticalAlignment.Center });
         layout.Children.Add(heading);
         var open = new Button { Content = new TextBlock { Text = notification.Title, TextTrimming = TextTrimming.CharacterEllipsis, FontWeight = FontWeights.SemiBold },
             HorizontalContentAlignment = System.Windows.HorizontalAlignment.Left, Margin = new Thickness(0, 8, 0, 0), BorderThickness = new Thickness(0), ToolTip = notification.Title };

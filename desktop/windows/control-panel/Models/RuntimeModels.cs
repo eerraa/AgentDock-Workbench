@@ -154,9 +154,9 @@ public sealed record RuntimeSnapshot(
     RuntimeManifest Manifest,
     ControlPanelSettings Settings,
     string Version,
-    bool CoreRunning,
+    bool? CoreRunning,
     bool Healthy,
-    bool CloudflaredRunning,
+    bool? CloudflaredRunning,
     string LocalMcpUrl,
     string PublicOrigin,
     string PublicMcpUrl,
@@ -168,15 +168,8 @@ public sealed record RuntimeSnapshot(
     NexusDeviceStatus Nexus,
     bool NexusConnected,
     DateTimeOffset CheckedAt,
-    NativeTunnelStatus? Tailscale = null)
-{
-    internal bool PublicTunnelDown => Healthy && TunnelMode.ToLowerInvariant() switch
-    {
-        "named" or "quick" => !CloudflaredRunning,
-        "funnel" => Tailscale is not { Ready: true },
-        _ => false
-    };
-}
+    NativeTunnelStatus? Tailscale = null,
+    bool? CloudflareReady = null);
 
 public sealed class CapabilityInventory
 {
@@ -326,12 +319,8 @@ public sealed record UrlTestResult(bool Success, int? StatusCode, TimeSpan Elaps
 
 public sealed class UpdateCheckResult
 {
-    [JsonPropertyName("code")]
-    public string Code { get; set; } = "";
-
-    [JsonIgnore]
-    public string DisplayMessage => Code == "online-updates-disabled"
-        ? UiText.Get("OfflineUpdatesOnly") : Message;
+ [JsonPropertyName("code")] public string Code { get; set; } = "";
+ [JsonIgnore] public string DisplayMessage => Code == "online-updates-disabled" ? UiText.Get("OfflineUpdateInformation") : Message;
     [JsonPropertyName("current_version")]
     public string CurrentVersion { get; set; } = "";
 
@@ -361,8 +350,8 @@ internal sealed class UpdateProgressEvent
     [JsonPropertyName("asset")]
     public string Asset { get; set; } = "";
 
-    [JsonPropertyName("bytes_read")]
-    public long? BytesRead { get; set; }
+    [JsonPropertyName("bytes")]
+    public long? Bytes { get; set; }
 
     [JsonPropertyName("total_bytes")]
     public long? TotalBytes { get; set; }
