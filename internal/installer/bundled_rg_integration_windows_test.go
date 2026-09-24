@@ -138,3 +138,50 @@ func TestRequiredRGCorruptPayloadCannotReplaceCommittedGeneration(t *testing.T) 
 		t.Fatalf("corrupt repair damaged the committed bundle: %v", err)
 	}
 }
+
+func TestRequiredRGLegacyMigrationPreservesSourceSidecar(t *testing.T) {
+	for _, relative := range []string{bundledrg.RelativeDir, "tools/rg"} {
+		t.Run(relative, func(t *testing.T) {
+			root := t.TempDir()
+			legacy := filepath.Join(root, "legacy")
+			target := filepath.Join(root, "target")
+			fixture := os.Getenv("AGENTDOCK_TEST_RG_BUNDLE")
+			if fixture == "" {
+				t.Fatal("required pinned rg fixture is missing")
+			}
+			source := filepath.Join(legacy, filepath.FromSlash(relative))
+			if err := os.MkdirAll(source, 0700); err != nil {
+				t.Fatal(err)
+			}
+			for _, file := range bundledrg.Specification().Files {
+				data, err := os.ReadFile(filepath.Join(fixture, file.Path))
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(filepath.Join(source, file.Path), data, 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if relative == bundledrg.RelativeDir {
+				if err := os.WriteFile(filepath.Join(source, "manifest.json"), bundledrg.ManifestBytes(), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := preserveLegacySearchBundle(t.Context(), legacy, target); err != nil {
+				t.Fatal(err)
+			}
+			copied := filepath.Join(target, filepath.FromSlash(relative))
+			verified, err := bundledrg.OpenLegacy(t.Context(), copied)
+			if err != nil {
+				t.Fatal(err)
+			}
+			verified.Close()
+			if err := os.WriteFile(filepath.Join(source, "rg.exe"), []byte("changed-source"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			if err := preserveLegacySearchBundle(t.Context(), legacy, filepath.Join(root, "rejected")); !errors.Is(err, bundledrg.ErrIntegrity) {
+				t.Fatalf("corrupt source was accepted: %v", err)
+			}
+		})
+	}
+}
