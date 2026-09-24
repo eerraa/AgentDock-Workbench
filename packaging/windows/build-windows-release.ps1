@@ -23,7 +23,9 @@ if ($version -eq '1.1.2' -and -not $Candidate) {
 }
 $sourceChanges = @(& git -C $repository status --porcelain)
 if ($LASTEXITCODE -ne 0) { throw 'Could not inspect source state.' }
-if (-not $Candidate -and $version -eq '1.1.2' -and $sourceChanges.Count -gt 0) { throw 'Formal release requires a clean verified source commit.' }
+if ($sourceChanges.Count -gt 0) { throw 'Formal release requires a clean verified source commit.' }
+$identity = (& go -C $repository run ./tools/release build-info | Out-String) | ConvertFrom-Json
+if ($LASTEXITCODE -ne 0 -or $identity.distribution -ne 'eerraa') { throw 'Could not read the downstream build identity.' }
 $commit = (& git -C $repository rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0) { throw 'Could not read the source commit.' }
 $buildDate = [DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
@@ -71,7 +73,7 @@ try {
         & go build -trimpath -ldflags '-s -w -H=windowsgui' -o (Join-Path $payload 'agentdock-tray-shim.exe') ./cmd/agentdock-shim
         Assert-NativeExit 'GUI shim build'
         $rid = if ($architecture -eq 'arm64') { 'win-arm64' } else { 'win-x64' }
-        & dotnet publish ./desktop/windows/control-panel/AgentDock.ControlPanel.csproj -c Release -r $rid --self-contained true -o $panel
+        & dotnet publish ./desktop/windows/control-panel/AgentDock.ControlPanel.csproj -c Release -r $rid --self-contained true -o $panel -p:Version=$version -p:SourceRevisionId=$commit
         Assert-NativeExit 'WPF publish'
         Copy-Item -LiteralPath (Join-Path $panel 'agentdock-tray.exe') -Destination (Join-Path $payload 'agentdock-tray.exe') -Force
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'assets\agentdock.ico') -Destination (Join-Path $payload 'agentdock.ico') -Force
@@ -82,8 +84,9 @@ try {
         if ($SignedBuild) {
             & (Join-Path $PSScriptRoot 'sign-windows.ps1') -Path @('agentdock.exe','agentdock-tray.exe','agentdock-arbiter.exe','agentdock-shim.exe','agentdock-tray-shim.exe').ForEach({ Join-Path $payload $_ })
         }
+        $identity | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $payload 'build-info.json') -Encoding utf8NoBOM
         $archive = Join-Path $releaseRoot "agentdock_windows_$architecture.zip"
-        $paths = @('agentdock.exe','agentdock-tray.exe','agentdock-arbiter.exe','agentdock-shim.exe','agentdock-tray-shim.exe','agentdock.ico','share','wsl-helper').ForEach({ Join-Path $payload $_ })
+        $paths = @('agentdock.exe','agentdock-tray.exe','agentdock-arbiter.exe','agentdock-shim.exe','agentdock-tray-shim.exe','agentdock.ico','share','wsl-helper','build-info.json').ForEach({ Join-Path $payload $_ })
         Compress-Archive -LiteralPath $paths -DestinationPath $archive -Force
         Write-Checksum $archive
         $parameters = @{
@@ -100,6 +103,7 @@ try {
     Copy-Item -LiteralPath (Join-Path $repository 'scripts\install\install.ps1') -Destination (Join-Path $releaseRoot 'install.ps1') -Force
     Write-Checksum (Join-Path $releaseRoot 'install.ps1')
     [ordered]@{
+        distribution=$identity.distribution; upstream_version=$identity.upstream_version; downstream_revision=$identity.downstream_revision
         version=$version; channel=$(if($Candidate){'candidate-not-released'}else{'release'}); source_dirty=($sourceChanges.Count -gt 0); changed_paths=$sourceChanges; commit=$commit; build_date=$buildDate; platforms=@($Architectures | ForEach-Object {"windows/$_"})
         agentdock_authenticode=$(if($SignedBuild){'signed'}else{'unsigned'}); cloudflared_authenticode='valid'
         wsl_helpers='Windows feature payload only; no separate Linux release'

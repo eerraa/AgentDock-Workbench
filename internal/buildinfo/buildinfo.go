@@ -9,6 +9,11 @@ import (
 )
 
 const Version = "1.1.6"
+const Distribution = "eerraa"
+const UpstreamVersion = "1.1.6"
+
+// Set only by the final downstream release commit.
+const DownstreamRevision = 0
 
 var (
 	Commit    string
@@ -16,6 +21,10 @@ var (
 )
 
 type Info struct {
+	Distribution           string `json:"distribution"`
+	UpstreamVersion        string `json:"upstream_version"`
+	DownstreamRevision     int    `json:"downstream_revision"`
+	SourceCommit           string `json:"source_commit"`
 	ExecutionPolicyVersion int    `json:"execution_policy_version"`
 	Version                string `json:"version"`
 	Commit                 string `json:"commit"`
@@ -26,6 +35,7 @@ type Info struct {
 
 func Current() Info {
 	info := Info{
+		Distribution: Distribution, UpstreamVersion: UpstreamVersion, DownstreamRevision: DownstreamRevision,
 		ExecutionPolicyVersion: executioncompat.PolicyVersion,
 		Version:                strings.TrimSpace(Version),
 		Commit:                 strings.TrimSpace(Commit),
@@ -47,6 +57,10 @@ func Current() Info {
 				}
 			}
 		}
+	}
+	info.SourceCommit = info.Commit
+	if info.SourceCommit == "" {
+		info.SourceCommit = "unknown"
 	}
 	if len(info.Commit) > 12 {
 		info.Commit = info.Commit[:12]

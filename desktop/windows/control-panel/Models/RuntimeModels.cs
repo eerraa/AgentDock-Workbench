@@ -318,6 +318,8 @@ public sealed record UrlTestResult(bool Success, int? StatusCode, TimeSpan Elaps
 
 public sealed class UpdateCheckResult
 {
+ [JsonPropertyName("code")] public string Code { get; set; } = "";
+ [JsonIgnore] public string DisplayMessage => Code == "online-updates-disabled" ? UiText.Get("OfflineUpdateInformation") : Message;
     [JsonPropertyName("current_version")]
     public string CurrentVersion { get; set; } = "";
 
