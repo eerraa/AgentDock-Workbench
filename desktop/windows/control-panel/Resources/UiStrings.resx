@@ -2753,4 +2753,121 @@ Shortcuts: Ctrl+F searches conversations; F5 refreshes; Esc closes details; Shif
   <data name="DisplayAndTheme" xml:space="preserve">
     <value>Display and theme</value>
   </data>
+  <data name="ExecutionProject" xml:space="preserve"><value>Project</value></data>
+  <data name="ExecutionSwitchCompact" xml:space="preserve"><value>Switch to compact view</value></data>
+  <data name="ExecutionSwitchDetailed" xml:space="preserve"><value>Switch to detailed view</value></data>
+  <data name="TunnelPhaseCheckingLocal" xml:space="preserve"><value>Checking local configuration</value></data>
+  <data name="TunnelPhaseNeedsApproval" xml:space="preserve"><value>Initial authorization required</value></data>
+  <data name="TunnelPhaseLocalReady" xml:space="preserve"><value>Local configuration ready</value></data>
+  <data name="TunnelPhaseVerifyingPublic" xml:space="preserve"><value>Verifying public access</value></data>
+  <data name="TunnelPhaseDegraded" xml:space="preserve"><value>Public access is not ready; local settings retained</value></data>
+  <data name="TunnelPhaseFailed" xml:space="preserve"><value>Verification failed</value></data>
+  <data name="TunnelPhaseReady" xml:space="preserve"><value>Public access verified</value></data>
+  <data name="TunnelPhaseCommitted" xml:space="preserve"><value>Local settings saved. Public verification continues in the background.</value></data>
+  <data name="ExecutionRpcDurationPrefix" xml:space="preserve"><value>RPC duration: </value></data>
+  <data name="ExecutionLegacyDurationPrefix" xml:space="preserve"><value>Historical total duration: </value></data>
+  <data name="ExecutionLegacyDurationNote" xml:space="preserve"><value>; the original record has no RPC/execution/wait breakdown.</value></data>
+  <data name="ExecutionOperationDurationPrefix" xml:space="preserve"><value>Operation completion duration: </value></data>
+  <data name="ExecutionOperationDurationSource" xml:space="preserve"><value> (source: operation_elapsed_ms)</value></data>
+  <data name="ExecutionDurationNotRecorded" xml:space="preserve"><value>Total duration: not recorded</value></data>
+  <data name="ExecutionDryRun" xml:space="preserve"><value>Preview</value></data>
+  <data name="ExecutionPartialEditHint" xml:space="preserve"><value>Partial execution: only confirmed persisted changes are counted; unverified paths remain unknown.</value></data>
+  <data name="ExecutionPreviewEditHint" xml:space="preserve"><value>Preview only; no changes saved. Proposed line counts are in file details.</value></data>
+  <data name="ExecutionActualEditHint" xml:space="preserve"><value>Logical lines actually added/deleted by this root call.</value></data>
+  <data name="ExecutionUnknownEditHint" xml:space="preserve"><value>Changed lines were not counted or the outcome is unknown; not treated as zero.</value></data>
+  <data name="ExecutionToolPrefix" xml:space="preserve"><value>Tool: </value></data>
+  <data name="ExecutionRpcReturnedPrefix" xml:space="preserve"><value>RPC returned: </value></data>
+  <data name="ExecutionPhasePrefix" xml:space="preserve"><value>Execution: </value></data>
+  <data name="ExecutionWaitPrefix" xml:space="preserve"><value>Pre-execution wait: </value></data>
+  <data name="ExecutionWaitObservedNote" xml:space="preserve"><value> (includes observed preparation and approval waits)</value></data>
+  <data name="ExecutionProcessDurationPrefix" xml:space="preserve"><value>Background command process: </value></data>
+  <data name="ExecutionStderrPrefix" xml:space="preserve"><value>Standard error
+</value></data>
+  <data name="ExecutionOutputTruncatedPrefix" xml:space="preserve"><value>Output was truncated; only the retained portion is shown.
+
+</value></data>
+  <data name="ExecutionRequestSaving" xml:space="preserve"><value>Saving call arguments</value></data>
+  <data name="ExecutionOutputWaiting" xml:space="preserve"><value>Waiting for output</value></data>
+  <data name="ExecutionOutputStreaming" xml:space="preserve"><value>Streaming output</value></data>
+  <data name="ExecutionOutputPartial" xml:space="preserve"><value>Partial output</value></data>
+  <data name="ExecutionInternalCall" xml:space="preserve"><value>Internal call</value></data>
+  <data name="ExecutionLegacyRecord" xml:space="preserve"><value>Legacy record</value></data>
+  <data name="ExecutionPayloadInvalidBoundary" xml:space="preserve"><value>Invalid tool output page boundary.</value></data>
+  <data name="ExecutionPayloadNoProgress" xml:space="preserve"><value>Tool output pagination did not advance.</value></data>
+  <data name="ExecutionStreamSizeLimit" xml:space="preserve"><value>Execution event exceeds its size limit.</value></data>
+  <data name="ExecutionStreamInvalidSequence" xml:space="preserve"><value>Invalid execution event sequence.</value></data>
+  <data name="ExecutionStreamInvalidId" xml:space="preserve"><value>Invalid execution event ID.</value></data>
+  <data name="ExecutionStreamLineLimit" xml:space="preserve"><value>Execution event line exceeds its size limit.</value></data>
+  <data name="TunnelVerificationIncompletePrefix" xml:space="preserve"><value>Public verification did not complete: </value></data>
+  <data name="TunnelCheckingLocalNotice" xml:space="preserve"><value>Checking local settings. The interface remains usable.</value></data>
+  <data name="TunnelVerificationRetainedPrefix" xml:space="preserve"><value>Public verification is incomplete; local settings retained: </value></data>
+  <data name="ExecutionCollapseAllProjects" xml:space="preserve"><value>Collapse all projects</value></data>
+  <data name="ExecutionTotalDuration" xml:space="preserve"><value>Total duration</value></data>
+  <data name="ExecutionHistoryRetry" xml:space="preserve"><value>History could not be loaded. Retry</value></data>
+  <data name="ExecutionRequestAndOutput" xml:space="preserve"><value>Request and output</value></data>
+  <data name="ExecutionCopyRequest" xml:space="preserve"><value>Copy request</value></data>
+  <data name="ExecutionCopyRequestHelp" xml:space="preserve"><value>Copy the current redacted call-argument page</value></data>
+  <data name="ExecutionCopyOutputHelp" xml:space="preserve"><value>Copy the current redacted output page</value></data>
+  <data name="ExecutionRequest" xml:space="preserve"><value>Request</value></data>
+  <data name="ExecutionOutput" xml:space="preserve"><value>Output</value></data>
+  <data name="ExecutionPreviousRequest" xml:space="preserve"><value>Previous call arguments</value></data>
+  <data name="ExecutionNextRequest" xml:space="preserve"><value>Next call arguments</value></data>
+  <data name="ExecutionRequestRetry" xml:space="preserve"><value>Retry reading request</value></data>
+  <data name="ExecutionActualRequest" xml:space="preserve"><value>Actual call arguments</value></data>
+  <data name="ExecutionPreviousOutput" xml:space="preserve"><value>Previous output</value></data>
+  <data name="ExecutionNextOutput" xml:space="preserve"><value>Next output</value></data>
+  <data name="ExecutionOutputRetry" xml:space="preserve"><value>Retry reading output</value></data>
+  <data name="ExecutionProgress" xml:space="preserve"><value>Execution progress</value></data>
+  <data name="ExecutionActualOutput" xml:space="preserve"><value>Actual tool output</value></data>
+  <data name="ActivitySummaryLastRequest" xml:space="preserve"><value>Last tool request: {0:T}</value></data>
+  <data name="ActivitySummaryNoRequest" xml:space="preserve"><value>No recorded tool request</value></data>
+  <data name="ActivitySummaryStale" xml:space="preserve"><value>Unavailable or stale</value></data>
+  <data name="LocalHealthyPublicUnavailable" xml:space="preserve"><value>Local Core is healthy; public access is unavailable</value></data>
+  <data name="ExecutionPayloadSaved" xml:space="preserve"><value>Saved</value></data>
+  <data name="ExecutionPayloadPosition" xml:space="preserve"><value>{0:N0}–{1:N0} / {2:N0} bytes · {3:N0} lines</value></data>
+  <data name="ExecutionPayloadPreviewPosition" xml:space="preserve"><value>Preview / {0:N0} bytes · {1:N0} lines</value></data>
+  <data name="ExecutionPayloadLegacyMissing" xml:space="preserve"><value>The legacy record did not retain {0}.</value></data>
+  <data name="ExecutionPayloadInternalNotice" xml:space="preserve"><value>This internal call belongs to root call {0}. See the root for stored requests and output.</value></data>
+  <data name="ExecutionFileDetailsFormat" xml:space="preserve"><value>{0} · {1}
+Target: {2}
+Preview: {3}
+Dispatched: {4}
+Actually changed: {5}
+Affected files: {6}
+Statistics: {7}
+{8} added/deleted lines: {9} / {10}
+</value></data>
+  <data name="ExecutionPartialConfirmed" xml:space="preserve"><value>Partial; confirmed changes only</value></data>
+  <data name="ExecutionProposed" xml:space="preserve"><value>Proposed</value></data>
+  <data name="ExecutionActual" xml:space="preserve"><value>Actual</value></data>
+  <data name="ExecutionFilesTruncated" xml:space="preserve"><value>
+File details exceed the preview limit.</value></data>
+  <data name="OwnedTool_agentdock_context" xml:space="preserve"><value>Load context{0}</value></data>
+  <data name="OwnedTool_workspace_context" xml:space="preserve"><value>Read workspace rules{0}</value></data>
+  <data name="OwnedTool_read_file" xml:space="preserve"><value>Read file{0}</value></data>
+  <data name="OwnedTool_list_dir" xml:space="preserve"><value>List directory{0}</value></data>
+  <data name="OwnedTool_search_text" xml:space="preserve"><value>Search text{0}</value></data>
+  <data name="OwnedTool_exec_command" xml:space="preserve"><value>Run command{0}</value></data>
+  <data name="OwnedTool_file_edit" xml:space="preserve"><value>Edit file{0}</value></data>
+  <data name="OwnedTool_task_manage" xml:space="preserve"><value>Manage task{0}</value></data>
+  <data name="OwnedTool_workspace_manage" xml:space="preserve"><value>Manage workspace{0}</value></data>
+  <data name="OwnedTool_mcp_tool_search" xml:space="preserve"><value>Discover tools{0}</value></data>
+  <data name="OwnedTool_mcp_tool_list" xml:space="preserve"><value>Read tool catalog{0}</value></data>
+  <data name="OwnedTool_mcp_tool_inspect" xml:space="preserve"><value>Inspect tool schema{0}</value></data>
+  <data name="OwnedTool_plugin_load" xml:space="preserve"><value>Load plugin{0}</value></data>
+  <data name="OwnedTool_session_observe" xml:space="preserve"><value>Observe command session{0}</value></data>
+  <data name="OwnedTool_session_act" xml:space="preserve"><value>Control command session{0}</value></data>
+  <data name="OwnedPermissionUpdate" xml:space="preserve"><value>Change execution permissions</value></data>
+  <data name="OwnedPermissionUpdated" xml:space="preserve"><value>Scope={0} ID={1} mode={2} revision={3}. Operating-system privileges were not changed.</value></data>
+  <data name="NativeOperationFailed" xml:space="preserve"><value>The native operation failed. No success is implied.</value></data>
+  <data name="NativeTaskOwnerMismatch" xml:space="preserve"><value>The scheduled task does not match this runtime and Windows user. It was not adopted.</value></data>
+  <data name="NativeTaskStopIncomplete" xml:space="preserve"><value>The previous runtime has not stopped completely. No replacement was started.</value></data>
+  <data name="NativeElevatedUnavailable" xml:space="preserve"><value>The requested elevated runtime is unavailable. Check task ownership and the original diagnostic; no fallback mode was selected.</value></data>
+  <data name="NativeTaskBackupInvalid" xml:space="preserve"><value>The task recovery data could not be validated. Preserve it and restore the recorded owner before retrying.</value></data>
+  <data name="NativeDiagnosticOriginal" xml:space="preserve"><value>{0}
+
+Original diagnostic:
+{1}</value></data>
+  <data name="OfflineUpdateInformation" xml:space="preserve"><value>AgentDock Eerraa is distributed through verified offline Setup packages. Install a newer Setup to update; this action does not check upstream or download software.</value></data>
+  <data name="DistributionVersionFormat" xml:space="preserve"><value>AgentDock Eerraa {0} · upstream {1} · revision {2}</value></data>
 </root>

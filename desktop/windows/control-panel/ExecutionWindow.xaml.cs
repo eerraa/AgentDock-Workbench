@@ -312,7 +312,7 @@ public partial class ExecutionWindow : Window
     {
         if (_closed || generation != _generation || epoch != _streamEpoch) return;
 		if (message.Kind == "connected") { _streamConnected = true; FollowButton.ToolTip = UiText.Get("ExecutionFollowLatest"); }
-		else if (message.Kind == "disconnected") { _streamConnected = false; FollowButton.ToolTip = "执行流重连中：" + message.Message; }
+		else if (message.Kind == "disconnected") { _streamConnected = false; FollowButton.ToolTip = UiText.Get("ExecutionStreamReconnectingPrefix") + message.Message; }
         else if (message.Kind == "call")
         {
             _cursor = Math.Max(_cursor, message.Seq); UpsertCall(message.Value); UpdateEmpty();
@@ -429,7 +429,7 @@ public partial class ExecutionWindow : Window
         CallsList.ItemTemplate = (DataTemplate)Resources[detailed ? "DetailedCallRowTemplate" : "CallRowTemplate"];
         DetailedCallsHeader.Visibility = detailed ? Visibility.Visible : Visibility.Collapsed;
 		CallPresentationButton.Content = detailed ? UiText.Get("ExecutionDetailed") : UiText.Get("ExecutionCompact");
-		CallPresentationButton.ToolTip = detailed ? "切换到简洁视图" : "切换到详细视图";
+		CallPresentationButton.ToolTip = detailed ? UiText.Get("ExecutionSwitchCompact") : UiText.Get("ExecutionSwitchDetailed");
     }
 	private async void CallPresentation_Click(object sender, RoutedEventArgs e)
     {

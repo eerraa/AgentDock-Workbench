@@ -36,7 +36,7 @@ internal static class ExecutionDialogs
     {
         var ui = Create(owner, title); var close = Action(UiText.Get("ExecutionClose")); close.Click += (_, _) => ui.Window.Close(); ui.Actions.Children.Add(close); ui.Root.Children.Add(Readonly(text)); ui.Window.ShowDialog();
     }
-    internal static bool Confirm(Window owner, string title, string explanation, string confirm = "确定")
+    internal static bool Confirm(Window owner, string title, string explanation, string? confirm = null)
     {
         var ui = Create(owner, title, 500, 230);
         ui.Window.ResizeMode = ResizeMode.NoResize;

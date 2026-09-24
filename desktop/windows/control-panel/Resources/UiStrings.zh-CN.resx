@@ -2753,4 +2753,121 @@
   <data name="DisplayAndTheme" xml:space="preserve">
     <value>显示与主题</value>
   </data>
+  <data name="ExecutionProject" xml:space="preserve"><value>项目</value></data>
+  <data name="ExecutionSwitchCompact" xml:space="preserve"><value>切换到简洁视图</value></data>
+  <data name="ExecutionSwitchDetailed" xml:space="preserve"><value>切换到详细视图</value></data>
+  <data name="TunnelPhaseCheckingLocal" xml:space="preserve"><value>检查本地配置</value></data>
+  <data name="TunnelPhaseNeedsApproval" xml:space="preserve"><value>需要首次授权</value></data>
+  <data name="TunnelPhaseLocalReady" xml:space="preserve"><value>本地配置完成</value></data>
+  <data name="TunnelPhaseVerifyingPublic" xml:space="preserve"><value>公网验证中</value></data>
+  <data name="TunnelPhaseDegraded" xml:space="preserve"><value>公网暂未就绪，本地配置保留</value></data>
+  <data name="TunnelPhaseFailed" xml:space="preserve"><value>验证失败</value></data>
+  <data name="TunnelPhaseReady" xml:space="preserve"><value>公网已验证</value></data>
+  <data name="TunnelPhaseCommitted" xml:space="preserve"><value>本地配置已提交，公网验证在后台进行。</value></data>
+  <data name="ExecutionRpcDurationPrefix" xml:space="preserve"><value>RPC 耗时：</value></data>
+  <data name="ExecutionLegacyDurationPrefix" xml:space="preserve"><value>历史总耗时：</value></data>
+  <data name="ExecutionLegacyDurationNote" xml:space="preserve"><value>；原记录未保存 RPC/执行/等待分项。</value></data>
+  <data name="ExecutionOperationDurationPrefix" xml:space="preserve"><value>操作完成耗时：</value></data>
+  <data name="ExecutionOperationDurationSource" xml:space="preserve"><value>（来源：operation_elapsed_ms）</value></data>
+  <data name="ExecutionDurationNotRecorded" xml:space="preserve"><value>总耗时：未记录</value></data>
+  <data name="ExecutionDryRun" xml:space="preserve"><value>预演</value></data>
+  <data name="ExecutionPartialEditHint" xml:space="preserve"><value>部分执行：仅计入已确认仍落盘的变化；未核实的路径保留未知。</value></data>
+  <data name="ExecutionPreviewEditHint" xml:space="preserve"><value>预演未落盘；拟议行数在文件详情中。</value></data>
+  <data name="ExecutionActualEditHint" xml:space="preserve"><value>本次根调用实际落盘的新增/删除逻辑行数。</value></data>
+  <data name="ExecutionUnknownEditHint" xml:space="preserve"><value>本次修改行数未统计或结果未知，未计为零。</value></data>
+  <data name="ExecutionToolPrefix" xml:space="preserve"><value>工具：</value></data>
+  <data name="ExecutionRpcReturnedPrefix" xml:space="preserve"><value>RPC 返回：</value></data>
+  <data name="ExecutionPhasePrefix" xml:space="preserve"><value>执行阶段：</value></data>
+  <data name="ExecutionWaitPrefix" xml:space="preserve"><value>执行前等待：</value></data>
+  <data name="ExecutionWaitObservedNote" xml:space="preserve"><value>（含已观测到的准备及审批等待）</value></data>
+  <data name="ExecutionProcessDurationPrefix" xml:space="preserve"><value>后台命令进程：</value></data>
+  <data name="ExecutionStderrPrefix" xml:space="preserve"><value>标准错误
+</value></data>
+  <data name="ExecutionOutputTruncatedPrefix" xml:space="preserve"><value>输出已截断，仅显示保留部分。
+
+</value></data>
+  <data name="ExecutionRequestSaving" xml:space="preserve"><value>正在保存调用参数</value></data>
+  <data name="ExecutionOutputWaiting" xml:space="preserve"><value>等待输出</value></data>
+  <data name="ExecutionOutputStreaming" xml:space="preserve"><value>流式输出</value></data>
+  <data name="ExecutionOutputPartial" xml:space="preserve"><value>部分输出</value></data>
+  <data name="ExecutionInternalCall" xml:space="preserve"><value>内部调用</value></data>
+  <data name="ExecutionLegacyRecord" xml:space="preserve"><value>旧记录</value></data>
+  <data name="ExecutionPayloadInvalidBoundary" xml:space="preserve"><value>工具输出分页边界无效。</value></data>
+  <data name="ExecutionPayloadNoProgress" xml:space="preserve"><value>工具输出分页没有推进。</value></data>
+  <data name="ExecutionStreamSizeLimit" xml:space="preserve"><value>执行事件超过大小限制。</value></data>
+  <data name="ExecutionStreamInvalidSequence" xml:space="preserve"><value>执行事件序号无效。</value></data>
+  <data name="ExecutionStreamInvalidId" xml:space="preserve"><value>执行事件 ID 无效。</value></data>
+  <data name="ExecutionStreamLineLimit" xml:space="preserve"><value>执行事件行超过大小限制。</value></data>
+  <data name="TunnelVerificationIncompletePrefix" xml:space="preserve"><value>公网验证未完成：</value></data>
+  <data name="TunnelCheckingLocalNotice" xml:space="preserve"><value>正在核对本地配置，界面可继续使用。</value></data>
+  <data name="TunnelVerificationRetainedPrefix" xml:space="preserve"><value>公网验证暂未完成，本地配置未撤销：</value></data>
+  <data name="ExecutionCollapseAllProjects" xml:space="preserve"><value>折叠全部项目</value></data>
+  <data name="ExecutionTotalDuration" xml:space="preserve"><value>总耗时</value></data>
+  <data name="ExecutionHistoryRetry" xml:space="preserve"><value>历史加载失败，重试</value></data>
+  <data name="ExecutionRequestAndOutput" xml:space="preserve"><value>调用与输出</value></data>
+  <data name="ExecutionCopyRequest" xml:space="preserve"><value>复制调用</value></data>
+  <data name="ExecutionCopyRequestHelp" xml:space="preserve"><value>复制当前已脱敏的调用参数页</value></data>
+  <data name="ExecutionCopyOutputHelp" xml:space="preserve"><value>复制当前已脱敏的输出页</value></data>
+  <data name="ExecutionRequest" xml:space="preserve"><value>调用</value></data>
+  <data name="ExecutionOutput" xml:space="preserve"><value>输出</value></data>
+  <data name="ExecutionPreviousRequest" xml:space="preserve"><value>上一段调用参数</value></data>
+  <data name="ExecutionNextRequest" xml:space="preserve"><value>下一段调用参数</value></data>
+  <data name="ExecutionRequestRetry" xml:space="preserve"><value>重试读取调用</value></data>
+  <data name="ExecutionActualRequest" xml:space="preserve"><value>真实调用参数</value></data>
+  <data name="ExecutionPreviousOutput" xml:space="preserve"><value>上一段输出</value></data>
+  <data name="ExecutionNextOutput" xml:space="preserve"><value>下一段输出</value></data>
+  <data name="ExecutionOutputRetry" xml:space="preserve"><value>重试读取输出</value></data>
+  <data name="ExecutionProgress" xml:space="preserve"><value>执行过程</value></data>
+  <data name="ExecutionActualOutput" xml:space="preserve"><value>真实工具输出</value></data>
+  <data name="ActivitySummaryLastRequest" xml:space="preserve"><value>最近工具请求：{0:T}</value></data>
+  <data name="ActivitySummaryNoRequest" xml:space="preserve"><value>尚无工具请求记录</value></data>
+  <data name="ActivitySummaryStale" xml:space="preserve"><value>当前不可用或数据已过期</value></data>
+  <data name="LocalHealthyPublicUnavailable" xml:space="preserve"><value>本机核心健康；公网访问不可用</value></data>
+  <data name="ExecutionPayloadSaved" xml:space="preserve"><value>已保存</value></data>
+  <data name="ExecutionPayloadPosition" xml:space="preserve"><value>{0:N0}–{1:N0} / {2:N0} 字节 · {3:N0} 行</value></data>
+  <data name="ExecutionPayloadPreviewPosition" xml:space="preserve"><value>预览 / {0:N0} 字节 · {1:N0} 行</value></data>
+  <data name="ExecutionPayloadLegacyMissing" xml:space="preserve"><value>旧记录未保存{0}。</value></data>
+  <data name="ExecutionPayloadInternalNotice" xml:space="preserve"><value>此内部调用关联根调用 {0}。已保存的业务请求与输出请在根调用中查看。</value></data>
+  <data name="ExecutionFileDetailsFormat" xml:space="preserve"><value>{0} · {1}
+目标：{2}
+预览：{3}
+已派发：{4}
+实际修改：{5}
+影响文件数：{6}
+统计：{7}
+{8}新增/删除行：{9} / {10}
+</value></data>
+  <data name="ExecutionPartialConfirmed" xml:space="preserve"><value>部分执行，仅含已确认变化</value></data>
+  <data name="ExecutionProposed" xml:space="preserve"><value>拟议</value></data>
+  <data name="ExecutionActual" xml:space="preserve"><value>实际</value></data>
+  <data name="ExecutionFilesTruncated" xml:space="preserve"><value>
+文件明细超过预览上限。</value></data>
+  <data name="OwnedTool_agentdock_context" xml:space="preserve"><value>加载上下文{0}</value></data>
+  <data name="OwnedTool_workspace_context" xml:space="preserve"><value>读取工作区规则{0}</value></data>
+  <data name="OwnedTool_read_file" xml:space="preserve"><value>读取文件{0}</value></data>
+  <data name="OwnedTool_list_dir" xml:space="preserve"><value>列出目录{0}</value></data>
+  <data name="OwnedTool_search_text" xml:space="preserve"><value>搜索文本{0}</value></data>
+  <data name="OwnedTool_exec_command" xml:space="preserve"><value>运行命令{0}</value></data>
+  <data name="OwnedTool_file_edit" xml:space="preserve"><value>file_edit{0}</value></data>
+  <data name="OwnedTool_task_manage" xml:space="preserve"><value>任务管理{0}</value></data>
+  <data name="OwnedTool_workspace_manage" xml:space="preserve"><value>工作区管理{0}</value></data>
+  <data name="OwnedTool_mcp_tool_search" xml:space="preserve"><value>发现动态工具{0}</value></data>
+  <data name="OwnedTool_mcp_tool_list" xml:space="preserve"><value>读取工具目录{0}</value></data>
+  <data name="OwnedTool_mcp_tool_inspect" xml:space="preserve"><value>加载工具 Schema{0}</value></data>
+  <data name="OwnedTool_plugin_load" xml:space="preserve"><value>展开插件{0}</value></data>
+  <data name="OwnedTool_session_observe" xml:space="preserve"><value>查看命令会话{0}</value></data>
+  <data name="OwnedTool_session_act" xml:space="preserve"><value>控制命令会话{0}</value></data>
+  <data name="OwnedPermissionUpdate" xml:space="preserve"><value>修改执行权限</value></data>
+  <data name="OwnedPermissionUpdated" xml:space="preserve"><value>scope={0} scope_id={1} mode={2} revision={3}；操作系统权限未改变。</value></data>
+  <data name="NativeOperationFailed" xml:space="preserve"><value>本机操作失败；不表示操作已成功。</value></data>
+  <data name="NativeTaskOwnerMismatch" xml:space="preserve"><value>计划任务与此运行目录及 Windows 用户不符；未接管该任务。</value></data>
+  <data name="NativeTaskStopIncomplete" xml:space="preserve"><value>旧运行时尚未完全停止；未启动替代进程。</value></data>
+  <data name="NativeElevatedUnavailable" xml:space="preserve"><value>请求的管理员运行模式不可用。请核对任务所有权和原始诊断；未切换其他模式。</value></data>
+  <data name="NativeTaskBackupInvalid" xml:space="preserve"><value>无法验证任务恢复数据。请保留数据并恢复记录的所有者后再重试。</value></data>
+  <data name="NativeDiagnosticOriginal" xml:space="preserve"><value>{0}
+
+原始诊断：
+{1}</value></data>
+  <data name="OfflineUpdateInformation" xml:space="preserve"><value>AgentDock Eerraa 通过经验证的离线 Setup 分发。更新请安装新 Setup；此操作不查询上游或下载软件。</value></data>
+  <data name="DistributionVersionFormat" xml:space="preserve"><value>AgentDock Eerraa {0} · 上游 {1} · 修订 {2}</value></data>
 </root>

@@ -2753,4 +2753,121 @@
   <data name="DisplayAndTheme" xml:space="preserve">
     <value>표시 및 테마</value>
   </data>
+  <data name="ExecutionProject" xml:space="preserve"><value>프로젝트</value></data>
+  <data name="ExecutionSwitchCompact" xml:space="preserve"><value>간결한 보기로 전환</value></data>
+  <data name="ExecutionSwitchDetailed" xml:space="preserve"><value>자세한 보기로 전환</value></data>
+  <data name="TunnelPhaseCheckingLocal" xml:space="preserve"><value>로컬 설정 확인 중</value></data>
+  <data name="TunnelPhaseNeedsApproval" xml:space="preserve"><value>최초 승인 필요</value></data>
+  <data name="TunnelPhaseLocalReady" xml:space="preserve"><value>로컬 설정 완료</value></data>
+  <data name="TunnelPhaseVerifyingPublic" xml:space="preserve"><value>공개 연결 검증 중</value></data>
+  <data name="TunnelPhaseDegraded" xml:space="preserve"><value>공개 연결이 아직 준비되지 않았습니다. 로컬 설정은 유지됩니다.</value></data>
+  <data name="TunnelPhaseFailed" xml:space="preserve"><value>검증 실패</value></data>
+  <data name="TunnelPhaseReady" xml:space="preserve"><value>공개 연결 검증 완료</value></data>
+  <data name="TunnelPhaseCommitted" xml:space="preserve"><value>로컬 설정을 저장했습니다. 공개 연결은 백그라운드에서 검증합니다.</value></data>
+  <data name="ExecutionRpcDurationPrefix" xml:space="preserve"><value>RPC 소요 시간: </value></data>
+  <data name="ExecutionLegacyDurationPrefix" xml:space="preserve"><value>이전 기록의 전체 소요 시간: </value></data>
+  <data name="ExecutionLegacyDurationNote" xml:space="preserve"><value>; 원래 기록에는 RPC·실행·대기별 시간이 없습니다.</value></data>
+  <data name="ExecutionOperationDurationPrefix" xml:space="preserve"><value>작업 완료 소요 시간: </value></data>
+  <data name="ExecutionOperationDurationSource" xml:space="preserve"><value> (출처: operation_elapsed_ms)</value></data>
+  <data name="ExecutionDurationNotRecorded" xml:space="preserve"><value>전체 소요 시간: 기록 없음</value></data>
+  <data name="ExecutionDryRun" xml:space="preserve"><value>미리보기</value></data>
+  <data name="ExecutionPartialEditHint" xml:space="preserve"><value>부분 실행: 저장이 확인된 변경만 집계합니다. 확인되지 않은 경로는 알 수 없음으로 유지합니다.</value></data>
+  <data name="ExecutionPreviewEditHint" xml:space="preserve"><value>미리보기이며 저장하지 않았습니다. 예상 변경 행 수는 파일 상세에 표시됩니다.</value></data>
+  <data name="ExecutionActualEditHint" xml:space="preserve"><value>이 최상위 호출에서 실제 저장한 추가·삭제 논리 행 수입니다.</value></data>
+  <data name="ExecutionUnknownEditHint" xml:space="preserve"><value>변경 행 수가 집계되지 않았거나 결과를 알 수 없습니다. 0으로 처리하지 않았습니다.</value></data>
+  <data name="ExecutionToolPrefix" xml:space="preserve"><value>도구: </value></data>
+  <data name="ExecutionRpcReturnedPrefix" xml:space="preserve"><value>RPC 반환: </value></data>
+  <data name="ExecutionPhasePrefix" xml:space="preserve"><value>실행 단계: </value></data>
+  <data name="ExecutionWaitPrefix" xml:space="preserve"><value>실행 전 대기: </value></data>
+  <data name="ExecutionWaitObservedNote" xml:space="preserve"><value> (관측된 준비·승인 대기 포함)</value></data>
+  <data name="ExecutionProcessDurationPrefix" xml:space="preserve"><value>백그라운드 명령 프로세스: </value></data>
+  <data name="ExecutionStderrPrefix" xml:space="preserve"><value>표준 오류
+</value></data>
+  <data name="ExecutionOutputTruncatedPrefix" xml:space="preserve"><value>출력이 잘렸습니다. 보존된 부분만 표시합니다.
+
+</value></data>
+  <data name="ExecutionRequestSaving" xml:space="preserve"><value>호출 인자 저장 중</value></data>
+  <data name="ExecutionOutputWaiting" xml:space="preserve"><value>출력 대기 중</value></data>
+  <data name="ExecutionOutputStreaming" xml:space="preserve"><value>출력 수신 중</value></data>
+  <data name="ExecutionOutputPartial" xml:space="preserve"><value>부분 출력</value></data>
+  <data name="ExecutionInternalCall" xml:space="preserve"><value>내부 호출</value></data>
+  <data name="ExecutionLegacyRecord" xml:space="preserve"><value>이전 기록</value></data>
+  <data name="ExecutionPayloadInvalidBoundary" xml:space="preserve"><value>도구 출력의 페이지 경계가 올바르지 않습니다.</value></data>
+  <data name="ExecutionPayloadNoProgress" xml:space="preserve"><value>도구 출력 페이지가 다음 위치로 진행되지 않았습니다.</value></data>
+  <data name="ExecutionStreamSizeLimit" xml:space="preserve"><value>실행 이벤트가 크기 제한을 초과했습니다.</value></data>
+  <data name="ExecutionStreamInvalidSequence" xml:space="preserve"><value>실행 이벤트 순서가 올바르지 않습니다.</value></data>
+  <data name="ExecutionStreamInvalidId" xml:space="preserve"><value>실행 이벤트 ID가 올바르지 않습니다.</value></data>
+  <data name="ExecutionStreamLineLimit" xml:space="preserve"><value>실행 이벤트 행이 크기 제한을 초과했습니다.</value></data>
+  <data name="TunnelVerificationIncompletePrefix" xml:space="preserve"><value>공개 연결 검증이 완료되지 않았습니다: </value></data>
+  <data name="TunnelCheckingLocalNotice" xml:space="preserve"><value>로컬 설정을 확인하고 있습니다. 화면은 계속 사용할 수 있습니다.</value></data>
+  <data name="TunnelVerificationRetainedPrefix" xml:space="preserve"><value>공개 연결 검증이 완료되지 않았습니다. 로컬 설정은 유지됩니다: </value></data>
+  <data name="ExecutionCollapseAllProjects" xml:space="preserve"><value>모든 프로젝트 접기</value></data>
+  <data name="ExecutionTotalDuration" xml:space="preserve"><value>전체 소요 시간</value></data>
+  <data name="ExecutionHistoryRetry" xml:space="preserve"><value>이력을 불러오지 못했습니다. 다시 시도</value></data>
+  <data name="ExecutionRequestAndOutput" xml:space="preserve"><value>호출과 출력</value></data>
+  <data name="ExecutionCopyRequest" xml:space="preserve"><value>호출 복사</value></data>
+  <data name="ExecutionCopyRequestHelp" xml:space="preserve"><value>현재 페이지의 민감 정보가 가려진 호출 인자 복사</value></data>
+  <data name="ExecutionCopyOutputHelp" xml:space="preserve"><value>현재 페이지의 민감 정보가 가려진 출력 복사</value></data>
+  <data name="ExecutionRequest" xml:space="preserve"><value>호출</value></data>
+  <data name="ExecutionOutput" xml:space="preserve"><value>출력</value></data>
+  <data name="ExecutionPreviousRequest" xml:space="preserve"><value>이전 호출 인자</value></data>
+  <data name="ExecutionNextRequest" xml:space="preserve"><value>다음 호출 인자</value></data>
+  <data name="ExecutionRequestRetry" xml:space="preserve"><value>호출 다시 읽기</value></data>
+  <data name="ExecutionActualRequest" xml:space="preserve"><value>실제 호출 인자</value></data>
+  <data name="ExecutionPreviousOutput" xml:space="preserve"><value>이전 출력</value></data>
+  <data name="ExecutionNextOutput" xml:space="preserve"><value>다음 출력</value></data>
+  <data name="ExecutionOutputRetry" xml:space="preserve"><value>출력 다시 읽기</value></data>
+  <data name="ExecutionProgress" xml:space="preserve"><value>실행 과정</value></data>
+  <data name="ExecutionActualOutput" xml:space="preserve"><value>실제 도구 출력</value></data>
+  <data name="ActivitySummaryLastRequest" xml:space="preserve"><value>최근 도구 요청: {0:T}</value></data>
+  <data name="ActivitySummaryNoRequest" xml:space="preserve"><value>기록된 도구 요청 없음</value></data>
+  <data name="ActivitySummaryStale" xml:space="preserve"><value>현재 사용할 수 없거나 오래된 정보</value></data>
+  <data name="LocalHealthyPublicUnavailable" xml:space="preserve"><value>로컬 Core는 정상이며 공개 연결은 사용할 수 없습니다</value></data>
+  <data name="ExecutionPayloadSaved" xml:space="preserve"><value>저장됨</value></data>
+  <data name="ExecutionPayloadPosition" xml:space="preserve"><value>{0:N0}–{1:N0} / {2:N0}바이트 · {3:N0}행</value></data>
+  <data name="ExecutionPayloadPreviewPosition" xml:space="preserve"><value>미리보기 / {0:N0}바이트 · {1:N0}행</value></data>
+  <data name="ExecutionPayloadLegacyMissing" xml:space="preserve"><value>이전 기록에는 {0}이 저장되지 않았습니다.</value></data>
+  <data name="ExecutionPayloadInternalNotice" xml:space="preserve"><value>이 내부 호출은 최상위 호출 {0}에 속합니다. 저장된 요청과 출력은 최상위 호출에서 확인하세요.</value></data>
+  <data name="ExecutionFileDetailsFormat" xml:space="preserve"><value>{0} · {1}
+대상: {2}
+미리보기: {3}
+실행 요청됨: {4}
+실제 변경: {5}
+영향 파일 수: {6}
+집계: {7}
+{8} 추가/삭제 행: {9} / {10}
+</value></data>
+  <data name="ExecutionPartialConfirmed" xml:space="preserve"><value>부분 실행, 확인된 변경만 포함</value></data>
+  <data name="ExecutionProposed" xml:space="preserve"><value>예상</value></data>
+  <data name="ExecutionActual" xml:space="preserve"><value>실제</value></data>
+  <data name="ExecutionFilesTruncated" xml:space="preserve"><value>
+파일 상세가 미리보기 제한을 초과했습니다.</value></data>
+  <data name="OwnedTool_agentdock_context" xml:space="preserve"><value>컨텍스트 불러오기{0}</value></data>
+  <data name="OwnedTool_workspace_context" xml:space="preserve"><value>작업 공간 규칙 읽기{0}</value></data>
+  <data name="OwnedTool_read_file" xml:space="preserve"><value>파일 읽기{0}</value></data>
+  <data name="OwnedTool_list_dir" xml:space="preserve"><value>폴더 목록 읽기{0}</value></data>
+  <data name="OwnedTool_search_text" xml:space="preserve"><value>텍스트 검색{0}</value></data>
+  <data name="OwnedTool_exec_command" xml:space="preserve"><value>명령 실행{0}</value></data>
+  <data name="OwnedTool_file_edit" xml:space="preserve"><value>파일 편집{0}</value></data>
+  <data name="OwnedTool_task_manage" xml:space="preserve"><value>작업 관리{0}</value></data>
+  <data name="OwnedTool_workspace_manage" xml:space="preserve"><value>작업 공간 관리{0}</value></data>
+  <data name="OwnedTool_mcp_tool_search" xml:space="preserve"><value>도구 검색{0}</value></data>
+  <data name="OwnedTool_mcp_tool_list" xml:space="preserve"><value>도구 목록 읽기{0}</value></data>
+  <data name="OwnedTool_mcp_tool_inspect" xml:space="preserve"><value>도구 스키마 읽기{0}</value></data>
+  <data name="OwnedTool_plugin_load" xml:space="preserve"><value>플러그인 불러오기{0}</value></data>
+  <data name="OwnedTool_session_observe" xml:space="preserve"><value>명령 세션 확인{0}</value></data>
+  <data name="OwnedTool_session_act" xml:space="preserve"><value>명령 세션 제어{0}</value></data>
+  <data name="OwnedPermissionUpdate" xml:space="preserve"><value>실행 권한 변경</value></data>
+  <data name="OwnedPermissionUpdated" xml:space="preserve"><value>범위={0} ID={1} 모드={2} 리비전={3}. 운영체제 권한은 변경하지 않았습니다.</value></data>
+  <data name="NativeOperationFailed" xml:space="preserve"><value>네이티브 작업에 실패했습니다. 작업 성공을 의미하지 않습니다.</value></data>
+  <data name="NativeTaskOwnerMismatch" xml:space="preserve"><value>예약 작업이 이 실행 폴더 및 Windows 사용자와 일치하지 않습니다. 해당 작업을 인수하지 않았습니다.</value></data>
+  <data name="NativeTaskStopIncomplete" xml:space="preserve"><value>기존 실행 환경이 완전히 종료되지 않았습니다. 대체 프로세스를 시작하지 않았습니다.</value></data>
+  <data name="NativeElevatedUnavailable" xml:space="preserve"><value>요청한 관리자 실행 모드를 사용할 수 없습니다. 작업 소유권과 원문 진단을 확인하세요. 다른 모드로 대체하지 않았습니다.</value></data>
+  <data name="NativeTaskBackupInvalid" xml:space="preserve"><value>예약 작업 복구 데이터를 검증하지 못했습니다. 데이터를 보존하고 기록된 소유자를 복원한 뒤 다시 시도하세요.</value></data>
+  <data name="NativeDiagnosticOriginal" xml:space="preserve"><value>{0}
+
+원문 진단:
+{1}</value></data>
+  <data name="OfflineUpdateInformation" xml:space="preserve"><value>AgentDock Eerraa는 검증된 오프라인 Setup으로 배포됩니다. 새 Setup을 설치하여 업데이트하세요. 이 동작은 업스트림을 조회하거나 소프트웨어를 다운로드하지 않습니다.</value></data>
+  <data name="DistributionVersionFormat" xml:space="preserve"><value>AgentDock Eerraa {0} · 업스트림 {1} · 리비전 {2}</value></data>
 </root>

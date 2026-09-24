@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.IO;
 using System.Resources;
-using System.Windows.Markup;
 
 namespace AgentDock.ControlPanel;
 
@@ -108,7 +107,7 @@ internal static class UiText
         return string.Format(CultureInfo.CurrentCulture, Get(key), args);
     }
 
-    private static void ApplyPreference(string preference)
+    internal static void ApplyPreference(string preference)
     {
         var locale = ResolveLocale(preference, SystemLocale);
         var culture = CultureInfo.GetCultureInfo(locale);
@@ -116,22 +115,5 @@ internal static class UiText
         _resourceCulture = culture;
         CultureInfo.CurrentUICulture = culture;
         CultureInfo.DefaultThreadCurrentUICulture = culture;
-    }
-}
-
-[MarkupExtensionReturnType(typeof(string))]
-internal sealed class LocExtension : MarkupExtension
-{
-    public LocExtension(string key)
-    {
-        Key = key;
-    }
-
-    [ConstructorArgument("key")]
-    public string Key { get; set; }
-
-    public override object ProvideValue(IServiceProvider serviceProvider)
-    {
-        return UiText.Get(Key);
     }
 }

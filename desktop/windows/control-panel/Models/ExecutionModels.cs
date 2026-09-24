@@ -127,8 +127,8 @@ public sealed class ExecutionObject : INotifyPropertyChanged
 
 public sealed class ExecutionCallRow : INotifyPropertyChanged
 {
-	public ExecutionPayloadView RequestPayload { get; } = new("调用");
-	public ExecutionPayloadView ResponsePayload { get; } = new("输出");
+	public ExecutionPayloadView RequestPayload { get; } = new("request");
+	public ExecutionPayloadView ResponsePayload { get; } = new("response");
 	public string RequestText => RequestPayload.Text;
     private JsonElement _value;
     private string _output = "";
@@ -142,7 +142,7 @@ public sealed class ExecutionCallRow : INotifyPropertyChanged
     public long UpdatedSeq => _value.Number("updated_seq");
     public string Status => _value.Text("status");
     public string State => ExecutionJson.State(Status);
-    public string StatusGlyph => Status switch { "succeeded" => "✓", "failed" => "×", "partial" or "unknown" => "!", "pending_approval" => "审", "cancelled" => "–", _ => "…" };
+    public string StatusGlyph => Status switch { "succeeded" => "✓", "failed" => "×", "partial" or "unknown" => "!", "pending_approval" => "?", "cancelled" => "–", _ => "…" };
     public string Tool => _value.Text("tool_name");
     public string ApprovalId => _value.Text("approval_id");
     public string ConversationId => _value.Text("conversation_id");
@@ -151,13 +151,14 @@ public sealed class ExecutionCallRow : INotifyPropertyChanged
     public string Workdir => _value.Text("workdir");
     public string Parameters => _value.Text("parameter_summary");
     public bool ReadOnlyLegacy => _value.Flag("read_only_legacy");
-    public string Summary => _value.Text("summary");
+    public string Summary => OwnedText.Render(_value.Field("summary_text"), _value.Text("summary"), Tool, _value.Text("activity_label_source"), Status);
 	public string Title
 	{
 		get
 		{
-			var label = _value.Text("activity_label", _value.Text("display_title", _value.Text("title", Tool))).Replace('\r',' ').Replace('\n',' ');
-			if (Tool == "file_edit" && label.StartsWith("EDIT_FILE", StringComparison.Ordinal)) label = label[9..].TrimStart(' ', '·', ':');
+            var original = _value.Text("activity_label", _value.Text("display_title", _value.Text("title", Tool)));
+            var label = OwnedText.Render(_value.Field("title_text"), original, Tool, _value.Text("activity_label_source"), Status).Replace('\r',' ').Replace('\n',' ');
+            if (_value.Text("activity_label_source") == "tool" && Tool == "file_edit" && label == "EDIT_FILE") label = Tool;
 			return Tool.Length == 0 || label == Tool ? label : label.Length == 0 ? Tool : Tool + " · " + label;
 		}
 	}
@@ -169,10 +170,10 @@ public sealed class ExecutionCallRow : INotifyPropertyChanged
     public string Duration => FormatDuration(TotalElapsedMs);
     public string TotalTimingDetails => DurationSource switch
     {
-        "rpc" => "RPC 耗时：" + Duration,
-        "legacy" => "历史总耗时：" + Duration + "；原记录未保存 RPC/执行/等待分项。",
-        "operation" => "操作完成耗时：" + Duration + "（来源：operation_elapsed_ms）",
-        _ => "总耗时：未记录"
+        "rpc" => UiText.Get("ExecutionRpcDurationPrefix") + Duration,
+        "legacy" => UiText.Get("ExecutionLegacyDurationPrefix") + Duration + UiText.Get("ExecutionLegacyDurationNote"),
+        "operation" => UiText.Get("ExecutionOperationDurationPrefix") + Duration + UiText.Get("ExecutionOperationDurationSource"),
+        _ => UiText.Get("ExecutionDurationNotRecorded")
     };
     public string ExecutionDuration => FormatDuration(_value.OptionalNumber("execution_elapsed_ms"));
     public string WaitDuration => FormatDuration(_value.OptionalNumber("wait_elapsed_ms"));
@@ -181,20 +182,20 @@ public sealed class ExecutionCallRow : INotifyPropertyChanged
 	public bool EditPreview => HasEditStatistics && _value.Field("file_edit").Flag("dry_run");
 	public bool EditCountsKnown => HasEditStatistics && !EditPreview && (_value.Field("file_edit").Text("stats_state") is "" or "known" or "partial") && _value.Field("file_edit").OptionalNumber("insertions") is >= 0 && _value.Field("file_edit").OptionalNumber("deletions") is >= 0;
 	public bool PartialEditStatistics => _value.Field("file_edit").Text("stats_state") == "partial";
-	public string AddedLinesText => !HasEditStatistics ? "" : EditCountsKnown ? "+" + _value.Field("file_edit").Number("insertions") + (PartialEditStatistics ? "*" : "") : EditPreview ? "预演" : "—";
+	public string AddedLinesText => !HasEditStatistics ? "" : EditCountsKnown ? "+" + _value.Field("file_edit").Number("insertions") + (PartialEditStatistics ? "*" : "") : EditPreview ? UiText.Get("ExecutionDryRun") : "—";
 	public string DeletedLinesText => EditCountsKnown ? "−" + _value.Field("file_edit").Number("deletions") : "";
-	public string EditCountsHint => PartialEditStatistics ? "部分执行：仅计入已确认仍落盘的变化；未核实的路径保留未知。" : EditPreview ? "预演未落盘；拟议行数在文件详情中。" : EditCountsKnown ? "本次根调用实际落盘的新增/删除逻辑行数。" : "本次修改行数未统计或结果未知，未计为零。";
+	public string EditCountsHint => PartialEditStatistics ? UiText.Get("ExecutionPartialEditHint") : EditPreview ? UiText.Get("ExecutionPreviewEditHint") : EditCountsKnown ? UiText.Get("ExecutionActualEditHint") : UiText.Get("ExecutionUnknownEditHint");
     public string Started => _value.Date("started_at")?.ToLocalTime().ToString("HH:mm:ss.fff") ?? When;
     public string SourceType => _value.Text("source", UiText.Get("ExecutionNotRecorded"));
     public string TimingDetails => string.Join("\n", new[]
     {
-        "工具：" + Tool,
-        "RPC 返回：" + (_value.Date("rpc_completed_at")?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff") ?? UiText.Get("ExecutionNotRecorded")),
+        UiText.Get("ExecutionToolPrefix") + Tool,
+        UiText.Get("ExecutionRpcReturnedPrefix") + (_value.Date("rpc_completed_at")?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff") ?? UiText.Get("ExecutionNotRecorded")),
         TotalTimingDetails,
-        "执行阶段：" + ExecutionDuration,
-        "执行前等待：" + WaitDuration + "（含已观测到的准备及审批等待）",
-        "操作完成耗时：" + FormatDuration(_value.OptionalNumber("operation_elapsed_ms")),
-        "后台命令进程：" + FormatDuration(_value.OptionalNumber("process_elapsed_ms")),
+        UiText.Get("ExecutionPhasePrefix") + ExecutionDuration,
+        UiText.Get("ExecutionWaitPrefix") + WaitDuration + UiText.Get("ExecutionWaitObservedNote"),
+        UiText.Get("ExecutionOperationDurationPrefix") + FormatDuration(_value.OptionalNumber("operation_elapsed_ms")),
+        UiText.Get("ExecutionProcessDurationPrefix") + FormatDuration(_value.OptionalNumber("process_elapsed_ms")),
         UiText.Get("ExecutionConcurrentTimingNotice")
     });
     public string FileEditDetails
@@ -208,7 +209,16 @@ public sealed class ExecutionCallRow : INotifyPropertyChanged
             var addedKey = preview ? "proposed_insertions" : "insertions";
             var removedKey = preview ? "proposed_deletions" : "deletions";
             var files = edit.Array("affected_files").Select(file => file.Text("path") + (file.Text("move_to").Length > 0 ? " → " + file.Text("move_to") : "") + "  +" + (file.OptionalNumber(addedKey)?.ToString() ?? "—") + " −" + (file.OptionalNumber(removedKey)?.ToString() ?? "—"));
-            return $"{Tool} · {edit.Text("action")}\n目标：{edit.Text("path")}\n预览：{(edit.Flag("dry_run") ? "是，未写入" : "否")}\n已派发：{(edit.Flag("executed") ? "是" : "否")}\n实际修改：{changed}\n影响文件数：{edit.OptionalNumber("affected_count")?.ToString() ?? "未记录"}\n统计：{(PartialEditStatistics ? "部分执行，仅含已确认变化" : preview ? "预演计划" : edit.Text("stats_state", "旧记录"))}\n{(preview ? "拟议" : "实际")}新增/删除行：{edit.OptionalNumber(addedKey)?.ToString() ?? "未记录"} / {edit.OptionalNumber(removedKey)?.ToString() ?? "未记录"}\n" + string.Join("\n", files) + (edit.Flag("files_truncated") ? "\n文件明细超过预览上限。" : "") + "\n\n" + edit.Text("diff_preview") + (edit.Flag("diff_truncated") ? "\n差异预览已截断。" : "");
+            var notRecorded = UiText.Get("ExecutionNotRecorded");
+            return UiText.Format("ExecutionFileDetailsFormat", Tool, edit.Text("action"), edit.Text("path"),
+                preview ? UiText.Get("ExecutionPreviewNotWritten") : UiText.Get("ExecutionNo"),
+                UiText.Get(edit.Flag("executed") ? "ExecutionYes" : "ExecutionNo"), changed,
+                edit.OptionalNumber("affected_count")?.ToString() ?? notRecorded,
+                PartialEditStatistics ? UiText.Get("ExecutionPartialConfirmed") : preview ? UiText.Get("ExecutionDryRun") : edit.Text("stats_state", UiText.Get("ExecutionLegacyRecord")),
+                UiText.Get(preview ? "ExecutionProposed" : "ExecutionActual"),
+                edit.OptionalNumber(addedKey)?.ToString() ?? notRecorded, edit.OptionalNumber(removedKey)?.ToString() ?? notRecorded)
+                + string.Join("\n", files) + (edit.Flag("files_truncated") ? UiText.Get("ExecutionFilesTruncated") : "")
+                + "\n\n" + edit.Text("diff_preview") + (edit.Flag("diff_truncated") ? UiText.Get("ExecutionDiffTruncated") : "");
         }
     }
     private static string FormatDuration(long? milliseconds) => milliseconds is >= 0 ? (milliseconds.Value / 1000.0).ToString("0.000") + " s" : UiText.Get("ExecutionNotRecorded");
@@ -266,8 +276,8 @@ public sealed class ExecutionCallRow : INotifyPropertyChanged
         if (value.Number("updated_seq") < UpdatedSeq) return;
         Apply(value); DetailLoaded = true;
         var output = value.Text("output_preview"); var error = value.Text("stderr_preview");
-        if (error.Length > 0) output += (output.Length > 0 ? "\n\n" : "") + "标准错误\n" + error;
-        if (value.Flag("stdout_truncated") || value.Flag("stderr_truncated")) output = "输出已截断，仅显示保留部分。\n\n" + output;
+        if (error.Length > 0) output += (output.Length > 0 ? "\n\n" : "") + UiText.Get("ExecutionStderrPrefix") + error;
+        if (value.Flag("stdout_truncated") || value.Flag("stderr_truncated")) output = UiText.Get("ExecutionOutputTruncatedPrefix") + output;
         _output = output; Notify();
     }
     private void Notify() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(null));
