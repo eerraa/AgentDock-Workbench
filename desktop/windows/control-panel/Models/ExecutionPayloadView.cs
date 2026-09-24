@@ -30,8 +30,8 @@ public sealed class ExecutionPayloadView(string kind) : INotifyPropertyChanged
     public string StateLabel => State switch
     {
         "pending" => kind == "调用" ? "正在保存调用参数" : "等待输出",
-        "streaming" => "流式输出", "complete" => "已保存", "partial" => "部分输出",
-        "not_stored" => "未保存", "internal" => "内部调用", _ => "旧记录"
+        "streaming" => "流式输出", "complete" => UiText.Get("SettingsSaved"), "partial" => "部分输出",
+        "not_stored" => UiText.Get("NotSaved"), "internal" => "内部调用", _ => "旧记录"
     };
 
     public void Describe(JsonElement descriptor, string parentCallId = "")

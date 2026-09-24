@@ -13,2744 +13,2744 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="MainWindowTitle" xml:space="preserve">
-    <value>AgentDock Control Panel</value>
+    <value>AgentDock 제어판</value>
   </data>
   <data name="WindowsControlPanel" xml:space="preserve">
-    <value>Windows Control Panel</value>
+    <value>Windows 제어판</value>
   </data>
   <data name="LoadingStatus" xml:space="preserve">
-    <value>Loading status…</value>
+    <value>상태를 읽는 중…</value>
   </data>
   <data name="Overview" xml:space="preserve">
-    <value>Overview</value>
+    <value>개요</value>
   </data>
   <data name="RuntimeStatus" xml:space="preserve">
-    <value>Runtime status</value>
+    <value>런타임 상태</value>
   </data>
   <data name="Service" xml:space="preserve">
-    <value>Service</value>
+    <value>서비스</value>
   </data>
   <data name="Unknown" xml:space="preserve">
-    <value>Unknown</value>
+    <value>알 수 없음</value>
   </data>
   <data name="HealthCheck" xml:space="preserve">
-    <value>Health check</value>
+    <value>상태 확인</value>
   </data>
   <data name="NotConfigured" xml:space="preserve">
-    <value>Not configured</value>
+    <value>구성되지 않음</value>
   </data>
   <data name="Version" xml:space="preserve">
-    <value>Version</value>
+    <value>버전</value>
   </data>
   <data name="Start" xml:space="preserve">
-    <value>Start</value>
+    <value>시작</value>
   </data>
   <data name="Stop" xml:space="preserve">
-    <value>Stop</value>
+    <value>중지</value>
   </data>
   <data name="Restart" xml:space="preserve">
-    <value>Restart</value>
+    <value>다시 시작</value>
   </data>
   <data name="Update" xml:space="preserve">
-    <value>Update</value>
+    <value>업데이트</value>
   </data>
   <data name="ConnectionAddresses" xml:space="preserve">
-    <value>Connection addresses</value>
+    <value>연결 주소</value>
   </data>
   <data name="LocalMCP" xml:space="preserve">
-    <value>Local MCP</value>
+    <value>로컬 MCP</value>
   </data>
   <data name="PublicMCP" xml:space="preserve">
-    <value>Public MCP</value>
+    <value>공개 MCP</value>
   </data>
   <data name="Test" xml:space="preserve">
-    <value>Test</value>
+    <value>테스트</value>
   </data>
   <data name="PublicCheck" xml:space="preserve">
-    <value>Public check</value>
+    <value>공개 확인</value>
   </data>
   <data name="NotChecked" xml:space="preserve">
-    <value>Not checked</value>
+    <value>아직 확인하지 않음</value>
   </data>
   <data name="AccessCredentials" xml:space="preserve">
-    <value>Access credentials</value>
+    <value>접근 자격 증명</value>
   </data>
   <data name="Show" xml:space="preserve">
-    <value>Show</value>
+    <value>표시</value>
   </data>
   <data name="Hide" xml:space="preserve">
-    <value>Hide</value>
+    <value>숨기기</value>
   </data>
   <data name="OAuthPassword" xml:space="preserve">
-    <value>OAuth password</value>
+    <value>OAuth 비밀번호</value>
   </data>
   <data name="PublicAccess" xml:space="preserve">
-    <value>Public access</value>
+    <value>공개 접근</value>
   </data>
   <data name="AccessMode" xml:space="preserve">
-    <value>Access mode</value>
+    <value>접근 모드</value>
   </data>
   <data name="LocalOnly" xml:space="preserve">
-    <value>Local only</value>
+    <value>이 컴퓨터만</value>
   </data>
   <data name="LocalOnlyDescription" xml:space="preserve">
-    <value>Only allow this computer to access AgentDock. Cloudflare public access stays disabled; you can configure your own tunnel or reverse proxy.</value>
+    <value>이 컴퓨터만 AgentDock에 접근할 수 있습니다. Cloudflare 공개 접근은 꺼 둡니다. 직접 터널이나 역방향 프록시를 구성할 수 있습니다.</value>
   </data>
   <data name="TemporaryAddress" xml:space="preserve">
-    <value>Cloudflare temporary address</value>
+    <value>Cloudflare 임시 주소</value>
   </data>
   <data name="TemporaryAddressDescription" xml:space="preserve">
-    <value>Automatically generate a temporary public address through Cloudflare without configuring a domain. Suitable for temporary access or testing; the address may change.</value>
+    <value>도메인을 구성하지 않고 Cloudflare로 임시 공개 주소를 만듭니다. 임시 접근이나 테스트에 적합하며 주소가 바뀔 수 있습니다.</value>
   </data>
   <data name="CustomDomain" xml:space="preserve">
-    <value>Cloudflare custom domain</value>
+    <value>Cloudflare 고정 도메인</value>
   </data>
   <data name="CustomDomainDescription" xml:space="preserve">
-    <value>Use your own HTTPS domain through Cloudflare Tunnel. Once configured, the public address remains stable.</value>
+    <value>Cloudflare Tunnel로 자신의 HTTPS 도메인을 사용합니다. 구성을 마치면 공개 주소가 유지됩니다.</value>
   </data>
   <data name="CustomDomainConfiguration" xml:space="preserve">
-    <value>Custom domain configuration</value>
+    <value>고정 도메인 구성</value>
   </data>
   <data name="PublicHTTPSAddress" xml:space="preserve">
-    <value>Public HTTPS address</value>
+    <value>HTTPS 공개 주소</value>
   </data>
   <data name="SavedState" xml:space="preserve">
-    <value>Saved state</value>
+    <value>저장 상태</value>
   </data>
   <data name="NotSaved" xml:space="preserve">
-    <value>Not saved</value>
+    <value>저장되지 않음</value>
   </data>
   <data name="ApplyAccessMode" xml:space="preserve">
-    <value>Apply access mode</value>
+    <value>접근 모드 적용</value>
   </data>
   <data name="RegenerateTemporaryAddress" xml:space="preserve">
-    <value>Regenerate temporary address</value>
+    <value>임시 주소 다시 만들기</value>
   </data>
   <data name="AdvancedSettings" xml:space="preserve">
-    <value>Advanced settings</value>
+    <value>고급 설정</value>
   </data>
   <data name="BasicSettings" xml:space="preserve">
-    <value>Basic settings</value>
+    <value>기본 설정</value>
   </data>
   <data name="Port" xml:space="preserve">
-    <value>Port</value>
+    <value>포트</value>
   </data>
   <data name="LogLevel" xml:space="preserve">
-    <value>Log level</value>
+    <value>로그 수준</value>
   </data>
   <data name="EnableMcpAppsUi" xml:space="preserve">
-    <value>Enable MCP Apps UI</value>
+    <value>MCP Apps UI 사용</value>
   </data>
   <data name="Address" xml:space="preserve">
-    <value>Address</value>
+    <value>주소</value>
   </data>
   <data name="NexusPublicHttpsTooltip" xml:space="preserve">
-    <value>NexusDock public HTTPS address</value>
+    <value>NexusDock 공개 HTTPS 주소</value>
   </data>
   <data name="OneTimePairingCode" xml:space="preserve">
-    <value>One-time pairing code</value>
+    <value>일회용 페어링 코드</value>
   </data>
   <data name="PairAndRestart" xml:space="preserve">
-    <value>Pair and restart</value>
+    <value>페어링하고 다시 시작</value>
   </data>
   <data name="NotPaired" xml:space="preserve">
-    <value>Not paired</value>
+    <value>아직 페어링되지 않음</value>
   </data>
   <data name="Browser" xml:space="preserve">
-    <value>Browser</value>
+    <value>브라우저</value>
   </data>
   <data name="EnableBrowserCdp" xml:space="preserve">
-    <value>Enable browser CDP control</value>
+    <value>브라우저 CDP 제어 사용</value>
   </data>
   <data name="ConnectionMode" xml:space="preserve">
-    <value>Connection mode</value>
+    <value>연결 방식</value>
   </data>
   <data name="ManagedBrowser" xml:space="preserve">
-    <value>Isolated browser</value>
+    <value>격리된 브라우저</value>
   </data>
   <data name="ReuseExistingCdpBrowser" xml:space="preserve">
-    <value>Prefer an existing local CDP browser</value>
+    <value>이 컴퓨터의 기존 CDP 브라우저 우선</value>
   </data>
   <data name="SpecifiedCdpBrowser" xml:space="preserve">
-    <value>Connect to a specified CDP browser</value>
+    <value>지정한 CDP 브라우저에 연결</value>
   </data>
   <data name="CdpUrlExample" xml:space="preserve">
-    <value>For example: http://127.0.0.1:9222 or ws://.../devtools/browser/...</value>
+    <value>예: http://127.0.0.1:9222 또는 ws://.../devtools/browser/...</value>
   </data>
   <data name="CodingAgentAcp" xml:space="preserve">
     <value>Coding Agent (ACP)</value>
   </data>
   <data name="EnableCodingAgent" xml:space="preserve">
-    <value>Enable Coding Agent</value>
+    <value>Coding Agent 사용</value>
   </data>
   <data name="DefaultAcp" xml:space="preserve">
-    <value>Default ACP</value>
+    <value>기본 ACP</value>
   </data>
   <data name="AddCustomAcp" xml:space="preserve">
-    <value>+ Add custom ACP</value>
+    <value>+ 사용자 지정 ACP 추가</value>
   </data>
   <data name="AddCustomAcpTitle" xml:space="preserve">
-    <value>Add custom ACP</value>
+    <value>사용자 지정 ACP 추가</value>
   </data>
   <data name="EditCustomAcpTitle" xml:space="preserve">
-    <value>Edit custom ACP</value>
+    <value>사용자 지정 ACP 편집</value>
   </data>
   <data name="Name" xml:space="preserve">
-    <value>Name</value>
+    <value>이름</value>
   </data>
   <data name="Command" xml:space="preserve">
-    <value>Command</value>
+    <value>명령</value>
   </data>
   <data name="ArgsJson" xml:space="preserve">
-    <value>Args JSON</value>
+    <value>인수 JSON</value>
   </data>
   <data name="Add" xml:space="preserve">
-    <value>Add</value>
+    <value>추가</value>
   </data>
   <data name="Save" xml:space="preserve">
-    <value>Save</value>
+    <value>저장</value>
   </data>
   <data name="Cancel" xml:space="preserve">
-    <value>Cancel</value>
+    <value>취소</value>
   </data>
   <data name="Delete" xml:space="preserve">
-    <value>Delete</value>
+    <value>삭제</value>
   </data>
   <data name="Custom" xml:space="preserve">
-    <value>Custom</value>
+    <value>사용자 지정</value>
   </data>
   <data name="AcpCommandTooltip" xml:space="preserve">
-    <value>Absolute path to the ACP Adapter executable</value>
+    <value>ACP Adapter 실행 파일의 절대 경로</value>
   </data>
   <data name="AcpArgsTooltip" xml:space="preserve">
-    <value>JSON string array, for example ["--flag","value"]</value>
+    <value>JSON 문자열 배열, 예: ["--flag","value"]</value>
   </data>
   <data name="Status" xml:space="preserve">
-    <value>Status</value>
+    <value>상태</value>
   </data>
   <data name="Disabled" xml:space="preserve">
-    <value>Disabled</value>
+    <value>사용 안 함</value>
   </data>
   <data name="RuntimePermissions" xml:space="preserve">
-    <value>Runtime permissions</value>
+    <value>런타임 권한</value>
   </data>
   <data name="RunCoreElevated" xml:space="preserve">
-    <value>Run AgentDock core with administrator privileges</value>
+    <value>관리자 권한으로 AgentDock 코어 실행</value>
   </data>
   <data name="Startup" xml:space="preserve">
-    <value>Startup</value>
+    <value>시작 프로그램</value>
   </data>
   <data name="CoreStartup" xml:space="preserve">
-    <value>Start AgentDock core at sign-in</value>
+    <value>로그인할 때 AgentDock 코어 시작</value>
   </data>
   <data name="TrayStartup" xml:space="preserve">
-    <value>Start AgentDock control panel tray at sign-in</value>
+    <value>로그인할 때 AgentDock 제어판 트레이 시작</value>
   </data>
   <data name="SaveAndRestart" xml:space="preserve">
-    <value>Save and restart</value>
+    <value>저장하고 다시 시작</value>
   </data>
   <data name="OpenLogsFolder" xml:space="preserve">
-    <value>Open logs folder</value>
+    <value>로그 폴더 열기</value>
   </data>
   <data name="OpenConfigFolder" xml:space="preserve">
-    <value>Open config folder</value>
+    <value>구성 폴더 열기</value>
   </data>
   <data name="Ready" xml:space="preserve">
-    <value>Ready</value>
+    <value>준비됨</value>
   </data>
   <data name="Refresh" xml:space="preserve">
-    <value>Refresh</value>
+    <value>새로 고침</value>
   </data>
   <data name="UpdateWindowTitle" xml:space="preserve">
-    <value>AgentDock Update</value>
+    <value>AgentDock 업데이트</value>
   </data>
   <data name="UpdatingAgentDock" xml:space="preserve">
-    <value>Updating AgentDock</value>
+    <value>AgentDock 업데이트 중</value>
   </data>
   <data name="PreparingUpdate" xml:space="preserve">
-    <value>Preparing update…</value>
+    <value>업데이트를 준비하는 중…</value>
   </data>
   <data name="Close" xml:space="preserve">
-    <value>Close</value>
+    <value>닫기</value>
   </data>
   <data name="StatusUnavailable" xml:space="preserve">
-    <value>Status unavailable</value>
+    <value>상태를 사용할 수 없음</value>
   </data>
   <data name="OpenAgentDock" xml:space="preserve">
-    <value>Open AgentDock</value>
+    <value>AgentDock 열기</value>
   </data>
   <data name="StopAgentDock" xml:space="preserve">
-    <value>Stop AgentDock</value>
+    <value>AgentDock 중지</value>
   </data>
   <data name="RestartAgentDock" xml:space="preserve">
-    <value>Restart AgentDock</value>
+    <value>AgentDock 다시 시작</value>
   </data>
   <data name="StartAgentDock" xml:space="preserve">
-    <value>Start AgentDock</value>
+    <value>AgentDock 시작</value>
   </data>
   <data name="CheckingForUpdates" xml:space="preserve">
-    <value>Checking for updates…</value>
+    <value>업데이트를 확인하는 중…</value>
   </data>
   <data name="CheckForUpdates" xml:space="preserve">
-    <value>Check for updates…</value>
+    <value>업데이트 확인…</value>
   </data>
   <data name="OpenDocumentation" xml:space="preserve">
-    <value>Open documentation</value>
+    <value>사용 문서 열기</value>
   </data>
   <data name="ExitTray" xml:space="preserve">
-    <value>Exit tray</value>
+    <value>트레이 끝내기</value>
   </data>
   <data name="RunningNormally" xml:space="preserve">
-    <value>Running normally</value>
+    <value>정상 실행 중</value>
+  </data>
+  <data name="RuntimeOperationInProgress" xml:space="preserve">
+    <value>이미 런타임 작업이 진행 중입니다. 끝난 뒤에 다시 시도하세요.</value>
+  </data>
+  <data name="PublicTunnelDown" xml:space="preserve">
+    <value>로컬은 정상, 공개 터널 중지</value>
   </data>
   <data name="ServiceError" xml:space="preserve">
-    <value>Service error</value>
+    <value>서비스 오류</value>
   </data>
   <data name="Stopped" xml:space="preserve">
-    <value>Stopped</value>
+    <value>중지됨</value>
   </data>
   <data name="PleaseWaitCheckingUpdates" xml:space="preserve">
-    <value>Checking for updates, please wait…</value>
+    <value>업데이트를 확인하는 중…</value>
   </data>
   <data name="NewVersionPrompt" xml:space="preserve">
-    <value>A new AgentDock version is available.
+    <value>AgentDock 새 버전을 사용할 수 있습니다.
 
-Current version: {0}
-Latest version: {1}
+현재 버전: {0}
+최신 버전: {1}
 
-Update now?</value>
+지금 업데이트할까요?</value>
   </data>
   <data name="UpdateCancelled" xml:space="preserve">
-    <value>Update cancelled.</value>
+    <value>업데이트를 취소했습니다.</value>
   </data>
   <data name="UpdateCompleted" xml:space="preserve">
-    <value>Update completed.</value>
+    <value>업데이트가 완료되었습니다.</value>
   </data>
   <data name="UpdateFailed" xml:space="preserve">
-    <value>Update failed.</value>
+    <value>업데이트에 실패했습니다.</value>
   </data>
   <data name="UpdateRolledBack" xml:space="preserve">
-    <value>The update could not be committed and AgentDock was restored to the previous version.</value>
+    <value>업데이트를 커밋하지 못해 AgentDock을 이전 버전으로 되돌렸습니다.</value>
   </data>
   <data name="UpdateTransactionResultTimeout" xml:space="preserve">
-    <value>The update did not report a final result. Reopen AgentDock or run repair if the problem persists.</value>
+    <value>업데이트 트랜잭션이 최종 결과를 반환하지 않았습니다. 문제가 계속되면 AgentDock을 다시 열거나 복구 설치를 실행하세요.</value>
   </data>
   <data name="UpdateStageRollingBack" xml:space="preserve">
-    <value>Restoring the previous version…</value>
+    <value>이전 버전을 복원하는 중…</value>
   </data>
   <data name="PleaseWaitUpdating" xml:space="preserve">
-    <value>Updating AgentDock…</value>
+    <value>AgentDock을 업데이트하는 중…</value>
   </data>
   <data name="UpdateStageChecking" xml:space="preserve">
-    <value>Checking for updates…</value>
+    <value>업데이트를 확인하는 중…</value>
   </data>
   <data name="UpdateStageDownloading" xml:space="preserve">
-    <value>Downloading update…</value>
+    <value>업데이트를 다운로드하는 중…</value>
   </data>
   <data name="UpdateStageVerifying" xml:space="preserve">
-    <value>Verifying update package…</value>
+    <value>업데이트 패키지를 확인하는 중…</value>
   </data>
   <data name="UpdateStageExtracting" xml:space="preserve">
-    <value>Preparing update package…</value>
+    <value>업데이트 패키지를 준비하는 중…</value>
   </data>
   <data name="UpdateStageInstalling" xml:space="preserve">
-    <value>Installing the new version…</value>
+    <value>새 버전을 설치하는 중…</value>
   </data>
   <data name="UpdateStageUpdatingSkills" xml:space="preserve">
-    <value>Updating built-in Skills…</value>
+    <value>기본 제공 Skill을 업데이트하는 중…</value>
   </data>
   <data name="UpdateStageRestarting" xml:space="preserve">
-    <value>Starting and verifying the new version…</value>
+    <value>새 버전을 시작하고 확인하는 중…</value>
   </data>
   <data name="UpdateDownloadingProgress" xml:space="preserve">
-    <value>Downloading update… {0} / {1}</value>
+    <value>업데이트를 다운로드하는 중… {0} / {1}</value>
   </data>
   <data name="UpdateDownloadingUnknownSize" xml:space="preserve">
-    <value>Downloading update… {0}</value>
+    <value>업데이트를 다운로드하는 중… {0}</value>
   </data>
   <data name="UpdateCheckFailed" xml:space="preserve">
-    <value>Failed to check for updates.</value>
+    <value>업데이트 확인에 실패했습니다.</value>
   </data>
   <data name="OperationFailed" xml:space="preserve">
-    <value>Operation failed.</value>
+    <value>작업에 실패했습니다.</value>
   </data>
   <data name="LastRefresh" xml:space="preserve">
-    <value>Last refresh: {0:HH:mm:ss}</value>
+    <value>마지막 새로 고침: {0:HH:mm:ss}</value>
   </data>
   <data name="StatusReadFailed" xml:space="preserve">
-    <value>Failed to read status</value>
+    <value>상태를 읽지 못했습니다</value>
   </data>
   <data name="RunningHealthFailed" xml:space="preserve">
-    <value>Running, but health check failed</value>
+    <value>실행 중이지만 상태 확인에 실패했습니다</value>
   </data>
   <data name="ConfigurationError" xml:space="preserve">
-    <value>Configuration error</value>
+    <value>구성 오류</value>
   </data>
   <data name="Connected" xml:space="preserve">
-    <value>Connected</value>
+    <value>연결됨</value>
   </data>
   <data name="NotConnected" xml:space="preserve">
-    <value>Not connected</value>
+    <value>연결되지 않음</value>
   </data>
   <data name="Running" xml:space="preserve">
-    <value>Running</value>
+    <value>실행 중</value>
   </data>
   <data name="Healthy" xml:space="preserve">
-    <value>Healthy</value>
+    <value>정상</value>
   </data>
   <data name="Unavailable" xml:space="preserve">
-    <value>Unavailable</value>
+    <value>사용할 수 없음</value>
   </data>
   <data name="TunnelTokenSaved" xml:space="preserve">
-    <value>Tunnel Token saved securely</value>
+    <value>Tunnel Token을 안전하게 저장했습니다</value>
   </data>
   <data name="DeviceTokenSaved" xml:space="preserve">
-    <value>Saved securely · node_id={0}</value>
+    <value>안전하게 저장됨 · node_id={0}</value>
   </data>
   <data name="DeviceNotPairedHelp" xml:space="preserve">
-    <value>Not paired yet; Device Token will be generated automatically during one-time pairing.</value>
+    <value>아직 페어링되지 않았습니다. Device Token은 일회용 페어링 중에 자동으로 만들어집니다.</value>
   </data>
   <data name="WaitingTemporaryAddress" xml:space="preserve">
-    <value>Waiting for a new temporary address…</value>
+    <value>새 임시 주소를 기다리는 중…</value>
   </data>
   <data name="PublicAddressNotConfigured" xml:space="preserve">
-    <value>Public address is not configured</value>
+    <value>공개 주소가 구성되지 않았습니다</value>
   </data>
   <data name="AutoDetectingPublicAddress" xml:space="preserve">
-    <value>Detecting public address automatically…</value>
+    <value>공개 주소를 자동으로 찾는 중…</value>
   </data>
   <data name="OperationCompleted" xml:space="preserve">
-    <value>Operation completed</value>
+    <value>작업이 완료되었습니다</value>
   </data>
   <data name="Starting" xml:space="preserve">
-    <value>Starting…</value>
+    <value>시작하는 중…</value>
   </data>
   <data name="Stopping" xml:space="preserve">
-    <value>Stopping…</value>
+    <value>중지하는 중…</value>
   </data>
   <data name="Restarting" xml:space="preserve">
-    <value>Restarting…</value>
+    <value>다시 시작하는 중…</value>
   </data>
   <data name="CurrentNoPublicAddress" xml:space="preserve">
-    <value>There is no public address currently</value>
+    <value>현재 공개 주소가 없습니다</value>
   </data>
   <data name="Testing" xml:space="preserve">
-    <value>Testing…</value>
+    <value>테스트하는 중…</value>
   </data>
   <data name="GeneratingTemporaryAddress" xml:space="preserve">
-    <value>Generating a new temporary address…</value>
+    <value>새 임시 주소를 만드는 중…</value>
   </data>
   <data name="SwitchingPublicAccess" xml:space="preserve">
-    <value>Switching public access mode…</value>
+    <value>공개 접근 모드를 전환하는 중…</value>
   </data>
   <data name="OldAddressHidden" xml:space="preserve">
-    <value>Old address hidden; starting a new Quick Tunnel…</value>
+    <value>이전 주소를 숨겼습니다. 새 Quick Tunnel을 시작하는 중…</value>
   </data>
   <data name="BrowserReuseHelp" xml:space="preserve">
-    <value>Prefer an existing local CDP browser; fall back to an isolated browser when none is found. Existing login state may be reused.</value>
+    <value>이 컴퓨터의 기존 CDP 브라우저를 우선 사용하고, 없으면 격리된 브라우저로 돌아갑니다. 기존 로그인 상태를 다시 사용할 수 있습니다.</value>
   </data>
   <data name="BrowserSpecifiedHelp" xml:space="preserve">
-    <value>Use the specified CDP browser. Existing login state in that browser may be reused.</value>
+    <value>지정한 CDP 브라우저를 사용합니다. 그 브라우저의 기존 로그인 상태를 다시 사용할 수 있습니다.</value>
   </data>
   <data name="BrowserManagedHelp" xml:space="preserve">
-    <value>Use an isolated browser without reusing the login state from your everyday browser.</value>
+    <value>일상 브라우저의 로그인 상태를 다시 사용하지 않는 격리된 브라우저를 사용합니다.</value>
   </data>
   <data name="ArgsJsonInvalid" xml:space="preserve">
-    <value>Args JSON must be a JSON string array.</value>
+    <value>Args JSON은 JSON 문자열 배열이어야 합니다.</value>
   </data>
   <data name="CustomConfigured" xml:space="preserve">
-    <value>Custom configured · takes effect when enabled</value>
+    <value>사용자 지정이 구성됨 · 사용하면 적용됩니다</value>
   </data>
   <data name="AgentDetected" xml:space="preserve">
-    <value>Detected {0} · takes effect when enabled</value>
+    <value>{0}을 찾음 · 사용하면 적용됩니다</value>
   </data>
   <data name="PortInvalid" xml:space="preserve">
-    <value>Port must be an integer between 1 and 65535.</value>
+    <value>포트는 1에서 65535 사이의 정수여야 합니다.</value>
   </data>
   <data name="CustomAcpUnavailable" xml:space="preserve">
-    <value>The custom ACP Adapter is unavailable. Check Command and Args JSON.</value>
+    <value>사용자 지정 ACP Adapter를 사용할 수 없습니다. Command와 Args JSON을 확인하세요.</value>
   </data>
   <data name="AgentUnavailable" xml:space="preserve">
-    <value>{0} is unavailable. Install the corresponding command first.</value>
+    <value>{0}을 사용할 수 없습니다. 해당 명령을 먼저 설치하세요.</value>
   </data>
   <data name="SpecifiedCdpRequired" xml:space="preserve">
-    <value>A CDP address is required when ‘Connect to a specified CDP browser’ is selected.</value>
+    <value>‘지정한 CDP 브라우저에 연결’을 선택하면 CDP 주소가 필요합니다.</value>
   </data>
   <data name="SavingAndRestarting" xml:space="preserve">
-    <value>Saving settings and restarting…</value>
+    <value>설정을 저장하고 다시 시작하는 중…</value>
   </data>
   <data name="PairingFieldsRequired" xml:space="preserve">
-    <value>Enter the NexusDock address and one-time pairing code.</value>
+    <value>NexusDock 주소와 일회용 페어링 코드를 입력하세요.</value>
   </data>
   <data name="PairingAndRestarting" xml:space="preserve">
-    <value>Pairing and restarting AgentDock…</value>
+    <value>AgentDock을 페어링하고 다시 시작하는 중…</value>
   </data>
   <data name="SwitchingAdmin" xml:space="preserve">
-    <value>Switching to administrator mode…</value>
+    <value>관리자 모드로 전환하는 중…</value>
   </data>
   <data name="SwitchingStandard" xml:space="preserve">
-    <value>Switching to standard user mode…</value>
+    <value>표준 사용자 모드로 전환하는 중…</value>
   </data>
   <data name="SwitchedAdmin" xml:space="preserve">
-    <value>Switched to administrator mode</value>
+    <value>관리자 모드로 전환했습니다</value>
   </data>
   <data name="SwitchedStandard" xml:space="preserve">
-    <value>Switched to standard user mode</value>
+    <value>표준 사용자 모드로 전환했습니다</value>
   </data>
   <data name="UpdatingCoreStartup" xml:space="preserve">
-    <value>Updating core startup…</value>
+    <value>코어 시작 프로그램을 업데이트하는 중…</value>
   </data>
   <data name="UpdatingTrayStartup" xml:space="preserve">
-    <value>Updating tray startup…</value>
+    <value>트레이 시작 프로그램을 업데이트하는 중…</value>
   </data>
   <data name="UnsupportedCodingAgent" xml:space="preserve">
-    <value>Unsupported Coding Agent</value>
+    <value>지원하지 않는 Coding Agent</value>
   </data>
   <data name="MinimizedToTray" xml:space="preserve">
-    <value>Control panel minimized to the system tray</value>
+    <value>제어판을 시스템 트레이로 최소화했습니다</value>
   </data>
   <data name="AcpNotConfigured" xml:space="preserve">
-    <value>Not configured · enter an executable ACP Adapter absolute path</value>
+    <value>구성되지 않음 · 실행 가능한 ACP Adapter 절대 경로를 입력하세요</value>
   </data>
   <data name="AcpDetectedPath" xml:space="preserve">
-    <value>Detected · {0}</value>
+    <value>찾음 · {0}</value>
   </data>
   <data name="AcpNotInstalled" xml:space="preserve">
-    <value>Not installed · could not find {0}{1}</value>
+    <value>설치되지 않음 · {0}{1}을 찾지 못했습니다</value>
   </data>
   <data name="InvalidPublicAddress" xml:space="preserve">
-    <value>Invalid address</value>
+    <value>주소가 올바르지 않습니다</value>
   </data>
   <data name="AccessSuccess" xml:space="preserve">
-    <value>Access OK · {0} · {1} ms</value>
+    <value>접근 정상 · {0} · {1} ms</value>
   </data>
   <data name="AccessFailed" xml:space="preserve">
-    <value>Access failed · {0}</value>
+    <value>접근 실패 · {0}</value>
   </data>
   <data name="AccessTimeout" xml:space="preserve">
-    <value>Access timed out</value>
+    <value>접근 시간이 초과되었습니다</value>
   </data>
   <data name="NexusPairingRequired" xml:space="preserve">
-    <value>NexusDock address and one-time pairing code cannot be empty.</value>
+    <value>NexusDock 주소와 일회용 페어링 코드는 비워 둘 수 없습니다.</value>
   </data>
   <data name="RuntimeJsonMissing" xml:space="preserve">
-    <value>AgentDock runtime.json was not found.</value>
+    <value>AgentDock runtime.json을 찾지 못했습니다.</value>
   </data>
   <data name="RuntimeJsonInvalid" xml:space="preserve">
-    <value>AgentDock runtime.json is invalid.</value>
+    <value>AgentDock runtime.json 형식이 올바르지 않습니다.</value>
   </data>
   <data name="CoreBinaryMissing" xml:space="preserve">
-    <value>AgentDock core executable was not found ({0}). Run Setup.exe to repair the installation.</value>
+    <value>AgentDock 코어 실행 파일을 찾지 못했습니다({0}). Setup.exe를 실행해 설치를 복구하세요.</value>
   </data>
   <data name="TrayBinaryMissing" xml:space="preserve">
-    <value>AgentDock tray executable was not found ({0}).</value>
+    <value>AgentDock 트레이 실행 파일을 찾지 못했습니다({0}).</value>
   </data>
   <data name="CurrentWindowsIdentityUnavailable" xml:space="preserve">
-    <value>Unable to read the current Windows user identity.</value>
+    <value>현재 Windows 사용자 ID를 읽을 수 없습니다.</value>
   </data>
   <data name="AdminSwitchCancelled" xml:space="preserve">
-    <value>AgentDock administrator privilege switch was cancelled.</value>
+    <value>AgentDock 관리자 권한 전환을 취소했습니다.</value>
   </data>
   <data name="StartupRegistryUnavailable" xml:space="preserve">
-    <value>Unable to open the Windows startup registry.</value>
+    <value>Windows 시작 프로그램 레지스트리를 열 수 없습니다.</value>
   </data>
   <data name="CoreStartFailed" xml:space="preserve">
-    <value>Unable to start the AgentDock core executable.</value>
+    <value>AgentDock 코어 실행 파일을 시작할 수 없습니다.</value>
   </data>
   <data name="ManagerStartFailed" xml:space="preserve">
-    <value>Unable to start the AgentDock management executable.</value>
+    <value>AgentDock 관리 실행 파일을 시작할 수 없습니다.</value>
   </data>
   <data name="ManagerFailedWithExitCode" xml:space="preserve">
-    <value>AgentDock management executable failed with exit code {0}.</value>
+    <value>AgentDock 관리 실행 파일이 종료 코드 {0}(으)로 실패했습니다.</value>
   </data>
   <data name="DeviceIdentityInvalid" xml:space="preserve">
-    <value>Device identity file is invalid. Pair again.</value>
+    <value>장치 ID 파일이 올바르지 않습니다. 다시 페어링하세요.</value>
   </data>
   <data name="DeviceIdentityReadFailed" xml:space="preserve">
-    <value>Unable to read device identity: {0}</value>
+    <value>장치 ID를 읽을 수 없습니다: {0}</value>
   </data>
   <data name="ProcessStartFailed" xml:space="preserve">
-    <value>Unable to start {0}.</value>
+    <value>{0}을 시작할 수 없습니다.</value>
   </data>
   <data name="Refreshing" xml:space="preserve">
-    <value>Refreshing…</value>
+    <value>새로 고치는 중…</value>
   </data>
   <data name="UnsupportedRuntimeAction" xml:space="preserve">
-    <value>Unsupported runtime action.</value>
+    <value>지원하지 않는 런타임 동작입니다.</value>
   </data>
   <data name="EmptyUpdateCheckResult" xml:space="preserve">
-    <value>Update check returned an empty result.</value>
+    <value>업데이트 확인 결과가 비어 있습니다.</value>
   </data>
   <data name="ParseUpdateCheckFailed" xml:space="preserve">
-    <value>Unable to parse the AgentDock update check result.</value>
+    <value>AgentDock 업데이트 확인 결과를 해석할 수 없습니다.</value>
   </data>
   <data name="UnsupportedStartupComponent" xml:space="preserve">
-    <value>Unsupported startup component.</value>
+    <value>지원하지 않는 시작 프로그램 구성 요소입니다.</value>
   </data>
   <data name="PrivilegeSwitchRollbackFailed" xml:space="preserve">
-    <value>Failed to switch AgentDock administrator mode and the rollback did not complete.</value>
+    <value>AgentDock 관리자 모드 전환에 실패했고 롤백도 끝나지 않았습니다.</value>
   </data>
   <data name="ManagementBinaryMissing" xml:space="preserve">
-    <value>AgentDock management executable was not found ({0}).</value>
+    <value>AgentDock 관리 실행 파일을 찾지 못했습니다({0}).</value>
   </data>
   <data name="UnsupportedCoreServiceAction" xml:space="preserve">
-    <value>Unsupported core service action.</value>
+    <value>지원하지 않는 코어 서비스 동작입니다.</value>
   </data>
   <data name="UnsupportedTunnelAction" xml:space="preserve">
-    <value>Unsupported Tunnel action.</value>
+    <value>지원하지 않는 Tunnel 동작입니다.</value>
   </data>
   <data name="UnsupportedCodingAgentValue" xml:space="preserve">
-    <value>Unsupported Coding Agent: {0}</value>
+    <value>지원하지 않는 Coding Agent: {0}</value>
   </data>
   <data name="UnsupportedTaskAdminAction" xml:space="preserve">
-    <value>Unsupported AgentDock scheduled-task action: {0}</value>
+    <value>지원하지 않는 AgentDock 예약 작업 동작: {0}</value>
   </data>
   <data name="InvalidTaskAdminAction" xml:space="preserve">
-    <value>Invalid AgentDock scheduled-task management action.</value>
+    <value>AgentDock 예약 작업 관리 동작이 올바르지 않습니다.</value>
   </data>
   <data name="MissingAdminArgument" xml:space="preserve">
-    <value>Missing AgentDock management argument: {0}</value>
+    <value>AgentDock 관리 인수가 없습니다: {0}</value>
   </data>
   <data name="TaskAdminRequiresElevation" xml:space="preserve">
-    <value>AgentDock scheduled-task configuration requires administrator privileges.</value>
+    <value>AgentDock 예약 작업 구성에는 관리자 권한이 필요합니다.</value>
   </data>
   <data name="ElevatedModeMissingSid" xml:space="preserve">
-    <value>Administrator mode is missing the current Windows user SID.</value>
+    <value>관리자 모드에 현재 Windows 사용자 SID가 없습니다.</value>
   </data>
   <data name="ElevatedModeRequiresCurrentUserUac" xml:space="preserve">
-    <value>Administrator mode must be confirmed through UAC by the currently signed-in Windows account.</value>
+    <value>관리자 강화 모드는 현재 로그인한 Windows 계정이 UAC를 확인해야 합니다.</value>
   </data>
   <data name="AdminArgumentBoolean" xml:space="preserve">
-    <value>AgentDock management argument {0} must be true or false.</value>
+    <value>AgentDock 관리 인수 {0}은 true 또는 false여야 합니다.</value>
   </data>
   <data name="TaskEnabledStateRequired" xml:space="preserve">
-    <value>The AgentDock scheduled-task enabled state cannot be empty.</value>
+    <value>AgentDock 예약 작업 사용 상태는 비워 둘 수 없습니다.</value>
   </data>
   <data name="ScheduledTaskMissing" xml:space="preserve">
-    <value>AgentDock scheduled task was not found.</value>
+    <value>AgentDock 예약 작업을 찾지 못했습니다.</value>
   </data>
   <data name="TaskBackupDirectoryRequired" xml:space="preserve">
-    <value>AgentDock scheduled-task backup directory cannot be empty.</value>
+    <value>AgentDock 예약 작업 백업 디렉터리는 비워 둘 수 없습니다.</value>
   </data>
   <data name="RuntimeDirectoryRequired" xml:space="preserve">
-    <value>AgentDock runtime directory cannot be empty.</value>
+    <value>AgentDock 런타임 디렉터리는 비워 둘 수 없습니다.</value>
   </data>
   <data name="StopCoreFailed" xml:space="preserve">
-    <value>Unable to stop the running AgentDock Core: {0}</value>
+    <value>실행 중인 AgentDock Core를 중지할 수 없습니다: {0}</value>
   </data>
   <data name="TaskBackupStateMissing" xml:space="preserve">
-    <value>AgentDock scheduled-task backup state was not found: {0}</value>
+    <value>AgentDock 예약 작업 백업 상태를 찾지 못했습니다: {0}</value>
   </data>
   <data name="TaskBackupStateReadFailed" xml:space="preserve">
-    <value>Unable to read the AgentDock scheduled-task backup state.</value>
+    <value>AgentDock 예약 작업 백업 상태를 읽을 수 없습니다.</value>
   </data>
   <data name="TaskBackupXmlMissing" xml:space="preserve">
-    <value>AgentDock scheduled-task backup XML was not found: {0}</value>
+    <value>AgentDock 예약 작업 백업 XML을 찾지 못했습니다: {0}</value>
   </data>
   <data name="TaskBackupUserMissing" xml:space="preserve">
-    <value>AgentDock scheduled-task backup is missing the user identity.</value>
+    <value>AgentDock 예약 작업 백업에 사용자 ID가 없습니다.</value>
   </data>
   <data name="ElevatedTaskArgumentsIncomplete" xml:space="preserve">
-    <value>AgentDock administrator-mode scheduled-task arguments are incomplete.</value>
+    <value>AgentDock 관리자 모드 예약 작업 인수가 완전하지 않습니다.</value>
   </data>
   <data name="TaskSchedulerComUnavailable" xml:space="preserve">
-    <value>Windows Task Scheduler COM service is unavailable.</value>
+    <value>Windows Task Scheduler COM 서비스를 사용할 수 없습니다.</value>
   </data>
   <data name="TaskSchedulerConnectFailed" xml:space="preserve">
-    <value>Unable to connect to Windows Task Scheduler.</value>
+    <value>Windows Task Scheduler에 연결할 수 없습니다.</value>
   </data>
   <data name="CoreJobCreateFailed" xml:space="preserve">
-    <value>Unable to create the AgentDock Core Job Object.</value>
+    <value>AgentDock Core Job Object를 만들 수 없습니다.</value>
   </data>
   <data name="CoreJobConfigureFailed" xml:space="preserve">
-    <value>Unable to configure the AgentDock Core Job Object.</value>
+    <value>AgentDock Core Job Object를 구성할 수 없습니다.</value>
   </data>
   <data name="CoreJobAssignFailed" xml:space="preserve">
-    <value>Unable to assign AgentDock Core to the background Job Object.</value>
+    <value>AgentDock Core를 백그라운드 Job Object에 넣지 못했습니다.</value>
   </data>
   <data name="AcpPackageHint" xml:space="preserve">
-    <value> or {0}</value>
+    <value> 또는 {0}</value>
   </data>
   <data name="AcpDetectedPathDetails" xml:space="preserve">
-    <value>Detected · {0} · {1}</value>
+    <value>찾음 · {0} · {1}</value>
   </data>
   <data name="InterfaceLanguage" xml:space="preserve">
-    <value>Interface language</value>
+    <value>인터페이스 언어</value>
   </data>
   <data name="FollowSystem" xml:space="preserve">
-    <value>Follow system</value>
+    <value>시스템 설정 따르기</value>
   </data>
   <data name="SimplifiedChinese" xml:space="preserve">
-    <value>Simplified Chinese</value>
+    <value>简体中文</value>
   </data>
   <data name="EnglishLanguage" xml:space="preserve">
     <value>English</value>
   </data>
   <data name="LanguageChangeFailed" xml:space="preserve">
-    <value>Failed to change interface language: {0}</value>
+    <value>인터페이스 언어를 바꾸지 못했습니다: {0}</value>
   </data>
   <data name="LanguageChangeDiscardWarning" xml:space="preserve">
-    <value>Changing the interface language reloads this window. Any unsaved changes will be lost. Continue?</value>
+    <value>인터페이스 언어를 바꾸면 이 창을 다시 불러옵니다. 저장하지 않은 변경은 사라집니다. 계속할까요?</value>
   </data>
   <data name="Capabilities" xml:space="preserve">
-    <value>Capabilities</value>
+    <value>기능과 플러그인</value>
   </data>
   <data name="CapabilitiesDescription" xml:space="preserve">
-    <value>Manage installed plugins, Skills, and MCP servers. Normal plugins expose members directly; Heavy plugins disclose them on demand. Switches and credentials stay outside packages.</value>
+    <value>설치된 플러그인, Skill, MCP 서버를 관리합니다. 일반 플러그인은 구성원을 바로 보여 주고, Heavy 플러그인은 필요할 때 펼칩니다. 스위치와 자격 증명은 패키지 밖에 둡니다.</value>
   </data>
   <data name="PluginPackageMetadata" xml:space="preserve">
-    <value>Version {0} · {1}</value>
+    <value>버전 {0} · {1}</value>
   </data>
   <data name="RefreshCapabilities" xml:space="preserve">
-    <value>Refresh capabilities</value>
+    <value>기능 목록 새로 고침</value>
   </data>
   <data name="Plugins" xml:space="preserve">
-    <value>Plugins</value>
+    <value>플러그인</value>
   </data>
   <data name="StandaloneSkills" xml:space="preserve">
-    <value>Standalone Skills</value>
+    <value>독립 Skill</value>
   </data>
   <data name="StandaloneMcpServers" xml:space="preserve">
-    <value>Standalone MCP servers</value>
+    <value>독립 MCP 서버</value>
   </data>
   <data name="CapabilitiesRequireRunningCore" xml:space="preserve">
-    <value>Start AgentDock Core to manage capabilities.</value>
+    <value>기능을 관리하려면 AgentDock Core를 시작하세요.</value>
   </data>
   <data name="LoadingCapabilities" xml:space="preserve">
-    <value>Loading capability configuration…</value>
+    <value>기능 구성을 읽는 중…</value>
   </data>
   <data name="CapabilitiesLoaded" xml:space="preserve">
-    <value>Loaded {0} plugins, {1} Skills, and {2} MCP servers.</value>
+    <value>플러그인 {0}개, Skill {1}개, MCP 서버 {2}개를 불러왔습니다.</value>
   </data>
   <data name="NoPlugins" xml:space="preserve">
-    <value>No self-contained plugins are installed.</value>
+    <value>자체 포함 플러그인이 설치되어 있지 않습니다.</value>
   </data>
   <data name="NoStandaloneSkills" xml:space="preserve">
-    <value>No standalone Skills are available.</value>
+    <value>독립 Skill이 없습니다.</value>
   </data>
   <data name="NoStandaloneMcpServers" xml:space="preserve">
-    <value>No standalone MCP servers are available.</value>
+    <value>독립 MCP 서버가 없습니다.</value>
   </data>
   <data name="Enabled" xml:space="preserve">
-    <value>Enabled</value>
+    <value>사용</value>
   </data>
   <data name="Edit" xml:space="preserve">
-    <value>Edit</value>
+    <value>편집</value>
   </data>
   <data name="Bundled" xml:space="preserve">
-    <value>bundled</value>
+    <value>기본 제공</value>
   </data>
   <data name="PluginSkills" xml:space="preserve">
-    <value>Skills</value>
+    <value>Skill</value>
   </data>
   <data name="PluginMcpServers" xml:space="preserve">
-    <value>MCP servers</value>
+    <value>MCP 서버</value>
   </data>
   <data name="McpStatusSummary" xml:space="preserve">
-    <value>{0} · {1} tools</value>
+    <value>{0} · 도구 {1}개</value>
   </data>
   <data name="DisableCapability" xml:space="preserve">
-    <value>Disable this capability</value>
+    <value>이 기능 사용 안 함</value>
   </data>
   <data name="EnableCapability" xml:space="preserve">
-    <value>Enable this capability</value>
+    <value>이 기능 사용</value>
   </data>
   <data name="UnavailablePluginMember" xml:space="preserve">
-    <value>{0} member “{1}” is missing.</value>
+    <value>{0} 구성원 “{1}”이 없습니다.</value>
   </data>
   <data name="EnablingPlugin" xml:space="preserve">
-    <value>Enabling plugin {0}…</value>
+    <value>플러그인 {0}을 활성화하는 중…</value>
   </data>
   <data name="DisablingPlugin" xml:space="preserve">
-    <value>Disabling plugin {0}…</value>
+    <value>플러그인 {0}을 사용 중지하는 중…</value>
   </data>
   <data name="EnablingCapability" xml:space="preserve">
-    <value>Enabling {0}…</value>
+    <value>{0}을 활성화하는 중…</value>
   </data>
   <data name="DisablingCapability" xml:space="preserve">
-    <value>Disabling {0}…</value>
+    <value>{0}을 사용 중지하는 중…</value>
   </data>
   <data name="SavingPlugin" xml:space="preserve">
-    <value>Saving plugin {0}…</value>
+    <value>플러그인 {0}을 저장하는 중…</value>
   </data>
   <data name="ConfirmRemovePlugin" xml:space="preserve">
-    <value>Remove plugin {0}? This deletes its complete self-contained directory, including plugin Skills and bundled MCP implementation files. External credentials under env/mcp are not deleted.</value>
+    <value>플러그인 {0}을 삭제할까요? 플러그인 Skill과 함께 제공된 MCP 구현 파일을 포함한 자체 포함 디렉터리 전체가 삭제됩니다. env/mcp 아래의 외부 자격 증명은 삭제되지 않습니다.</value>
   </data>
   <data name="RemovingPlugin" xml:space="preserve">
-    <value>Removing plugin {0}…</value>
+    <value>플러그인 {0}을 삭제하는 중…</value>
   </data>
   <data name="EditPlugin" xml:space="preserve">
-    <value>Edit plugin</value>
+    <value>플러그인 편집</value>
   </data>
   <data name="EnablePluginAfterSaving" xml:space="preserve">
-    <value>Enable this plugin after saving</value>
+    <value>저장한 뒤 이 플러그인 사용</value>
   </data>
   <data name="PluginMemberSelectionHelp" xml:space="preserve">
-    <value>Select the Skills and MCP servers owned by this plugin. A member can belong to only one plugin.</value>
+    <value>이 플러그인이 소유할 Skill과 MCP 서버를 선택하세요. 구성원은 하나의 플러그인에만 속할 수 있습니다.</value>
   </data>
   <data name="PluginName" xml:space="preserve">
-    <value>Plugin identifier</value>
+    <value>플러그인 식별자</value>
   </data>
   <data name="PluginDescription" xml:space="preserve">
-    <value>Plugin description</value>
+    <value>플러그인 설명</value>
   </data>
   <data name="PluginNameInvalid" xml:space="preserve">
-    <value>Use 1–64 lowercase letters, digits, dots or hyphens; start and end with a letter or digit and avoid consecutive dots or hyphens.</value>
+    <value>식별자는 1–64자의 소문자, 숫자, 점 또는 하이픈이며 처음과 끝은 문자 또는 숫자이고 점이나 하이픈이 연속되면 안 됩니다.</value>
   </data>
   <data name="PluginNameExists" xml:space="preserve">
-    <value>A plugin with this identifier already exists.</value>
+    <value>이 식별자를 가진 플러그인이 이미 있습니다.</value>
   </data>
   <data name="PluginDescriptionRequired" xml:space="preserve">
-    <value>A plugin description is required.</value>
+    <value>플러그인 설명이 필요합니다.</value>
   </data>
   <data name="PluginMemberRequired" xml:space="preserve">
-    <value>Select at least one Skill or MCP server.</value>
+    <value>Skill 또는 MCP 서버를 하나 이상 선택하세요.</value>
   </data>
   <data name="RuntimeApiEmptyResponse" xml:space="preserve">
-    <value>The AgentDock Runtime API returned an empty response.</value>
+    <value>AgentDock Runtime API가 빈 응답을 반환했습니다.</value>
   </data>
   <data name="RuntimeApiInvalidResponse" xml:space="preserve">
-    <value>The AgentDock Runtime API returned an invalid response.</value>
+    <value>AgentDock Runtime API가 올바르지 않은 응답을 반환했습니다.</value>
   </data>
   <data name="RuntimeApiRequestFailed" xml:space="preserve">
-    <value>The AgentDock Runtime API request failed with HTTP status {0}.</value>
+    <value>AgentDock Runtime API 요청이 HTTP 상태 {0}(으)로 실패했습니다.</value>
   </data>
   <data name="HeavyPluginHelp" xml:space="preserve">
-    <value>Heavy: expose only the plugin summary until plugin_load. Off: expose enabled Skills and MCP servers directly. This switch is saved in host state, not in the package.</value>
+    <value>Heavy: plugin_load 전까지 플러그인 요약만 보여 줍니다. 끄면 사용 중인 Skill과 MCP 서버를 바로 보여 줍니다. 이 스위치는 패키지가 아니라 호스트 상태에 저장됩니다.</value>
   </data>
   <data name="PluginMemberSummary" xml:space="preserve">
-    <value>Members · {0} Skills · {1} MCP servers</value>
+    <value>구성원 · Skill {0}개 · MCP 서버 {1}개</value>
   </data>
   <data name="PluginDiagnosticCount" xml:space="preserve">
-    <value>{0} validation diagnostics; expand for details.</value>
+    <value>유효성 진단 {0}개. 펼치면 자세히 볼 수 있습니다.</value>
   </data>
   <data name="RuntimeConfiguration" xml:space="preserve">
-    <value>Runtime configuration</value>
+    <value>런타임 구성</value>
   </data>
   <data name="RuntimeConfigurationHelp" xml:space="preserve">
-    <value>Configure non-secret runtime options. Save validates the values and restarts Core; failed activation restores the previous settings. Other pages and plugin switches are preserved.</value>
+    <value>비밀이 아닌 런타임 옵션을 구성합니다. 저장하면 값을 검사한 뒤 Core를 다시 시작합니다. 활성화에 실패하면 이전 설정으로 되돌립니다. 다른 페이지와 플러그인 스위치는 유지됩니다.</value>
   </data>
   <data name="WorkspaceAndInstructions" xml:space="preserve">
-    <value>Workspace and instructions</value>
+    <value>작업 공간과 지침</value>
   </data>
   <data name="DefaultGlobalWorkspace" xml:space="preserve">
-    <value>Default global workspace (absolute path)</value>
+    <value>기본 전역 작업 공간(절대 경로)</value>
   </data>
   <data name="Browse" xml:space="preserve">
-    <value>Browse…</value>
+    <value>찾아보기…</value>
   </data>
   <data name="AutoLoadAgentsRules" xml:space="preserve">
-    <value>Automatically load global and workspace AGENTS.md</value>
+    <value>전역 및 작업 공간 AGENTS.md 자동 로드</value>
   </data>
   <data name="ExtraInstructionsFile" xml:space="preserve">
-    <value>Additional instructions file (optional)</value>
+    <value>추가 지침 파일(선택)</value>
   </data>
   <data name="ExtraInstructionsHelp" xml:space="preserve">
-    <value>Normally leave this blank when AGENTS.md auto-loading is enabled. An explicit file must exist, contain non-empty UTF-8 text, and be at most 64 KiB.</value>
+    <value>AGENTS.md 자동 로드를 사용 중이면 보통 비워 둡니다. 명시적 파일은 존재해야 하고, 비어 있지 않은 UTF-8 텍스트여야 하며, 64 KiB 이하여야 합니다.</value>
   </data>
   <data name="ProcessAndNetwork" xml:space="preserve">
-    <value>Processes and network</value>
+    <value>프로세스와 네트워크</value>
   </data>
   <data name="BrowserExecutable" xml:space="preserve">
-    <value>Browser executable (blank for automatic discovery)</value>
+    <value>브라우저 실행 파일(비우면 자동으로 찾음)</value>
   </data>
   <data name="TrustedProxyNetworks" xml:space="preserve">
-    <value>Trusted proxy CIDRs (one per line, optional)</value>
+    <value>신뢰하는 프록시 CIDR(한 줄에 하나, 선택)</value>
   </data>
   <data name="TrustedProxyNetworksHelp" xml:space="preserve">
-    <value>Trust only reverse proxies you control. CIDRs change how forwarded client addresses are interpreted; they do not enable unauthenticated access.</value>
+    <value>직접 제어하는 역방향 프록시만 신뢰하세요. CIDR은 전달된 클라이언트 주소를 해석하는 방식을 바꾸며, 인증 없는 접근을 열지는 않습니다.</value>
   </data>
   <data name="CommandEnvironmentReferences" xml:space="preserve">
-    <value>Command environment references (JSON)</value>
+    <value>명령 환경 변수 참조(JSON)</value>
   </data>
   <data name="CommandEnvironmentHelp" xml:space="preserve">
-    <value>Map child variable names to host variable names, for example {"API_TOKEN":"MY_API_TOKEN"}. Enter names only, never credential values. Use {} for no extra references.</value>
+    <value>자식 변수 이름을 호스트 변수 이름에 매핑합니다. 예: {"API_TOKEN":"MY_API_TOKEN"}. 이름만 입력하고 자격 증명 값은 입력하지 마세요. 추가 참조가 없으면 {}를 사용하세요.</value>
   </data>
   <data name="AcpConcurrency" xml:space="preserve">
-    <value>ACP concurrent prompts (1–8)</value>
+    <value>ACP 동시 프롬프트(1–8)</value>
   </data>
   <data name="AcpInteractionTimeout" xml:space="preserve">
-    <value>ACP interaction timeout (1000–3600000 ms)</value>
+    <value>ACP 상호 작용 시간 제한(1000–3600000 ms)</value>
   </data>
   <data name="ConfigurationLocations" xml:space="preserve">
-    <value>Configuration locations (read-only)</value>
+    <value>구성 위치(읽기 전용)</value>
   </data>
   <data name="AgentDockDataDirectory" xml:space="preserve">
-    <value>AgentDock data directory</value>
+    <value>AgentDock 데이터 디렉터리</value>
   </data>
   <data name="ConfigurationFiles" xml:space="preserve">
-    <value>Settings file and runtime manifest</value>
+    <value>설정 파일과 런타임 매니페스트</value>
   </data>
   <data name="ReloadConfiguration" xml:space="preserve">
-    <value>Reload saved values</value>
+    <value>저장된 값 다시 읽기</value>
   </data>
   <data name="RuntimeOptionsInvalid" xml:space="preserve">
-    <value>Enter an absolute workspace path, valid JSON string-to-string references, and ACP values within the stated ranges.</value>
+    <value>절대 작업 공간 경로, 유효한 JSON 문자열-문자열 참조, 표시된 범위 안의 ACP 값을 입력하세요.</value>
   </data>
   <data name="TailscaleDescription" xml:space="preserve">
-    <value>Use this device's .ts.net HTTPS address. Install and sign in to Tailscale first; no Tunnel Token is required. AgentDock manages only its own mapping and keeps Bearer/OAuth authentication.</value>
+    <value>이 장치의 .ts.net HTTPS 주소를 사용합니다. 먼저 Tailscale을 설치하고 로그인하세요. Tunnel Token은 필요 없습니다. AgentDock은 자신의 매핑만 관리하고 Bearer/OAuth 인증을 유지합니다.</value>
   </data>
   <data name="TailscaleClient" xml:space="preserve">
-    <value>Client</value>
+    <value>클라이언트</value>
   </data>
   <data name="TailscaleDevice" xml:space="preserve">
-    <value>Device</value>
+    <value>장치 이름</value>
   </data>
   <data name="TailscaleDomain" xml:space="preserve">
-    <value>Device domain (read-only)</value>
+    <value>장치 도메인(읽기 전용)</value>
   </data>
   <data name="TailscaleKeyExpiry" xml:space="preserve">
-    <value>Device key expires</value>
+    <value>장치 키 만료</value>
   </data>
   <data name="TailscaleLocalTarget" xml:space="preserve">
-    <value>Local target</value>
+    <value>로컬 대상</value>
   </data>
   <data name="TailscaleDetect" xml:space="preserve">
-    <value>Detect Tailscale</value>
+    <value>Tailscale 감지</value>
   </data>
   <data name="TailscaleEnable" xml:space="preserve">
-    <value>Enable Funnel</value>
+    <value>Funnel 사용</value>
   </data>
   <data name="TailscaleStop" xml:space="preserve">
-    <value>Stop AgentDock Funnel</value>
+    <value>AgentDock Funnel 중지</value>
   </data>
   <data name="TailscaleAuthorize" xml:space="preserve">
-    <value>Open Tailscale authorization</value>
+    <value>Tailscale 권한 부여 열기</value>
   </data>
   <data name="TailscaleNotInstalled" xml:space="preserve">
-    <value>Tailscale was not detected</value>
+    <value>Tailscale을 감지하지 못했습니다</value>
   </data>
   <data name="TailscalePending" xml:space="preserve">
-    <value>Mapping active; verification pending</value>
+    <value>매핑이 실행 중이며 확인을 기다리는 중입니다</value>
   </data>
   <data name="TailscaleNoKeyExpiry" xml:space="preserve">
-    <value>No expiry date reported</value>
+    <value>만료 날짜가 보고되지 않았습니다</value>
   </data>
   <data name="TailscaleOutputTooLarge" xml:space="preserve">
-    <value>Tailscale status output exceeded the size limit.</value>
+    <value>Tailscale 상태 출력이 크기 제한을 넘었습니다.</value>
   </data>
   <data name="PublicAccessSwitchWarning" xml:space="preserve">
-    <value>Switch from {0} to {1}? AgentDock will stop its current public entry and restart Core. Other Tailscale services and account settings are preserved. Existing public connections may be interrupted.</value>
+    <value>{0}에서 {1}(으)로 전환할까요? AgentDock이 현재 공개 입구를 중지하고 Core를 다시 시작합니다. 다른 Tailscale 서비스와 계정 설정은 유지됩니다. 기존 공개 연결이 끊길 수 있습니다.</value>
   </data>
   <data name="CopyPublicMcp" xml:space="preserve">
-    <value>Copy public MCP address</value>
+    <value>공개 MCP 주소 복사</value>
   </data>
   <data name="TaskActivityCenter" xml:space="preserve">
-    <value>Task activity center</value>
+    <value>작업 활동 센터</value>
   </data>
   <data name="ActivityCounts" xml:space="preserve">
-    <value>In progress: {0} · Needs attention: {1} · Latest 200 tasks{2} · {3:HH:mm:ss}</value>
+    <value>진행 중: {0} · 확인 필요: {1} · 최근 작업 200개{2} · {3:HH:mm:ss}</value>
   </data>
   <data name="TunnelTokenMissing" xml:space="preserve">
-    <value>No Tunnel Token configured</value>
+    <value>Tunnel Token이 구성되지 않음</value>
   </data>
   <data name="EffectiveAccess" xml:space="preserve">
-    <value>Currently effective: {0}</value>
+    <value>현재 적용: {0}</value>
   </data>
   <data name="AccessDraftPending" xml:space="preserve">
-    <value>{0}: changes are not applied. The current connection remains in use.</value>
+    <value>{0}: 변경 내용이 적용되지 않았습니다. 현재 연결은 그대로 사용됩니다.</value>
   </data>
   <data name="AccessDraftCurrent" xml:space="preserve">
-    <value>The displayed selection matches the saved configuration.</value>
+    <value>표시된 선택이 저장된 구성과 같습니다.</value>
   </data>
   <data name="AccessNotApplied" xml:space="preserve">
-    <value>Apply this mode to generate its address.</value>
+    <value>주소를 만들려면 이 모드를 적용하세요.</value>
   </data>
   <data name="AccessApplyFailedDraftKept" xml:space="preserve">
-    <value>Apply failed. Your draft is retained; the effective mode reflects the latest runtime state.</value>
+    <value>적용에 실패했습니다. 초안은 유지되며 적용 모드는 최신 런타임 상태를 따릅니다.</value>
   </data>
   <data name="EnableAndCheck" xml:space="preserve">
-    <value>Enable and check</value>
+    <value>사용하고 확인</value>
   </data>
   <data name="SaveAndApply" xml:space="preserve">
-    <value>Save and apply</value>
+    <value>저장하고 적용</value>
   </data>
   <data name="ServerChecksAuthorizationRequired" xml:space="preserve">
-    <value>Server checks passed</value>
+    <value>서버 확인을 통과했습니다</value>
   </data>
   <data name="PublicCheckStage" xml:space="preserve">
     <value>{0} · {1} · HTTP {2} · {3:HH:mm:ss}</value>
   </data>
   <data name="PublicNetwork" xml:space="preserve">
-    <value>Public network</value>
+    <value>공개 네트워크</value>
   </data>
   <data name="PublicDiscovery" xml:space="preserve">
-    <value>Authentication discovery</value>
+    <value>인증 검색</value>
   </data>
   <data name="PublicCheckError" xml:space="preserve">
     <value>{0} · {1} · {2} · {3:HH:mm:ss}</value>
   </data>
   <data name="PublicMetadataMismatch" xml:space="preserve">
-    <value>Metadata does not match the current origin</value>
+    <value>메타데이터가 현재 origin과 일치하지 않습니다</value>
   </data>
   <data name="PublicDiscoveryAuthorizationRequired" xml:space="preserve">
-    <value>Public endpoint reachable; authentication discovery passed</value>
+    <value>공개 엔드포인트에 도달했고 인증 검색을 통과했습니다</value>
   </data>
   <data name="PublicOAuthCapabilitiesMissing" xml:space="preserve">
-    <value>OAuth metadata is missing authorization code, S256 or refresh support.</value>
-  </data>
-  <data name="RuntimeOperationInProgress" xml:space="preserve">
-    <value>A runtime operation is already in progress. Wait for it to finish.</value>
-  </data>
-  <data name="PublicTunnelDown" xml:space="preserve">
-    <value>Local origin is up, public tunnel is down</value>
+    <value>OAuth 메타데이터에 인증 코드, S256 또는 토큰 갱신 지원이 없습니다.</value>
   </data>
   <data name="KoreanLanguage" xml:space="preserve">
     <value>한국어</value>
   </data>
   <data name="DisplaySettings" xml:space="preserve">
-    <value>Display</value>
+    <value>표시</value>
   </data>
   <data name="Theme" xml:space="preserve">
-    <value>Theme</value>
+    <value>테마</value>
   </data>
   <data name="ThemeLight" xml:space="preserve">
-    <value>Light</value>
+    <value>밝게</value>
   </data>
   <data name="ThemeDark" xml:space="preserve">
-    <value>Dark</value>
+    <value>어둡게</value>
   </data>
   <data name="EmbeddedInterface" xml:space="preserve">
-    <value>ChatGPT embedded interface</value>
+    <value>ChatGPT 내장 인터페이스</value>
   </data>
   <data name="ProvideEmbeddedInterface" xml:space="preserve">
-    <value>Provide the AgentDock embedded interface</value>
+    <value>AgentDock 내장 인터페이스 제공</value>
   </data>
   <data name="EmbeddedInterfaceHelp" xml:space="preserve">
-    <value>Tools, task management and file access remain available when disabled. This setting does not affect other plugins or previously rendered cards.</value>
+    <value>꺼도 도구 호출, 작업 관리와 파일 읽기·쓰기는 계속 사용할 수 있습니다. 다른 플러그인과 이미 표시된 카드는 영향을 받지 않습니다.</value>
   </data>
   <data name="DisplayReadCancelled" xml:space="preserve">
-    <value>Reading display settings was cancelled or timed out.</value>
+    <value>표시 설정 읽기가 취소되었거나 시간이 초과되었습니다.</value>
   </data>
   <data name="DisplayUnavailable" xml:space="preserve">
-    <value>Display settings are unavailable from the current core: {0}</value>
+    <value>현재 Core에서 표시 설정을 사용할 수 없습니다: {0}</value>
   </data>
   <data name="DisplaySaved" xml:space="preserve">
-    <value>Saved locally; the server has applied the new policy. </value>
+    <value>로컬에 저장했으며 서버에 새 정책이 적용되었습니다. </value>
   </data>
   <data name="DisplaySaveUnconfirmed" xml:space="preserve">
-    <value>Save result unconfirmed; reloading current settings: {0}</value>
+    <value>저장 결과를 확인하지 못했습니다. 현재 설정을 다시 읽는 중입니다: {0}</value>
   </data>
   <data name="DisplayReloaded" xml:space="preserve">
-    <value>Reloaded the current server settings. </value>
+    <value>서버의 현재 설정을 다시 읽었습니다. </value>
   </data>
   <data name="DisplayConfirmUnavailable" xml:space="preserve">
-    <value>Cannot confirm the save result. Reopen the Display tab.</value>
+    <value>저장 결과를 확인할 수 없습니다. 런타임 구성의 표시 및 테마를 다시 여세요.</value>
   </data>
   <data name="SettingsSaved" xml:space="preserve">
-    <value>Saved</value>
+    <value>저장했습니다</value>
   </data>
   <data name="ThemeSaveFailed" xml:space="preserve">
-    <value>Theme was not saved: {0}</value>
+    <value>테마를 저장하지 못했습니다: {0}</value>
   </data>
   <data name="OfflineUpdatesOnly" xml:space="preserve">
-    <value>AgentDock Eerraa uses verified offline Setup.exe packages for manual updates. Online checks and updates are unavailable. Upstream packages are never used as a fallback.</value>
+    <value>AgentDock Eerraa는 검증된 오프라인 Setup.exe로 수동 업데이트합니다. 온라인 확인과 업데이트는 아직 사용할 수 없으며, upstream 설치파일로 자동 전환하지 않습니다.</value>
   </data>
   <data name="ActivityNeedsAttention" xml:space="preserve">
-    <value>Needs attention</value>
+    <value>확인이 필요한 작업</value>
   </data>
   <data name="ActivityInProgressTasks" xml:space="preserve">
-    <value>In progress</value>
+    <value>진행 중 작업</value>
   </data>
   <data name="ActivityEndedTasks" xml:space="preserve">
-    <value>Ended</value>
+    <value>종료된 작업</value>
   </data>
   <data name="ActivityRecords" xml:space="preserve">
-    <value>Activity records</value>
+    <value>활동 기록</value>
   </data>
   <data name="ActivityNoStep" xml:space="preserve">
-    <value>No current step recorded</value>
+    <value>현재 단계가 기록되지 않았습니다</value>
   </data>
   <data name="ActivityNoReason" xml:space="preserve">
-    <value>No reason recorded</value>
+    <value>사유가 기록되지 않았습니다</value>
   </data>
   <data name="ActivityNoNext" xml:space="preserve">
-    <value>No next action recorded</value>
+    <value>다음 동작이 기록되지 않았습니다</value>
   </data>
   <data name="ActivityCancelReason" xml:space="preserve">
-    <value>Cancellation reason</value>
+    <value>취소 사유</value>
   </data>
   <data name="ActivityTaskBlockReason" xml:space="preserve">
-    <value>Task blocked</value>
+    <value>작업 차단 사유</value>
   </data>
   <data name="ActivityThreadBlockReason" xml:space="preserve">
-    <value>Branch blocked</value>
+    <value>분기 차단 사유</value>
   </data>
   <data name="ActivityNoWorkspace" xml:space="preserve">
-    <value>No workspace bound</value>
+    <value>연결된 작업 공간 없음</value>
   </data>
   <data name="ActivityWorkspaceMissing" xml:space="preserve">
-    <value>Bound workspace is missing</value>
+    <value>연결된 작업 공간 기록을 찾을 수 없습니다</value>
   </data>
   <data name="ActivityWorkspaceButton" xml:space="preserve">
-    <value>Open workspace</value>
+    <value>작업 공간 열기</value>
   </data>
   <data name="ActivitySummary" xml:space="preserve">
-    <value>Checkpoint summary</value>
+    <value>체크포인트 요약</value>
   </data>
   <data name="ActivityCommandDirectory" xml:space="preserve">
-    <value>Command directory</value>
+    <value>명령 실행 디렉터리</value>
   </data>
   <data name="ActivityRunningNow" xml:space="preserve">
-    <value>Running at latest check</value>
+    <value>최근 확인 시 실행 중</value>
   </data>
   <data name="ActivityTaskCancelledEvent" xml:space="preserve">
-    <value>Task cancelled</value>
+    <value>작업이 취소되었습니다</value>
   </data>
   <data name="ActivityContinue" xml:space="preserve">
-    <value>Copy continuation instruction</value>
+    <value>계속하기 지시 복사</value>
   </data>
   <data name="ActivityRetry" xml:space="preserve">
-    <value>Copy retry instruction</value>
+    <value>재시도 지시 복사</value>
   </data>
   <data name="ActivityContinueInstruction" xml:space="preserve">
-    <value>Read this task and branch checkpoint, confirm its workspace, then continue the unfinished work. This instruction does not itself start execution.</value>
+    <value>이 작업과 분기의 체크포인트를 읽고 연결된 작업 공간을 확인한 뒤 미완료 작업을 계속하세요. 이 지시를 복사하는 것만으로 실행이 시작되지는 않습니다.</value>
   </data>
   <data name="ActivityRetryInstruction" xml:space="preserve">
-    <value>Keep the original task cancelled. Read its goal and cancellation reason, then create a new task for a retry.</value>
+    <value>원래 작업은 취소된 상태로 유지하세요. 목표와 취소 사유를 확인한 뒤 새 작업을 만들어 재시도하세요.</value>
   </data>
   <data name="ActivityResumeTask" xml:space="preserve">
-    <value>Unblock task state</value>
+    <value>작업 차단 해제</value>
   </data>
   <data name="ActivityResumeHint" xml:space="preserve">
-    <value>The state is restored. Continue from the connected client; no model was started.</value>
+    <value>상태가 복원되었습니다. 연결된 클라이언트에서 계속하세요. 모델이 새로 시작된 것은 아닙니다.</value>
   </data>
   <data name="ActivityLiveCommands" xml:space="preserve">
-    <value>Live command sessions · all branches of this task</value>
+    <value>실시간 명령 세션 · 이 작업의 모든 분기</value>
   </data>
   <data name="ActivityLiveUnavailable" xml:space="preserve">
-    <value>Live session state unavailable; stopping is disabled until checked.</value>
+    <value>실시간 세션 상태를 확인할 수 없습니다. 다시 확인하기 전에는 명령을 중지할 수 없습니다.</value>
   </data>
   <data name="ActivityNoRunning" xml:space="preserve">
-    <value>No running commands at the latest check. Task progress does not indicate client execution.</value>
+    <value>최근 확인 시 실행 중인 명령이 없습니다. 작업 진행 상태는 클라이언트가 현재 실행 중임을 뜻하지 않습니다.</value>
   </data>
   <data name="ActivityRunningAfterCancel" xml:space="preserve">
-    <value>The task has ended, but its command processes are still running.</value>
+    <value>작업은 종료됐지만 해당 명령 프로세스는 아직 실행 중입니다.</value>
   </data>
   <data name="ActivityUnknownCommand" xml:space="preserve">
-    <value>Command session · command text not retained</value>
+    <value>명령 세션 · 명령 내용이 보존되지 않았습니다</value>
   </data>
   <data name="ActivityTechnical" xml:space="preserve">
-    <value>Technical details</value>
+    <value>기술 상세 정보</value>
   </data>
   <data name="ActivityProgress" xml:space="preserve">
-    <value>Step progress</value>
+    <value>단계 진행 상태</value>
   </data>
   <data name="ActivityTaskSteps" xml:space="preserve">
-    <value>Task steps</value>
+    <value>작업 단계</value>
   </data>
   <data name="ActivityBranchSteps" xml:space="preserve">
-    <value>Selected branch steps</value>
+    <value>선택한 분기의 단계</value>
   </data>
   <data name="ActivityHistory" xml:space="preserve">
-    <value>Activity history</value>
+    <value>활동 기록</value>
   </data>
   <data name="ActivityReturnLatest" xml:space="preserve">
-    <value>Return to latest activity</value>
+    <value>최신 활동으로 돌아가기</value>
   </data>
   <data name="ActivityNoResults" xml:space="preserve">
-    <value>No matching tasks</value>
+    <value>조건에 맞는 작업 없음</value>
   </data>
   <data name="ActivityCategoryAll" xml:space="preserve">
-    <value>All activity types</value>
+    <value>모든 활동 유형</value>
   </data>
   <data name="ActivityCategoryCommand" xml:space="preserve">
-    <value>Commands</value>
+    <value>명령</value>
   </data>
   <data name="ActivityCategoryFile" xml:space="preserve">
-    <value>File changes</value>
+    <value>파일 변경</value>
   </data>
   <data name="ActivityCategoryCheckpoint" xml:space="preserve">
-    <value>Checkpoints and review</value>
+    <value>체크포인트 및 검토</value>
   </data>
   <data name="ActivityCategoryLifecycle" xml:space="preserve">
-    <value>Lifecycle and other events</value>
+    <value>수명 주기 및 기타 이벤트</value>
   </data>
   <data name="ActivityLastChecked" xml:space="preserve">
-    <value>Last check</value>
+    <value>최근 확인</value>
   </data>
   <data name="ActivityClipboardReady" xml:space="preserve">
-    <value>Continuation instruction copied.</value>
+    <value>계속하기 지시를 복사했습니다.</value>
   </data>
   <data name="ActivityDiffCurrentHint" xml:space="preserve">
-    <value>This compares the current working tree, not the file contents at event time.</value>
+    <value>현재 작업 트리를 비교한 결과이며, 이벤트 발생 당시의 파일 내용은 아닙니다.</value>
   </data>
   <data name="ActivityTitle" xml:space="preserve">
-    <value>AgentDock · Task activity</value>
+    <value>AgentDock · 작업 활동 센터</value>
   </data>
   <data name="ActivityOpen" xml:space="preserve">
-    <value>Task activity center</value>
+    <value>작업 활동 센터</value>
   </data>
   <data name="ActivityFacts" xml:space="preserve">
-    <value>Recorded AgentDock execution only. Threads are recoverable contexts, not background AI workers.</value>
+    <value>AgentDock에 기록된 실행 사실만 표시합니다. 스레드는 복원 가능한 작업 문맥이며, 백그라운드 AI 작업자가 아닙니다.</value>
   </data>
   <data name="ActivityTasks" xml:space="preserve">
-    <value>Tasks</value>
+    <value>작업</value>
   </data>
   <data name="ActivitySearch" xml:space="preserve">
-    <value>Filter by title, project, workspace or task ID</value>
+    <value>제목, 프로젝트, 작업 공간 또는 작업 ID로 검색</value>
   </data>
   <data name="ActivityAll" xml:space="preserve">
-    <value>All states</value>
+    <value>모든 상태</value>
   </data>
   <data name="ActivityRefresh" xml:space="preserve">
-    <value>Refresh</value>
+    <value>새로 고침</value>
   </data>
   <data name="ActivityArchived" xml:space="preserve">
-    <value>Include archived</value>
+    <value>보관된 작업 포함</value>
   </data>
   <data name="ActivityThread" xml:space="preserve">
-    <value>Execution branch</value>
+    <value>실행 분기</value>
   </data>
   <data name="ActivityThreadActions" xml:space="preserve">
-    <value>Branch actions ▾</value>
+    <value>분기 작업 ▾</value>
   </data>
   <data name="ActivityTaskActions" xml:space="preserve">
-    <value>Task actions ▾</value>
+    <value>작업 관리 ▾</value>
   </data>
   <data name="ActivitySetActive" xml:space="preserve">
-    <value>Use as default continuation branch</value>
+    <value>기본 계속하기 분기로 설정</value>
   </data>
   <data name="ActivityCreate" xml:space="preserve">
-    <value>Create thread</value>
+    <value>스레드 만들기</value>
   </data>
   <data name="ActivityFork" xml:space="preserve">
-    <value>Fork checkpoint</value>
+    <value>체크포인트에서 분기</value>
   </data>
   <data name="ActivityBlock" xml:space="preserve">
-    <value>Block thread</value>
+    <value>스레드 차단</value>
   </data>
   <data name="ActivityResume" xml:space="preserve">
-    <value>Unblock branch state</value>
+    <value>분기 차단 해제</value>
   </data>
   <data name="ActivityClose" xml:space="preserve">
-    <value>Close thread</value>
+    <value>스레드 닫기</value>
   </data>
   <data name="ActivityCancelTask" xml:space="preserve">
-    <value>Cancel task</value>
+    <value>작업 취소</value>
   </data>
   <data name="ActivityArchive" xml:space="preserve">
-    <value>Archive task</value>
+    <value>작업 보관</value>
   </data>
   <data name="ActivityUnarchive" xml:space="preserve">
-    <value>Restore from archive</value>
+    <value>보관 해제</value>
   </data>
   <data name="ActivityCleanup" xml:space="preserve">
-    <value>Clean activity older than 30 days</value>
+    <value>30일이 지난 활동 기록 정리</value>
   </data>
   <data name="ActivityStop" xml:space="preserve">
-    <value>Stop command</value>
+    <value>명령 중지</value>
   </data>
   <data name="ActivityCopy" xml:space="preserve">
-    <value>Copy redacted command</value>
+    <value>민감 정보가 제거된 명령 복사</value>
   </data>
   <data name="ActivityDirectory" xml:space="preserve">
-    <value>Open command directory</value>
+    <value>명령 실행 디렉터리 열기</value>
   </data>
   <data name="ActivityFile" xml:space="preserve">
-    <value>Locate modified file</value>
+    <value>변경된 파일 위치 열기</value>
   </data>
   <data name="ActivityDiff" xml:space="preserve">
-    <value>View current diff</value>
+    <value>현재 변경 사항 보기</value>
   </data>
   <data name="ActivityFollow" xml:space="preserve">
-    <value>Follow latest</value>
+    <value>최신 활동 따라가기</value>
   </data>
   <data name="ActivityOutput" xml:space="preserve">
-    <value>Show output</value>
+    <value>출력 펼치기</value>
   </data>
   <data name="ActivityOutputTruncated" xml:space="preserve">
-    <value>Show output · bounded preview, truncated</value>
+    <value>출력 펼치기 · 크기 제한으로 일부 생략됨</value>
   </data>
   <data name="ActivityDetails" xml:space="preserve">
-    <value>Steps and acceptance</value>
+    <value>단계 및 수용 조건</value>
   </data>
   <data name="ActivityConditions" xml:space="preserve">
-    <value>Acceptance conditions</value>
+    <value>수용 조건</value>
   </data>
   <data name="ActivityReview" xml:space="preserve">
-    <value>Final review</value>
+    <value>최종 검토</value>
   </data>
   <data name="ActivityRisks" xml:space="preserve">
-    <value>Open risks / missing checks</value>
+    <value>남은 위험 및 미완료 검사</value>
   </data>
   <data name="ActivityWorkspace" xml:space="preserve">
-    <value>Workspace</value>
+    <value>작업 공간</value>
   </data>
   <data name="ActivityStep" xml:space="preserve">
-    <value>Current step</value>
+    <value>현재 단계</value>
   </data>
   <data name="ActivityNext" xml:space="preserve">
-    <value>Next action</value>
+    <value>다음 동작</value>
   </data>
   <data name="ActivityDefaultThread" xml:space="preserve">
-    <value>Continuation thread</value>
+    <value>계속하기 스레드</value>
   </data>
   <data name="ActivityNoTask" xml:space="preserve">
-    <value>Select a task to view its execution timeline.</value>
+    <value>작업을 선택하면 실행 시간순 기록을 볼 수 있습니다.</value>
   </data>
   <data name="ActivityNoEvents" xml:space="preserve">
-    <value>No activity recorded for this thread yet.</value>
+    <value>이 스레드에 아직 활동 기록이 없습니다.</value>
   </data>
   <data name="ActivityUnassigned" xml:space="preserve">
-    <value>Unassigned legacy activity</value>
+    <value>작업에 연결되지 않은 이전 활동</value>
   </data>
   <data name="ActivityAllActivity" xml:space="preserve">
-    <value>All recorded activity</value>
+    <value>전체 실행 기록</value>
   </data>
   <data name="ActivityAllActivityDetail" xml:space="preserve">
-    <value>All tasks and legacy unassigned operations</value>
+    <value>모든 작업과 이전의 미연결 작업</value>
   </data>
   <data name="ActivityCancelConfirmation" xml:space="preserve">
-    <value>There are {0} running commands in this task. Cancelling changes the task state only and will not stop these processes. Cancel this task?</value>
+    <value>이 작업에서 현재 실행 중인 명령이 {0}개 있습니다. 작업 취소는 작업 상태만 변경하며 이 프로세스들을 중지하지 않습니다. 작업을 취소하시겠습니까?</value>
   </data>
   <data name="ActivityLoading" xml:space="preserve">
-    <value>Loading local activity…</value>
+    <value>로컬 활동을 불러오는 중…</value>
   </data>
   <data name="ActivityLive" xml:space="preserve">
-    <value>Connected · live events</value>
+    <value>연결됨 · 실시간 활동</value>
   </data>
   <data name="ActivityReconnecting" xml:space="preserve">
-    <value>Disconnected. Reconnecting to the local service…</value>
+    <value>연결이 끊어졌습니다. 로컬 서비스에 다시 연결하는 중…</value>
   </data>
   <data name="ActivityUnavailable" xml:space="preserve">
-    <value>Local activity is unavailable. Check the service connection.</value>
+    <value>로컬 활동을 확인할 수 없습니다. 서비스 연결을 확인하세요.</value>
   </data>
   <data name="ActivityGap" xml:space="preserve">
-    <value>Some older activity was removed by retention. Remaining records are still available.</value>
+    <value>일부 이전 활동은 보존 정책에 따라 정리됐습니다. 남아 있는 기록은 계속 볼 수 있습니다.</value>
   </data>
   <data name="ActivityReset" xml:space="preserve">
-    <value>The local journal changed; the replay cursor has been reset.</value>
+    <value>로컬 활동 로그가 변경되어 재생 위치를 초기화했습니다.</value>
   </data>
   <data name="ActivityWarning" xml:space="preserve">
-    <value>Activity warning</value>
+    <value>활동 기록 안내</value>
   </data>
   <data name="ActivityRecentOnly" xml:space="preserve">
-    <value>Only the latest 1,000 timeline entries are retained in this window.</value>
+    <value>이 창에는 최근 시간순 기록 1,000개만 유지됩니다.</value>
   </data>
   <data name="ActivityMoreTasks" xml:space="preserve">
-    <value>Showing at most 200 recent tasks. Narrow the server-side state filter to see older tasks.</value>
+    <value>최근 작업을 최대 200개까지 표시합니다. 이전 작업을 보려면 서버 측 상태 필터로 범위를 좁히세요.</value>
   </data>
   <data name="ActivityConfirm" xml:space="preserve">
-    <value>Confirm operation</value>
+    <value>작업 확인</value>
   </data>
   <data name="ActivityConfirmAction" xml:space="preserve">
-    <value>Apply this operation to the selected task/thread? Existing history will be retained.</value>
+    <value>선택한 작업 또는 스레드에 이 동작을 적용하시겠습니까? 기존 기록은 유지됩니다.</value>
   </data>
   <data name="ActivityConfirmStop" xml:space="preserve">
-    <value>Stop this command session? Unsaved work in that process may be lost.</value>
+    <value>이 명령 세션을 중지하시겠습니까? 해당 프로세스에서 저장하지 않은 작업은 손실될 수 있습니다.</value>
   </data>
   <data name="ActivityConfirmCleanup" xml:space="preserve">
-    <value>Remove complete activity segments older than 30 days? Task checkpoints and current output are retained.</value>
+    <value>30일이 지난 완결된 활동 로그 구간을 삭제하시겠습니까? 작업 체크포인트와 현재 출력은 유지됩니다.</value>
   </data>
   <data name="ActivityName" xml:space="preserve">
-    <value>Thread title</value>
+    <value>스레드 제목</value>
   </data>
   <data name="ActivityReason" xml:space="preserve">
-    <value>Reason</value>
+    <value>사유</value>
   </data>
   <data name="ActivityRequired" xml:space="preserve">
-    <value>Enter a non-empty value (at most 512 characters).</value>
+    <value>비어 있지 않은 내용을 입력하세요. 최대 512자까지 가능합니다.</value>
   </data>
   <data name="ActivityOK" xml:space="preserve">
-    <value>OK</value>
+    <value>확인</value>
   </data>
   <data name="ActivityDismiss" xml:space="preserve">
-    <value>Cancel</value>
+    <value>취소</value>
   </data>
   <data name="ActivityOperationFailed" xml:space="preserve">
-    <value>The operation did not complete.</value>
+    <value>작업이 완료되지 않았습니다.</value>
   </data>
   <data name="ActivityInvalidPath" xml:space="preserve">
-    <value>The recorded path is missing, redacted, remote, or not a local filesystem path.</value>
+    <value>기록된 경로가 없거나, 민감 정보 제거로 숨겨졌거나, 원격 환경에 속하거나, 로컬 파일 시스템 경로가 아닙니다.</value>
   </data>
   <data name="ActivityDiffTitle" xml:space="preserve">
-    <value>Current repository diff</value>
+    <value>현재 저장소 변경 사항</value>
   </data>
   <data name="ActivityDiffEmpty" xml:space="preserve">
-    <value>No current tracked diff for this file.</value>
+    <value>이 파일에 현재 추적 중인 변경 사항이 없습니다.</value>
   </data>
   <data name="ActivityInterrupted" xml:space="preserve">
-    <value>Last recorded running · not confirmed live</value>
+    <value>마지막 기록은 실행 중 · 현재 실행 여부는 확인되지 않음</value>
   </data>
   <data name="ActivityLabelActive" xml:space="preserve">
-    <value>Active</value>
+    <value>진행 중</value>
   </data>
   <data name="ActivityLabelBlocked" xml:space="preserve">
-    <value>Blocked</value>
+    <value>차단됨</value>
   </data>
   <data name="ActivityLabelCompleted" xml:space="preserve">
-    <value>Completed</value>
+    <value>완료됨</value>
   </data>
   <data name="ActivityLabelCancelled" xml:space="preserve">
-    <value>Cancelled</value>
+    <value>취소됨</value>
   </data>
   <data name="ActivityLabelArchived" xml:space="preserve">
-    <value>Archived</value>
+    <value>보관됨</value>
   </data>
   <data name="ActivityLabelOpen" xml:space="preserve">
-    <value>Open</value>
+    <value>열림</value>
   </data>
   <data name="ActivityLabelClosed" xml:space="preserve">
-    <value>Closed</value>
+    <value>닫힘</value>
   </data>
   <data name="ActivityLabelSucceeded" xml:space="preserve">
-    <value>Succeeded</value>
+    <value>성공</value>
   </data>
   <data name="ActivityLabelFailed" xml:space="preserve">
-    <value>Failed</value>
+    <value>실패</value>
   </data>
   <data name="ActivityLabelRunningLastObserved" xml:space="preserve">
-    <value>Running · last observed</value>
+    <value>실행 중 · 마지막 기록</value>
   </data>
   <data name="ActivityLabelTimedOut" xml:space="preserve">
-    <value>Timed out</value>
+    <value>시간 초과</value>
   </data>
   <data name="ActivityLabelStopped" xml:space="preserve">
-    <value>Stopped</value>
+    <value>중지됨</value>
   </data>
   <data name="ActivityLabelPending" xml:space="preserve">
-    <value>Pending</value>
+    <value>실행 대기</value>
   </data>
   <data name="ActivityLabelInProgress" xml:space="preserve">
-    <value>In progress</value>
+    <value>실행 중</value>
   </data>
   <data name="ActivityLabelPartial" xml:space="preserve">
-    <value>Partial</value>
+    <value>일부 완료</value>
   </data>
   <data name="ActivityLabelExited" xml:space="preserve">
-    <value>Exited</value>
+    <value>종료됨</value>
   </data>
   <data name="ActivityLabelCommand" xml:space="preserve">
-    <value>Command</value>
+    <value>명령</value>
   </data>
   <data name="ActivityLabelTaskCreated" xml:space="preserve">
-    <value>Task created</value>
+    <value>작업 생성됨</value>
   </data>
   <data name="ActivityLabelTaskCompleted" xml:space="preserve">
-    <value>Task completed</value>
+    <value>작업 완료됨</value>
   </data>
   <data name="ActivityLabelTaskBlocked" xml:space="preserve">
-    <value>Task blocked</value>
+    <value>작업 차단됨</value>
   </data>
   <data name="ActivityLabelTaskUnblocked" xml:space="preserve">
-    <value>Task unblocked</value>
+    <value>작업 차단 해제됨</value>
   </data>
   <data name="ActivityLabelTaskArchived" xml:space="preserve">
-    <value>Task archived</value>
+    <value>작업 보관됨</value>
   </data>
   <data name="ActivityLabelTaskRestoredFromArchive" xml:space="preserve">
-    <value>Task restored from archive</value>
+    <value>작업 보관 해제됨</value>
   </data>
   <data name="ActivityLabelBranchCreated" xml:space="preserve">
-    <value>Branch created</value>
+    <value>분기 생성됨</value>
   </data>
   <data name="ActivityLabelContinuationBranchChanged" xml:space="preserve">
-    <value>Continuation branch changed</value>
+    <value>계속하기 분기 변경됨</value>
   </data>
   <data name="ActivityLabelBranchBlocked" xml:space="preserve">
-    <value>Branch blocked</value>
+    <value>분기 차단됨</value>
   </data>
   <data name="ActivityLabelBranchUnblocked" xml:space="preserve">
-    <value>Branch unblocked</value>
+    <value>분기 차단 해제됨</value>
   </data>
   <data name="ActivityLabelBranchClosed" xml:space="preserve">
-    <value>Branch closed</value>
+    <value>분기 닫힘</value>
   </data>
   <data name="ActivityLabelHistoryCleaned" xml:space="preserve">
-    <value>History cleaned</value>
+    <value>활동 기록 정리됨</value>
   </data>
   <data name="ActivityLabelFileChanged" xml:space="preserve">
-    <value>File changed</value>
+    <value>파일 변경됨</value>
   </data>
   <data name="ActivityLabelStepStarted" xml:space="preserve">
-    <value>Step started</value>
+    <value>단계 시작됨</value>
   </data>
   <data name="ActivityLabelCheckpoint" xml:space="preserve">
-    <value>Checkpoint</value>
+    <value>체크포인트</value>
   </data>
   <data name="ActivityLabelToolCall" xml:space="preserve">
-    <value>Tool call</value>
+    <value>도구 호출</value>
   </data>
   <data name="ActivityLabelFinalReview" xml:space="preserve">
-    <value>Final review</value>
+    <value>최종 검토</value>
   </data>
   <data name="ExecutionWaiting" xml:space="preserve">
-    <value>Waiting to run</value>
+    <value>실행 대기</value>
   </data>
   <data name="ExecutionRunning" xml:space="preserve">
-    <value>Running</value>
+    <value>실행 중</value>
   </data>
   <data name="ExecutionPendingApproval" xml:space="preserve">
-    <value>Awaiting approval</value>
+    <value>승인 대기</value>
   </data>
   <data name="ExecutionCompleted" xml:space="preserve">
-    <value>Completed</value>
+    <value>완료됨</value>
   </data>
   <data name="ExecutionFailed" xml:space="preserve">
-    <value>Failed</value>
+    <value>실패</value>
   </data>
   <data name="ExecutionPartial" xml:space="preserve">
-    <value>Partially completed</value>
+    <value>일부 완료</value>
   </data>
   <data name="ExecutionCancelled" xml:space="preserve">
-    <value>Cancelled</value>
+    <value>취소됨</value>
   </data>
   <data name="ExecutionUnknownResult" xml:space="preserve">
-    <value>Result needs verification</value>
+    <value>결과 확인 필요</value>
   </data>
   <data name="ExecutionBlocked" xml:space="preserve">
-    <value>Blocked</value>
+    <value>차단됨</value>
   </data>
   <data name="ExecutionNotStarted" xml:space="preserve">
-    <value>Not started</value>
+    <value>시작 전</value>
   </data>
   <data name="ExecutionFullPermission" xml:space="preserve">
-    <value>Full permission</value>
+    <value>전체 권한</value>
   </data>
   <data name="ExecutionReadOnly" xml:space="preserve">
-    <value>Read-only</value>
+    <value>읽기 전용</value>
   </data>
   <data name="ExecutionApprovalRequired" xml:space="preserve">
-    <value>Approval required</value>
+    <value>승인 필요</value>
   </data>
   <data name="ExecutionUnassignedWorkspace" xml:space="preserve">
-    <value>Unassigned workspace</value>
+    <value>작업 공간 미지정</value>
   </data>
   <data name="ExecutionHistory" xml:space="preserve">
-    <value>History</value>
+    <value>이전 기록</value>
   </data>
   <data name="ExecutionConversationTimestamp" xml:space="preserve">
-    <value>Conversation · {0}</value>
+    <value>대화 · {0}</value>
   </data>
   <data name="ExecutionNotRecorded" xml:space="preserve">
-    <value>Not recorded</value>
+    <value>기록 없음</value>
   </data>
   <data name="ExecutionToolValue" xml:space="preserve">
-    <value>Tool: {0}</value>
+    <value>도구: {0}</value>
   </data>
   <data name="ExecutionRpcReturnedValue" xml:space="preserve">
-    <value>RPC returned: {0}</value>
+    <value>RPC 반환 시각: {0}</value>
   </data>
   <data name="ExecutionRpcDurationValue" xml:space="preserve">
-    <value>RPC duration: {0}</value>
+    <value>RPC 소요 시간: {0}</value>
   </data>
   <data name="ExecutionStageDurationValue" xml:space="preserve">
-    <value>Execution stage: {0}</value>
+    <value>실행 단계: {0}</value>
   </data>
   <data name="ExecutionWaitDurationValue" xml:space="preserve">
-    <value>Wait before execution: {0} (includes observed preparation and approval wait)</value>
+    <value>실행 전 대기: {0} (관측된 준비 및 승인 대기 포함)</value>
   </data>
   <data name="ExecutionOperationDurationValue" xml:space="preserve">
-    <value>Operation completion: {0}</value>
+    <value>작업 완료 소요 시간: {0}</value>
   </data>
   <data name="ExecutionProcessDurationValue" xml:space="preserve">
-    <value>Background command process: {0}</value>
+    <value>백그라운드 명령 프로세스: {0}</value>
   </data>
   <data name="ExecutionConcurrentTimingNotice" xml:space="preserve">
-    <value>RPC and background commands are timed separately. Summed concurrent-call durations do not equal elapsed wall-clock time.</value>
+    <value>RPC와 백그라운드 명령은 별도로 측정합니다. 동시 호출의 소요 시간을 합한 값은 실제 경과 시간과 다릅니다.</value>
   </data>
   <data name="ExecutionFileDetailsNotRecorded" xml:space="preserve">
-    <value>File operation details were not recorded.</value>
+    <value>파일 작업 상세 정보가 기록되지 않았습니다.</value>
   </data>
   <data name="ExecutionYes" xml:space="preserve">
-    <value>Yes</value>
+    <value>예</value>
   </data>
   <data name="ExecutionNo" xml:space="preserve">
-    <value>No</value>
+    <value>아니요</value>
   </data>
   <data name="ExecutionResultUnknown" xml:space="preserve">
-    <value>Result unknown</value>
+    <value>결과 알 수 없음</value>
   </data>
   <data name="ExecutionPreviewNotWritten" xml:space="preserve">
-    <value>Yes, no write performed</value>
+    <value>예, 파일에 쓰지 않음</value>
   </data>
   <data name="ExecutionFileEditSummary" xml:space="preserve">
     <value>EDIT_FILE / file_edit · {0}
-Target: {1}
-Preview: {2}
-Dispatched: {3}
-Actually changed: {4}
-Affected files: {5}
-Added/deleted lines: {6} / {7}
+대상: {1}
+미리보기: {2}
+요청 전달됨: {3}
+실제 변경됨: {4}
+영향을 받은 파일 수: {5}
+추가/삭제된 줄: {6} / {7}
 </value>
   </data>
   <data name="ExecutionFileListTruncated" xml:space="preserve">
-    <value>File details exceed the preview limit.</value>
+    <value>파일 목록이 미리보기 한도를 초과했습니다.</value>
   </data>
   <data name="ExecutionDiffTruncated" xml:space="preserve">
-    <value>The diff preview was truncated.</value>
+    <value>변경 사항 미리보기의 일부가 생략됐습니다.</value>
   </data>
   <data name="ExecutionUnassigned" xml:space="preserve">
-    <value>Unassigned</value>
+    <value>미연결</value>
   </data>
   <data name="ExecutionSourceLoading" xml:space="preserve">
-    <value>Loading source</value>
+    <value>출처를 불러오는 중</value>
   </data>
   <data name="ExecutionSourceDeleted" xml:space="preserve">
-    <value>Source deleted</value>
+    <value>출처가 삭제됨</value>
   </data>
   <data name="ExecutionSourceFailed" xml:space="preserve">
-    <value>Unable to load source</value>
+    <value>출처를 불러오지 못함</value>
   </data>
   <data name="ExecutionSourceUnavailable" xml:space="preserve">
-    <value>Source unavailable</value>
+    <value>출처를 확인할 수 없음</value>
   </data>
   <data name="ExecutionHistoryIncomplete" xml:space="preserve">
-    <value>Part of this record's history is no longer available.</value>
+    <value>이 기록의 일부 이전 내역을 더 이상 확인할 수 없습니다.</value>
   </data>
   <data name="ExecutionStandardError" xml:space="preserve">
-    <value>Standard error</value>
+    <value>표준 오류</value>
   </data>
   <data name="ExecutionNoOutput" xml:space="preserve">
-    <value>No output.</value>
+    <value>출력이 없습니다.</value>
   </data>
   <data name="ExecutionOutputTruncated" xml:space="preserve">
-    <value>Output was truncated; only the retained portion is shown.</value>
+    <value>출력의 일부가 생략됐으며 보존된 부분만 표시합니다.</value>
   </data>
   <data name="ExecutionSearchWorkspaceConversation" xml:space="preserve">
-    <value>Search workspaces or conversations</value>
+    <value>작업 공간 또는 대화 검색</value>
   </data>
   <data name="ExecutionSearch" xml:space="preserve">
-    <value>Search</value>
+    <value>검색</value>
   </data>
   <data name="ExecutionConversationManagement" xml:space="preserve">
-    <value>Manage conversations</value>
+    <value>대화 관리</value>
   </data>
   <data name="ExecutionMoreConversations" xml:space="preserve">
-    <value>More conversations</value>
+    <value>대화 더 보기</value>
   </data>
   <data name="ExecutionConversation" xml:space="preserve">
-    <value>Conversation</value>
+    <value>대화</value>
   </data>
   <data name="ExecutionRecentToolCall" xml:space="preserve">
-    <value>Execution updated in the last 2 minutes</value>
+    <value>최근 2분 동안 실행이 갱신됨</value>
   </data>
   <data name="ExecutionManageConversation" xml:space="preserve">
-    <value>Manage this conversation</value>
+    <value>이 대화 관리</value>
   </data>
   <data name="ExecutionNoConversations" xml:space="preserve">
-    <value>No conversations</value>
+    <value>대화 없음</value>
   </data>
   <data name="ExecutionSelectConversation" xml:space="preserve">
-    <value>Select a conversation</value>
+    <value>대화 선택</value>
   </data>
   <data name="ExecutionAttention" xml:space="preserve">
-    <value>Needs attention</value>
+    <value>확인 필요</value>
   </data>
   <data name="ExecutionPermissions" xml:space="preserve">
-    <value>Permissions</value>
+    <value>권한</value>
   </data>
   <data name="ExecutionConnection" xml:space="preserve">
-    <value>Connection</value>
+    <value>연결</value>
   </data>
   <data name="ExecutionTheme" xml:space="preserve">
-    <value>Theme</value>
+    <value>테마</value>
   </data>
   <data name="ExecutionSettings" xml:space="preserve">
-    <value>Settings</value>
+    <value>설정</value>
   </data>
   <data name="ExecutionStop" xml:space="preserve">
-    <value>Stop</value>
+    <value>중지</value>
   </data>
   <data name="ExecutionCurrentConversationActions" xml:space="preserve">
-    <value>Current conversation actions</value>
+    <value>현재 대화 작업</value>
   </data>
   <data name="ExecutionClose" xml:space="preserve">
-    <value>Close</value>
+    <value>닫기</value>
   </data>
   <data name="ExecutionTask" xml:space="preserve">
-    <value>Task</value>
+    <value>작업</value>
   </data>
   <data name="ExecutionRelatedTasks" xml:space="preserve">
-    <value>Tasks linked to this conversation</value>
+    <value>현재 대화에 연결된 작업</value>
   </data>
   <data name="ExecutionNoLinkedTask" xml:space="preserve">
-    <value>No linked task</value>
+    <value>연결된 작업 없음</value>
   </data>
   <data name="ExecutionLink" xml:space="preserve">
-    <value>Link</value>
+    <value>연결</value>
   </data>
   <data name="ExecutionFilterTask" xml:space="preserve">
-    <value>Filter this task</value>
+    <value>이 작업만 표시</value>
   </data>
   <data name="ExecutionTaskDetails" xml:space="preserve">
-    <value>Task details</value>
+    <value>작업 상세</value>
   </data>
   <data name="ExecutionSearchCalls" xml:space="preserve">
-    <value>Search execution records</value>
+    <value>실행 기록 검색</value>
   </data>
   <data name="ExecutionAllStates" xml:space="preserve">
-    <value>All states</value>
+    <value>모든 상태</value>
   </data>
   <data name="ExecutionNeedsVerification" xml:space="preserve">
-    <value>Needs verification</value>
+    <value>확인 필요</value>
   </data>
   <data name="ExecutionCompact" xml:space="preserve">
-    <value>Compact</value>
+    <value>간단히</value>
   </data>
   <data name="ExecutionDetailed" xml:space="preserve">
-    <value>Detailed</value>
+    <value>자세히</value>
   </data>
   <data name="ExecutionOlder" xml:space="preserve">
-    <value>Older</value>
+    <value>이전 기록</value>
   </data>
   <data name="ExecutionFollow" xml:space="preserve">
-    <value>Follow</value>
+    <value>최신 따라가기</value>
   </data>
   <data name="ExecutionFollowLatest" xml:space="preserve">
-    <value>Follow the latest calls</value>
+    <value>최신 호출 따라가기</value>
   </data>
   <data name="ExecutionRecordManagement" xml:space="preserve">
-    <value>Manage records</value>
+    <value>기록 관리</value>
   </data>
   <data name="ExecutionTool" xml:space="preserve">
-    <value>Tool</value>
+    <value>도구</value>
   </data>
   <data name="ExecutionStarted" xml:space="preserve">
-    <value>Started</value>
+    <value>시작</value>
   </data>
   <data name="ExecutionState" xml:space="preserve">
-    <value>State</value>
+    <value>상태</value>
   </data>
   <data name="ExecutionRpcTotal" xml:space="preserve">
-    <value>RPC total</value>
+    <value>RPC 합계</value>
   </data>
   <data name="ExecutionExecution" xml:space="preserve">
-    <value>Execution</value>
+    <value>실행</value>
   </data>
   <data name="ExecutionWait" xml:space="preserve">
-    <value>Wait</value>
+    <value>대기</value>
   </data>
   <data name="ExecutionSource" xml:space="preserve">
-    <value>Source</value>
+    <value>출처</value>
   </data>
   <data name="ExecutionNoCalls" xml:space="preserve">
-    <value>No execution records</value>
+    <value>실행 기록 없음</value>
   </data>
   <data name="ExecutionRefresh" xml:space="preserve">
-    <value>Refresh</value>
+    <value>새로 고침</value>
   </data>
   <data name="ExecutionCommandOutput" xml:space="preserve">
-    <value>Command and output</value>
+    <value>명령 및 출력</value>
   </data>
   <data name="ExecutionCopyCommand" xml:space="preserve">
-    <value>Copy command</value>
+    <value>명령 복사</value>
   </data>
   <data name="ExecutionCopyOutput" xml:space="preserve">
-    <value>Copy output</value>
+    <value>출력 복사</value>
   </data>
   <data name="ExecutionStopCall" xml:space="preserve">
-    <value>Stop call</value>
+    <value>호출 중지</value>
   </data>
   <data name="ExecutionApprove" xml:space="preserve">
-    <value>Review approval</value>
+    <value>승인 검토</value>
   </data>
   <data name="ExecutionReject" xml:space="preserve">
-    <value>Reject</value>
+    <value>거절</value>
   </data>
   <data name="ExecutionRetryInstructions" xml:space="preserve">
-    <value>Retry instructions</value>
+    <value>재시도 안내</value>
   </data>
   <data name="ExecutionChildCalls" xml:space="preserve">
-    <value>Child calls</value>
+    <value>하위 호출</value>
   </data>
   <data name="ExecutionTechnical" xml:space="preserve">
-    <value>Technical</value>
+    <value>기술 정보</value>
   </data>
   <data name="ExecutionTiming" xml:space="preserve">
-    <value>Timing</value>
+    <value>소요 시간</value>
   </data>
   <data name="ExecutionFileEdits" xml:space="preserve">
-    <value>File edits</value>
+    <value>파일 편집</value>
   </data>
   <data name="ExecutionContinueBranch" xml:space="preserve">
-    <value>Continue from this branch</value>
+    <value>이 분기에서 계속</value>
   </data>
   <data name="ExecutionCopyContinue" xml:space="preserve">
-    <value>Copy continuation instructions</value>
+    <value>계속하기 지시 복사</value>
   </data>
   <data name="ExecutionManageTask" xml:space="preserve">
-    <value>Manage task</value>
+    <value>작업 관리</value>
   </data>
   <data name="ExecutionHistoricalTasks" xml:space="preserve">
-    <value>Historical tasks</value>
+    <value>이전 작업</value>
   </data>
   <data name="ExecutionUnattributedCalls" xml:space="preserve">
-    <value>Unattributed calls</value>
+    <value>미연결 호출</value>
   </data>
   <data name="ExecutionAllCalls" xml:space="preserve">
-    <value>All calls</value>
+    <value>모든 호출</value>
   </data>
   <data name="ExecutionCurrent" xml:space="preserve">
-    <value>Current</value>
+    <value>현재</value>
   </data>
   <data name="ExecutionArchived" xml:space="preserve">
-    <value>Archived</value>
+    <value>보관됨</value>
   </data>
   <data name="ExecutionIsolated" xml:space="preserve">
-    <value>Isolated</value>
+    <value>분리됨</value>
   </data>
   <data name="ExecutionTrash" xml:space="preserve">
-    <value>Trash</value>
+    <value>휴지통</value>
   </data>
   <data name="ExecutionManageSelected" xml:space="preserve">
-    <value>Manage selected</value>
+    <value>선택 항목 관리</value>
   </data>
   <data name="ExecutionExport" xml:space="preserve">
-    <value>Export</value>
+    <value>내보내기</value>
   </data>
   <data name="ExecutionMore" xml:space="preserve">
-    <value>More</value>
+    <value>더 보기</value>
   </data>
   <data name="ExecutionUnattributedRecords" xml:space="preserve">
-    <value>Unattributed records</value>
+    <value>미연결 기록</value>
   </data>
   <data name="ExecutionHistoricalWorkspace" xml:space="preserve">
-    <value>Historical workspace</value>
+    <value>이전 작업 공간</value>
   </data>
   <data name="ExecutionNoConversationRecords" xml:space="preserve">
-    <value>No conversation records</value>
+    <value>대화 기록 없음</value>
   </data>
   <data name="ExecutionLoadingCalls" xml:space="preserve">
-    <value>Loading execution records</value>
+    <value>실행 기록을 불러오는 중</value>
   </data>
   <data name="ExecutionProgressNotRecorded" xml:space="preserve">
-    <value>Progress not recorded</value>
+    <value>진행 상태 기록 없음</value>
   </data>
   <data name="ExecutionNextActionPrefix" xml:space="preserve">
     <value>
-Next action: </value>
+다음 동작: </value>
   </data>
   <data name="ExecutionAcceptanceHeading" xml:space="preserve">
-    <value>Acceptance conditions
+    <value>수용 조건
 </value>
   </data>
   <data name="ExecutionHistoryRetentionGap" xml:space="preserve">
-    <value>Some history exceeded its retention period. Available records are shown.</value>
+    <value>일부 기록은 보존 기간이 지나 더 이상 제공되지 않습니다. 남아 있는 기록을 표시합니다.</value>
   </data>
   <data name="ExecutionStreamConnected" xml:space="preserve">
-    <value>Connected to the local execution stream</value>
+    <value>로컬 실행 스트림에 연결됨</value>
   </data>
   <data name="ExecutionStreamReconnectingPrefix" xml:space="preserve">
-    <value>Reconnecting to the local execution stream. Original diagnostic: </value>
+    <value>로컬 실행 스트림에 다시 연결하는 중. 원문 진단: </value>
   </data>
   <data name="ExecutionNoVerifiableSource" xml:space="preserve">
-    <value>Unattributed: this record has no verifiable source conversation. Its call ID can be used to export, isolate, archive or delete the record.</value>
+    <value>미연결 기록: 확인 가능한 출처 대화가 없습니다. 호출 ID로 기록을 내보내거나 분리·보관·삭제할 수 있습니다.</value>
   </data>
   <data name="ExecutionSourceResolved" xml:space="preserve">
-    <value>Source resolved</value>
+    <value>출처 확인됨</value>
   </data>
   <data name="ExecutionWorkdirPrefix" xml:space="preserve">
     <value>
-Working directory: </value>
+작업 디렉터리: </value>
   </data>
   <data name="ExecutionPermissionsPrefix" xml:space="preserve">
     <value>
-Permissions: </value>
+권한: </value>
   </data>
   <data name="ExecutionFileChangesHeading" xml:space="preserve">
     <value>
 
-File changes
+파일 변경 사항
 </value>
   </data>
   <data name="ExecutionNoMatchingCalls" xml:space="preserve">
-    <value>No matching execution records</value>
+    <value>조건에 맞는 실행 기록 없음</value>
   </data>
   <data name="ExecutionResumeFollowing" xml:space="preserve">
-    <value>Resume following</value>
+    <value>최신 따라가기 재개</value>
   </data>
   <data name="ExecutionShowAll" xml:space="preserve">
-    <value>Show all</value>
+    <value>모두 표시</value>
   </data>
   <data name="ExecutionPreferencesTooLarge" xml:space="preserve">
-    <value>Display preferences exceed the size limit. The original file was preserved.</value>
+    <value>표시 설정이 크기 제한을 초과했습니다. 원본 파일은 보존됐습니다.</value>
   </data>
   <data name="ExecutionPreferencesLoadFailedPrefix" xml:space="preserve">
-    <value>Display preferences could not be loaded; the original file was preserved. Diagnostic: </value>
+    <value>표시 설정을 불러오지 못했으며 원본 파일은 보존됐습니다. 진단: </value>
   </data>
   <data name="ExecutionPreferencesSaveFailedPrefix" xml:space="preserve">
-    <value>Display preferences were not saved. Diagnostic: </value>
+    <value>표시 설정을 저장하지 못했습니다. 진단: </value>
   </data>
   <data name="ExecutionConversationTerminated" xml:space="preserve">
-    <value>This conversation was terminated and further execution is blocked. Its history remains available for viewing and management.</value>
+    <value>이 대화는 종료되어 이후 실행이 차단됐습니다. 이전 기록은 계속 확인하고 관리할 수 있습니다.</value>
   </data>
   <data name="ExecutionAttentionCount" xml:space="preserve">
-    <value>Needs attention {0}</value>
+    <value>확인 필요 {0}</value>
   </data>
   <data name="ExecutionNewApprovals" xml:space="preserve">
-    <value>{0} new requests are awaiting approval.</value>
+    <value>새 승인 대기 요청이 {0}개 있습니다.</value>
   </data>
   <data name="ExecutionHistoryUnavailable" xml:space="preserve">
-    <value>Some historical records are no longer available.</value>
+    <value>일부 이전 기록을 더 이상 확인할 수 없습니다.</value>
   </data>
   <data name="ExecutionOriginalDiagnostic" xml:space="preserve">
-    <value>Original diagnostic</value>
+    <value>원문 진단</value>
   </data>
   <data name="ExecutionConfirm" xml:space="preserve">
-    <value>Confirm</value>
+    <value>확인</value>
   </data>
   <data name="ExecutionCancel" xml:space="preserve">
-    <value>Cancel</value>
+    <value>취소</value>
   </data>
   <data name="ExecutionChooseTaskId" xml:space="preserve">
-    <value>Or enter a task_id not shown in the first 200 items:</value>
+    <value>처음 200개 항목에 표시되지 않은 task_id를 직접 입력할 수 있습니다:</value>
   </data>
   <data name="ExecutionLinkTask" xml:space="preserve">
-    <value>Link task</value>
+    <value>작업 연결</value>
   </data>
   <data name="ExecutionApprovalTitle" xml:space="preserve">
-    <value>Pre-execution approval · fixed request</value>
+    <value>실행 전 승인 · 고정된 요청</value>
   </data>
   <data name="ExecutionAllowWorkspaceRule" xml:space="preserve">
-    <value>Also allow this type of tool operation in this workspace (create the Allow rule shown below)</value>
+    <value>이 작업 공간에서 같은 종류의 도구 작업도 허용합니다 (아래 Allow 규칙 생성)</value>
   </data>
   <data name="ExecutionAllowOnce" xml:space="preserve">
-    <value>Allow once</value>
+    <value>한 번만 허용</value>
   </data>
   <data name="ExecutionApproveSaveRule" xml:space="preserve">
-    <value>Approve and save workspace rule</value>
+    <value>승인 및 작업 공간 규칙 저장</value>
   </data>
   <data name="ExecutionBack" xml:space="preserve">
-    <value>Back</value>
+    <value>돌아가기</value>
   </data>
   <data name="ExecutionPermissionPolicyTitle" xml:space="preserve">
-    <value>Execution permissions · server-side policy</value>
+    <value>실행 권한 · 서버 정책</value>
   </data>
   <data name="ExecutionGlobalDefault" xml:space="preserve">
-    <value>Global default</value>
+    <value>전역 기본값</value>
   </data>
   <data name="ExecutionCurrentConversation" xml:space="preserve">
-    <value>Current conversation</value>
+    <value>현재 대화</value>
   </data>
   <data name="ExecutionPermissionInheritancePrefix" xml:space="preserve">
-    <value>Inheritance: conversation → workspace → global default. Unconfigured levels inherit. Effective source: </value>
+    <value>상속 순서: 대화 → 작업 공간 → 전역 기본값. 설정하지 않은 단계는 상위 설정을 따릅니다. 현재 적용 출처: </value>
   </data>
   <data name="ExecutionScope" xml:space="preserve">
-    <value>Scope</value>
+    <value>적용 범위</value>
   </data>
   <data name="ExecutionExecutionMode" xml:space="preserve">
-    <value>Execution mode</value>
+    <value>실행 모드</value>
   </data>
   <data name="ExecutionReadOnlyDescription" xml:space="preserve">
-    <value>Read-only inspection: do not dispatch writes or unknown side effects</value>
+    <value>읽기 전용 점검: 쓰기와 부작용을 알 수 없는 작업은 요청을 전달하지 않음</value>
   </data>
   <data name="ExecutionRulesDescription" xml:space="preserve">
-    <value>Rule-based approval: verified safe actions proceed; other actions wait for a decision</value>
+    <value>규칙 기반 승인: 안전함이 확인된 작업은 실행하고 나머지는 결정을 기다림</value>
   </data>
   <data name="ExecutionFullDescription" xml:space="preserve">
-    <value>Full permission: skip approval in this scope; explicit prohibitions still apply</value>
+    <value>전체 권한: 이 범위의 승인을 생략하되 명시적인 금지 규칙은 계속 적용</value>
   </data>
   <data name="ExecutionEditDangerousRules" xml:space="preserve">
-    <value>Also edit high-risk rules (advanced)</value>
+    <value>위험 작업 규칙도 수정 (고급)</value>
   </data>
   <data name="ExecutionRuleExplanation" xml:space="preserve">
-    <value>Rules match tool names, optional action and workspace. The effect is deny, ask or allow. Unlisted actions with side effects wait for approval by default.</value>
+    <value>규칙은 도구 이름, 선택적 action, 작업 공간을 기준으로 일치시킵니다. effect는 deny, ask 또는 allow입니다. 목록에 없는 부작용이 있는 작업은 기본적으로 승인을 기다립니다.</value>
   </data>
   <data name="ExecutionSaveApply" xml:space="preserve">
-    <value>Save and apply</value>
+    <value>저장 및 적용</value>
   </data>
   <data name="ExecutionConversationFullNotAllowed" xml:space="preserve">
-    <value>Full permission requires a workspace or global scope. Conversation scopes may only restrict permissions.</value>
+    <value>전체 권한은 작업 공간 또는 전역 범위에서만 설정할 수 있습니다. 대화 범위에서는 권한을 제한할 수만 있습니다.</value>
   </data>
   <data name="ExecutionConfirmFullScope" xml:space="preserve">
-    <value>Confirm full-permission scope</value>
+    <value>전체 권한 적용 범위 확인</value>
   </data>
   <data name="ExecutionEnable" xml:space="preserve">
-    <value>Enable</value>
+    <value>사용</value>
   </data>
   <data name="ExecutionRulesArrayRequired" xml:space="preserve">
-    <value>Rules must be a JSON array.</value>
+    <value>규칙은 JSON 배열이어야 합니다.</value>
   </data>
   <data name="ExecutionInvalidRules" xml:space="preserve">
-    <value>Invalid rules</value>
+    <value>잘못된 규칙</value>
   </data>
   <data name="ExecutionDisplayRetentionTitle" xml:space="preserve">
-    <value>Display and trash retention</value>
+    <value>표시 및 휴지통 보존</value>
   </data>
   <data name="ExecutionRetentionExplanation" xml:space="preserve">
-    <value>Retention days for newly trashed records (1–3650). Existing records keep their original expiry date. Workspaces and source code are not included in trash cleanup.</value>
+    <value>새로 휴지통에 넣는 기록의 보존 기간입니다 (1~3650일). 기존 기록의 만료일은 바뀌지 않습니다. 작업 공간과 소스 코드는 휴지통 정리 대상이 아닙니다.</value>
   </data>
   <data name="ExecutionFontSize" xml:space="preserve">
-    <value>Interface font size (12–20)</value>
+    <value>화면 글자 크기 (12~20)</value>
   </data>
   <data name="ExecutionNotifyApprovals" xml:space="preserve">
-    <value>Notify about new approval requests</value>
+    <value>새 승인 요청 알림</value>
   </data>
   <data name="ExecutionSave" xml:space="preserve">
-    <value>Save</value>
+    <value>저장</value>
   </data>
   <data name="ExecutionEnterRetentionDays" xml:space="preserve">
-    <value>Enter 1–3650 days.</value>
+    <value>1~3650일을 입력하세요.</value>
   </data>
   <data name="ExecutionInvalidRetention" xml:space="preserve">
-    <value>Invalid retention period</value>
+    <value>잘못된 보존 기간</value>
   </data>
   <data name="ExecutionNone" xml:space="preserve">
-    <value>None</value>
+    <value>없음</value>
   </data>
   <data name="ExecutionNotExecuted" xml:space="preserve">
-    <value>Not executed yet</value>
+    <value>아직 실행되지 않음</value>
   </data>
   <data name="ExecutionApprovalSummary" xml:space="preserve">
-    <value>Source conversation: {0}
-Linked task: {1}
-Operation: {2}
-Blocking rule: {3}
-Reason: {4}
+    <value>출처 대화: {0}
+연결된 작업: {1}
+작업: {2}
+차단 규칙: {3}
+사유: {4}
 
-Affected scope:
+영향 범위:
 {5}
 
-Current state: {6}</value>
+현재 상태: {6}</value>
   </data>
   <data name="ExecutionPermissionSummary" xml:space="preserve">
-    <value>Effective mode for the selected object: {0}
-Default mode: {1} · Policy revision: {2}
-Permissions control only whether AgentDock dispatches a request. They do not elevate operating-system privileges. Explicit Deny rules remain effective even with full permission.</value>
+    <value>선택한 항목에 적용되는 모드: {0}
+기본 모드: {1} · 정책 revision: {2}
+권한은 AgentDock이 요청을 전달할지만 제어하며, 운영체제 권한을 높이지 않습니다. 명시적 Deny 규칙은 전체 권한에서도 계속 적용됩니다.</value>
   </data>
   <data name="ExecutionConfirmFullScopeMessage" xml:space="preserve">
-    <value>Enable full permission for “{0}”. Commands, file writes and third-party tools will skip optional approval. Explicit prohibition rules remain effective.</value>
+    <value>“{0}” 범위에서 전체 권한을 사용합니다. 명령·파일 쓰기·외부 도구의 선택적 승인이 생략되지만, 명시적 금지 규칙은 계속 적용됩니다.</value>
   </data>
   <data name="ExecutionApprovalApproved" xml:space="preserve">
-    <value>Approved</value>
+    <value>승인됨</value>
   </data>
   <data name="ExecutionApprovalRejected" xml:space="preserve">
-    <value>Rejected</value>
+    <value>거절됨</value>
   </data>
   <data name="ExecutionApprovalExpired" xml:space="preserve">
-    <value>Expired</value>
+    <value>만료됨</value>
   </data>
   <data name="ExecutionSelectFilteredConversations" xml:space="preserve">
-    <value>Select all conversations in this filter</value>
+    <value>현재 조건의 모든 대화 선택</value>
   </data>
   <data name="ExecutionManageSelectedConversations" xml:space="preserve">
-    <value>Manage selected conversations</value>
+    <value>선택한 대화 관리</value>
   </data>
   <data name="ExecutionHistoricalUnattributed" xml:space="preserve">
-    <value>Historical tasks and unattributed records</value>
+    <value>이전 작업 및 미연결 기록</value>
   </data>
   <data name="ExecutionConversationDetails" xml:space="preserve">
-    <value>Conversation details</value>
+    <value>대화 상세</value>
   </data>
   <data name="ExecutionUnattributedIdManagement" xml:space="preserve">
-    <value>Unattributed records are managed using their original call IDs.</value>
+    <value>미연결 기록은 원래 호출 ID로 관리합니다.</value>
   </data>
   <data name="ExecutionExportExecution" xml:space="preserve">
-    <value>Export execution records</value>
+    <value>실행 기록 내보내기</value>
   </data>
   <data name="ExecutionManageRecords" xml:space="preserve">
-    <value>Manage records</value>
+    <value>기록 관리</value>
   </data>
   <data name="ExecutionRename" xml:space="preserve">
-    <value>Rename</value>
+    <value>이름 변경</value>
   </data>
   <data name="ExecutionTags" xml:space="preserve">
-    <value>Category tags</value>
+    <value>분류 태그</value>
   </data>
   <data name="ExecutionUnpin" xml:space="preserve">
-    <value>Unpin</value>
+    <value>고정 해제</value>
   </data>
   <data name="ExecutionPin" xml:space="preserve">
-    <value>Pin</value>
+    <value>고정</value>
   </data>
   <data name="ExecutionUnarchive" xml:space="preserve">
-    <value>Unarchive</value>
+    <value>보관 해제</value>
   </data>
   <data name="ExecutionArchive" xml:space="preserve">
-    <value>Archive</value>
+    <value>보관</value>
   </data>
   <data name="ExecutionRestoreFromTrash" xml:space="preserve">
-    <value>Restore from trash</value>
+    <value>휴지통에서 복원</value>
   </data>
   <data name="ExecutionMoveToTrash" xml:space="preserve">
-    <value>Move to trash</value>
+    <value>휴지통으로 이동</value>
   </data>
   <data name="ExecutionPermanentlyDelete" xml:space="preserve">
-    <value>Permanently delete</value>
+    <value>영구 삭제</value>
   </data>
   <data name="ExecutionResumeConversation" xml:space="preserve">
-    <value>Resume this conversation</value>
+    <value>이 대화 재개</value>
   </data>
   <data name="ExecutionTerminateConversation" xml:space="preserve">
-    <value>Terminate this conversation</value>
+    <value>이 대화 종료</value>
   </data>
   <data name="ExecutionLinkExistingTask" xml:space="preserve">
-    <value>Link an existing task</value>
+    <value>기존 작업 연결</value>
   </data>
   <data name="ExecutionEnterName" xml:space="preserve">
-    <value>Enter a name</value>
+    <value>이름 입력</value>
   </data>
   <data name="ExecutionNameRequired" xml:space="preserve">
-    <value>The name cannot be empty.</value>
+    <value>이름을 비워 둘 수 없습니다.</value>
   </data>
   <data name="ExecutionTagsHelp" xml:space="preserve">
-    <value>Separate tags with commas. Leave empty to clear.</value>
+    <value>여러 태그는 쉼표로 구분합니다. 비워 두면 태그를 지웁니다.</value>
   </data>
   <data name="ExecutionManagementResult" xml:space="preserve">
-    <value>Management result</value>
+    <value>관리 결과</value>
   </data>
   <data name="ExecutionTerminateWarning" xml:space="preserve">
-    <value>Block new execution requests for this conversation first, then cancel pending approvals and stop running calls. Historical records remain readable.</value>
+    <value>먼저 이 대화의 새 실행 요청을 차단한 뒤, 대기 중인 승인을 취소하고 실행 중인 호출을 중지합니다. 이전 기록은 계속 읽을 수 있습니다.</value>
   </data>
   <data name="ExecutionResumeWarning" xml:space="preserve">
-    <value>Allow this conversation to submit requests again. Cancelled calls will not be retried automatically.</value>
+    <value>이 대화에서 요청을 다시 제출할 수 있게 합니다. 취소된 호출은 자동 재시도하지 않습니다.</value>
   </data>
   <data name="ExecutionTerminationNeedsVerification" xml:space="preserve">
-    <value>The termination gate is active, but some calls still need their stop results verified.</value>
+    <value>종료 차단이 적용됐지만, 일부 호출의 중지 결과를 추가로 확인해야 합니다.</value>
   </data>
   <data name="ExecutionConversationExecutionBlocked" xml:space="preserve">
-    <value>This conversation was terminated. Further execution is blocked.</value>
+    <value>이 대화가 종료되어 이후 실행이 차단됐습니다.</value>
   </data>
   <data name="ExecutionConversationResumed" xml:space="preserve">
-    <value>This conversation was resumed. Cancelled calls were not replayed.</value>
+    <value>이 대화가 재개됐습니다. 취소된 호출을 다시 실행하지 않았습니다.</value>
   </data>
   <data name="ExecutionLinkWithoutSwitching" xml:space="preserve">
-    <value>Only create a link; do not switch the currently executing task.</value>
+    <value>연결만 추가하며, 현재 실행 중인 작업을 전환하지 않습니다.</value>
   </data>
   <data name="ExecutionPermissionsSaved" xml:space="preserve">
-    <value>Permission settings were saved.</value>
+    <value>권한 설정을 저장했습니다.</value>
   </data>
   <data name="ExecutionLocalStreamPrefix" xml:space="preserve">
-    <value>Local execution stream: </value>
+    <value>로컬 실행 스트림: </value>
   </data>
   <data name="ExecutionConnected" xml:space="preserve">
-    <value>Connected</value>
+    <value>연결됨</value>
   </data>
   <data name="ExecutionReconnecting" xml:space="preserve">
-    <value>Reconnecting</value>
+    <value>다시 연결하는 중</value>
   </data>
   <data name="ExecutionNoPublicAddress" xml:space="preserve">
-    <value>No public address configured</value>
+    <value>공개 주소가 설정되지 않음</value>
   </data>
   <data name="ExecutionRuntimeConfigTooLarge" xml:space="preserve">
-    <value>Runtime configuration exceeds the size limit.</value>
+    <value>실행 설정이 크기 제한을 초과했습니다.</value>
   </data>
   <data name="ExecutionPublicReachable" xml:space="preserve">
-    <value>Public endpoint reachable</value>
+    <value>공개 경로에 연결 가능</value>
   </data>
   <data name="ExecutionPublicProbeFailed" xml:space="preserve">
-    <value>Public endpoint unreachable or verification failed</value>
+    <value>공개 경로에 연결할 수 없거나 검증에 실패함</value>
   </data>
   <data name="ExecutionSystemTheme" xml:space="preserve">
-    <value>Follow system</value>
+    <value>시스템 설정 따름</value>
   </data>
   <data name="ExecutionLightTheme" xml:space="preserve">
-    <value>Light</value>
+    <value>밝게</value>
   </data>
   <data name="ExecutionDarkTheme" xml:space="preserve">
-    <value>Dark</value>
+    <value>어둡게</value>
   </data>
   <data name="ExecutionDisplayRetentionNotifications" xml:space="preserve">
-    <value>Display, retention and notifications</value>
+    <value>표시·보존·알림</value>
   </data>
   <data name="ExecutionHistoryManagerTitle" xml:space="preserve">
-    <value>Historical tasks and record management</value>
+    <value>이전 작업 및 기록 관리</value>
   </data>
   <data name="ExecutionSaveCurrentFilter" xml:space="preserve">
-    <value>Save current filter</value>
+    <value>현재 검색 조건 저장</value>
   </data>
   <data name="ExecutionSaveFilter" xml:space="preserve">
-    <value>Save filter</value>
+    <value>검색 조건 저장</value>
   </data>
   <data name="ExecutionFilterName" xml:space="preserve">
-    <value>Filter name</value>
+    <value>검색 조건 이름</value>
   </data>
   <data name="ExecutionFilterPrefix" xml:space="preserve">
-    <value>Filter: </value>
+    <value>검색 조건: </value>
   </data>
   <data name="ExecutionUsageGuide" xml:space="preserve">
-    <value>Structure and usage guide</value>
+    <value>구조 및 사용 안내</value>
   </data>
   <data name="ExecutionExportCurrentFilter" xml:space="preserve">
-    <value>Export current filter</value>
+    <value>현재 조건의 기록 내보내기</value>
   </data>
   <data name="ExecutionExecutionRecords" xml:space="preserve">
-    <value>Execution records</value>
+    <value>실행 기록</value>
   </data>
   <data name="ExecutionExportSelectedRecords" xml:space="preserve">
-    <value>Export selected records</value>
+    <value>선택한 기록 내보내기</value>
   </data>
   <data name="ExecutionArchiveSelected" xml:space="preserve">
-    <value>Archive selected</value>
+    <value>선택 항목 보관</value>
   </data>
   <data name="ExecutionIsolateSelected" xml:space="preserve">
-    <value>Isolate selected</value>
+    <value>선택 항목 분리</value>
   </data>
   <data name="ExecutionCurrentRecords" xml:space="preserve">
-    <value>Current records</value>
+    <value>현재 기록</value>
   </data>
   <data name="ExecutionArchivedRecords" xml:space="preserve">
-    <value>Archived records</value>
+    <value>보관된 기록</value>
   </data>
   <data name="ExecutionIsolatedRecords" xml:space="preserve">
-    <value>Isolated records</value>
+    <value>분리된 기록</value>
   </data>
   <data name="ExecutionTrashRecords" xml:space="preserve">
-    <value>Trash records</value>
+    <value>휴지통 기록</value>
   </data>
   <data name="ExecutionRestoreSelected" xml:space="preserve">
-    <value>Restore selected</value>
+    <value>선택 항목 복원</value>
   </data>
   <data name="ExecutionDeleteSelected" xml:space="preserve">
-    <value>Permanently delete selected</value>
+    <value>선택 항목 영구 삭제</value>
   </data>
   <data name="ExecutionUnisolateSelected" xml:space="preserve">
-    <value>Unisolate selected</value>
+    <value>선택 항목 분리 해제</value>
   </data>
   <data name="ExecutionUnarchiveSelected" xml:space="preserve">
-    <value>Unarchive selected</value>
+    <value>선택 항목 보관 해제</value>
   </data>
   <data name="ExecutionClipboardBusy" xml:space="preserve">
-    <value>The clipboard is busy. Try copying again.</value>
+    <value>클립보드가 사용 중입니다. 복사를 다시 시도하세요.</value>
   </data>
   <data name="ExecutionRetryCopied" xml:space="preserve">
-    <value>Retry instructions copied</value>
+    <value>재시도 지시 복사됨</value>
   </data>
   <data name="ExecutionSwitchBranch" xml:space="preserve">
-    <value>Switch execution branch</value>
+    <value>실행 분기 전환</value>
   </data>
   <data name="ExecutionSwitchBranchWarning" xml:space="preserve">
-    <value>Change this task's continuation point to the selected branch. Commands already running keep their original binding.</value>
+    <value>이 작업을 계속할 위치를 선택한 분기로 바꿉니다. 이미 실행 중인 명령의 원래 연결은 유지됩니다.</value>
   </data>
   <data name="ExecutionSwitch" xml:space="preserve">
-    <value>Switch</value>
+    <value>전환</value>
   </data>
   <data name="ExecutionContinuationUpdated" xml:space="preserve">
-    <value>Continuation branch updated.</value>
+    <value>계속하기 분기를 변경했습니다.</value>
   </data>
   <data name="ExecutionContinueCopied" xml:space="preserve">
-    <value>Task continuation instructions copied.</value>
+    <value>작업 계속하기 지시를 복사했습니다.</value>
   </data>
   <data name="ExecutionSetCurrentTask" xml:space="preserve">
-    <value>Set as this conversation's current task</value>
+    <value>이 대화의 현재 작업으로 설정</value>
   </data>
   <data name="ExecutionRenameTask" xml:space="preserve">
-    <value>Rename task</value>
+    <value>작업 이름 변경</value>
   </data>
   <data name="ExecutionArchiveTask" xml:space="preserve">
-    <value>Archive task</value>
+    <value>작업 보관</value>
   </data>
   <data name="ExecutionCancelTask" xml:space="preserve">
-    <value>Cancel task</value>
+    <value>작업 취소</value>
   </data>
   <data name="ExecutionSelectRecordsFirst" xml:space="preserve">
-    <value>Select records to manage first.</value>
+    <value>관리할 기록을 먼저 선택하세요.</value>
   </data>
   <data name="ExecutionViewDetails" xml:space="preserve">
-    <value>View details</value>
+    <value>상세 보기</value>
   </data>
   <data name="ExecutionUnisolate" xml:space="preserve">
-    <value>Unisolate</value>
+    <value>분리 해제</value>
   </data>
   <data name="ExecutionIsolate" xml:space="preserve">
-    <value>Isolate</value>
+    <value>분리</value>
   </data>
   <data name="ExecutionRestore" xml:space="preserve">
-    <value>Restore</value>
+    <value>복원</value>
   </data>
   <data name="ExecutionSelectExportFirst" xml:space="preserve">
-    <value>Select records to export first.</value>
+    <value>내보낼 항목을 먼저 선택하세요.</value>
   </data>
   <data name="ExecutionTaskRecords" xml:space="preserve">
-    <value>Task records</value>
+    <value>작업 기록</value>
   </data>
   <data name="ExecutionExportPagingStopped" xml:space="preserve">
-    <value>Export pagination did not advance. No file was written.</value>
+    <value>내보내기 페이지 조회가 진행되지 않았습니다. 파일은 아직 쓰지 않았습니다.</value>
   </data>
   <data name="ExecutionExportLimit" xml:space="preserve">
-    <value>This export exceeds 100000 records. Narrow the filter.</value>
+    <value>내보낼 기록이 100000개를 초과합니다. 검색 조건을 좁히세요.</value>
   </data>
   <data name="ExecutionConversationRecords" xml:space="preserve">
-    <value>Conversation execution records</value>
+    <value>대화 실행 기록</value>
   </data>
   <data name="ExecutionSelectedExecutionRecords" xml:space="preserve">
-    <value>Selected execution records</value>
+    <value>선택한 실행 기록</value>
   </data>
   <data name="ExecutionExportPrefix" xml:space="preserve">
-    <value>Export </value>
+    <value>내보내기: </value>
   </data>
   <data name="ExecutionExportedPrefix" xml:space="preserve">
-    <value>Exported: </value>
+    <value>내보낸 파일: </value>
   </data>
   <data name="ExecutionGuideText" xml:space="preserve">
-    <value>The sidebar groups conversations by workspace. Tasks are shown within the current conversation. Selecting a task or browsing branches does not change the active execution context.
+    <value>왼쪽에는 작업 공간별 대화가 표시됩니다. 작업은 현재 대화 안에서 확인합니다. 작업 선택과 분기 탐색은 현재 실행 중인 문맥을 바꾸지 않습니다.
 
-Each execution record shows its state, action, duration and time. Select it to inspect command, output, source and child calls below. Use the context menu or menus to manage records in batches.
+각 실행 기록에는 상태·동작·소요 시간·시각이 표시됩니다. 기록을 선택하면 아래에서 명령·출력·출처·하위 호출을 확인할 수 있습니다. 우클릭 또는 메뉴로 여러 기록을 함께 관리할 수 있습니다.
 
-Terminating a conversation first writes the server-side gate, then cancels pending approvals and running calls. Closing this window only stops observing; it does not stop execution.
+대화를 종료하면 먼저 서버의 실행 차단을 적용한 뒤 대기 중인 승인과 실행 중인 호출을 취소합니다. 이 창을 닫으면 관찰만 끝나며 실행은 중지되지 않습니다.
 
-Historical tasks without steps show “Progress not recorded”. Unattributed calls retain their original call IDs and can be exported, isolated, archived or moved to trash. Permanent deletion does not delete project source code.
+단계가 없는 이전 작업에는 “진행 상태 기록 없음”을 표시합니다. 미연결 호출은 원래 호출 ID를 보존하며 내보내기·분리·보관·휴지통 이동이 가능합니다. 영구 삭제는 프로젝트 소스 코드를 삭제하지 않습니다.
 
-Shortcuts: Ctrl+F searches conversations; F5 refreshes; Esc closes details; Shift+F10 opens the selected item menu.</value>
+단축키: Ctrl+F 대화 검색, F5 새로 고침, Esc 상세 닫기, Shift+F10 선택 항목 메뉴 열기.</value>
   </data>
   <data name="ExecutionJsonFilter" xml:space="preserve">
-    <value>JSON files|*.json</value>
+    <value>JSON 파일|*.json</value>
   </data>
   <data name="ExecutionSelectedConversationCount" xml:space="preserve">
-    <value>Selected {0} conversations in the current filter.</value>
+    <value>현재 조건의 대화 {0}개를 선택했습니다.</value>
   </data>
   <data name="ExecutionDeleteRecordsWarning" xml:space="preserve">
-    <value>Permanently delete the selected {0} records and their management indexes. They cannot be restored from trash. Workspace source code remains unchanged.</value>
+    <value>선택한 기록 {0}개와 관리 색인을 영구 삭제합니다. 휴지통에서 복원할 수 없습니다. 작업 공간의 소스 코드는 변경되지 않습니다.</value>
   </data>
   <data name="ExecutionTrashRecordsWarning" xml:space="preserve">
-    <value>Move the selected {0} records to trash. Running records and records awaiting approval will be retained. Workspace source code remains unchanged.</value>
+    <value>선택한 기록 {0}개를 휴지통으로 옮깁니다. 실행 중이거나 승인 대기 중인 기록은 보존합니다. 작업 공간의 소스 코드는 변경되지 않습니다.</value>
   </data>
   <data name="ExecutionBatchResult" xml:space="preserve">
-    <value>Completed {0}, skipped {1}, failed {2}.
+    <value>완료 {0}개, 건너뜀 {1}개, 실패 {2}개.
 
 </value>
   </data>
   <data name="ExecutionUpdatedRecords" xml:space="preserve">
-    <value>Updated {0} records.</value>
+    <value>기록 {0}개를 변경했습니다.</value>
   </data>
   <data name="ExecutionRetryInstruction" xml:space="preserve">
-    <value>Read call {0}'s original request and failure reason. Check for partial effects before deciding whether to retry using retry_of_call_id={0}. Do not directly replay the command shown in the summary.</value>
+    <value>호출 {0}의 원래 요청과 실패 사유를 읽고, 이미 일부 효과가 발생했는지 확인한 뒤 retry_of_call_id={0}으로 재시도할지 결정하세요. 요약에 나온 명령을 그대로 다시 실행하지 마세요.</value>
   </data>
   <data name="ExecutionContinueInstruction" xml:space="preserve">
-    <value>Continue task {0}. First read the latest task and branch {1} state, then continue from the checkpoint. Do not repeat completed operations.</value>
+    <value>작업 {0}을 계속하세요. 먼저 작업과 분기 {1}의 최신 상태를 읽고 체크포인트부터 이어가세요. 이미 완료한 작업을 반복 실행하지 마세요.</value>
   </data>
   <data name="ExecutionTerminate" xml:space="preserve">
-    <value>Terminate</value>
+    <value>종료</value>
   </data>
   <data name="ExecutionResume" xml:space="preserve">
-    <value>Resume</value>
+    <value>재개</value>
   </data>
   <data name="ExecutionCheckingPublicAccess" xml:space="preserve">
-    <value>Checking public access…</value>
+    <value>공개 경로 접근을 확인하는 중…</value>
   </data>
   <data name="ExecutionCancelTaskReason" xml:space="preserve">
-    <value>Cancellation reason. This changes task state only; running command processes are not stopped.</value>
+    <value>취소 사유를 입력하세요. 작업 상태만 취소하며 실행 중인 명령 프로세스는 중지하지 않습니다.</value>
   </data>
   <data name="ActivitySummaryCounts" xml:space="preserve">
-    <value>{0} running · {1} awaiting approval · {2} unknown results</value>
+    <value>실행 중 {0} · 승인 대기 {1} · 결과 미확인 {2}</value>
   </data>
   <data name="FunnelCheckingLocal" xml:space="preserve">
-    <value>Checking local configuration</value>
+    <value>로컬 구성 확인 중</value>
   </data>
   <data name="FunnelNeedsApproval" xml:space="preserve">
-    <value>Initial authorization required</value>
+    <value>최초 권한 부여 필요</value>
   </data>
   <data name="FunnelLocalReady" xml:space="preserve">
-    <value>Local configuration ready</value>
+    <value>로컬 구성 완료</value>
   </data>
   <data name="FunnelVerifyingPublic" xml:space="preserve">
-    <value>Verifying public access</value>
+    <value>공개 경로 검증 중</value>
   </data>
   <data name="FunnelDegraded" xml:space="preserve">
-    <value>Public access is not ready; local configuration retained</value>
+    <value>공개 경로가 아직 준비되지 않았으며 로컬 구성은 유지됨</value>
   </data>
   <data name="FunnelVerificationFailed" xml:space="preserve">
-    <value>Verification failed</value>
+    <value>검증 실패</value>
   </data>
   <data name="FunnelLocalSubmitted" xml:space="preserve">
-    <value>Local configuration committed; public verification is in progress.</value>
+    <value>로컬 구성이 적용됐으며 공개 경로를 검증하고 있습니다.</value>
   </data>
   <data name="FunnelReady" xml:space="preserve">
-    <value>Public access verified</value>
+    <value>공개 경로 검증 완료</value>
   </data>
   <data name="ExecutionStreamMissing" xml:space="preserve">
-    <value>The service did not return an execution event stream.</value>
+    <value>서비스가 실행 기록 이벤트 스트림을 반환하지 않았습니다.</value>
   </data>
   <data name="ExecutionStreamDisconnected" xml:space="preserve">
-    <value>The execution stream disconnected; reconnecting from its sequence.</value>
+    <value>실행 스트림이 끊어졌으며 기록 순번부터 다시 연결합니다.</value>
   </data>
   <data name="ExecutionStreamSequenceMismatch" xml:space="preserve">
-    <value>Call and event sequences do not match.</value>
+    <value>호출 순번과 이벤트 순번이 일치하지 않습니다.</value>
   </data>
   <data name="ExecutionEventTooLarge" xml:space="preserve">
-    <value>The execution event exceeds the size limit.</value>
+    <value>실행 이벤트가 크기 제한을 초과했습니다.</value>
   </data>
   <data name="ExecutionEventSequenceInvalid" xml:space="preserve">
-    <value>The execution event sequence is invalid.</value>
+    <value>실행 이벤트 순번이 올바르지 않습니다.</value>
   </data>
   <data name="ExecutionEventIdInvalid" xml:space="preserve">
-    <value>The execution event ID is invalid.</value>
+    <value>실행 이벤트 ID가 올바르지 않습니다.</value>
   </data>
   <data name="ExecutionEventLineTooLarge" xml:space="preserve">
-    <value>The execution event line exceeds the size limit.</value>
+    <value>실행 이벤트의 한 줄이 크기 제한을 초과했습니다.</value>
   </data>
   <data name="ThemeLoadWarning" xml:space="preserve">
-    <value>Display settings could not be loaded; the original file was preserved. Original diagnostic: {0}</value>
+    <value>표시 설정을 불러오지 못했으며 원본 파일은 보존됐습니다. 원문 진단: {0}</value>
   </data>
   <data name="ThemeCleanupWarning" xml:space="preserve">
-    <value>The temporary theme file could not be removed. Original diagnostic: {0}</value>
+    <value>테마 임시 파일을 정리하지 못했습니다. 원문 진단: {0}</value>
   </data>
   <data name="ThemeSelectionInvalid" xml:space="preserve">
-    <value>The selected theme is invalid.</value>
+    <value>선택한 테마가 올바르지 않습니다.</value>
   </data>
   <data name="ThemeNotInitialized" xml:space="preserve">
-    <value>Theme settings have not been initialized.</value>
+    <value>테마 설정이 아직 초기화되지 않았습니다.</value>
   </data>
   <data name="ThemePreferencesTooLarge" xml:space="preserve">
-    <value>Display settings exceed the size limit.</value>
+    <value>표시 설정이 크기 제한을 초과했습니다.</value>
   </data>
   <data name="ThemePreferencesObjectRequired" xml:space="preserve">
-    <value>Display settings must be a JSON object.</value>
+    <value>표시 설정은 JSON 객체여야 합니다.</value>
   </data>
   <data name="UiPreferenceDirectoryUnavailable" xml:space="preserve">
-    <value>The AgentDock UI preference directory is unavailable.</value>
+    <value>AgentDock 화면 설정 디렉터리를 사용할 수 없습니다.</value>
   </data>
   <data name="DisplayPreferenceInvalid" xml:space="preserve">
-    <value>The service did not return valid display preferences.</value>
+    <value>서비스가 올바른 표시 설정을 반환하지 않았습니다.</value>
   </data>
   <data name="DisplayRefreshConnectionHint" xml:space="preserve">
-    <value>This controls only the interface provided by AgentDock. Previously rendered cards are retained. Refresh the ChatGPT connection and verify in a new conversation.</value>
+    <value>이 설정은 AgentDock이 제공하는 내장 화면만 제어합니다. 이미 표시된 카드는 삭제되지 않습니다. ChatGPT 연결을 새로 고치고 새 대화에서 확인하세요.</value>
   </data>
   <data name="FunnelProbeDiagnostic" xml:space="preserve">
-    <value>Public verification did not complete. Original diagnostic: {0}</value>
+    <value>공개 경로 검증을 완료하지 못했습니다. 원문 진단: {0}</value>
   </data>
   <data name="FunnelLocalCheckingHint" xml:space="preserve">
-    <value>Checking local configuration. You can continue using the interface.</value>
+    <value>로컬 구성을 확인하고 있습니다. 화면은 계속 사용할 수 있습니다.</value>
   </data>
   <data name="FunnelProbePreservedDiagnostic" xml:space="preserve">
-    <value>Public verification is incomplete; local configuration was retained. Original diagnostic: {0}</value>
+    <value>공개 경로 검증이 완료되지 않았으며 로컬 구성은 유지됐습니다. 원문 진단: {0}</value>
   </data>
   <data name="TunnelDiagnostic_command_failed" xml:space="preserve">
-    <value>The Tailscale command failed. Inspect the original diagnostic.</value>
+    <value>Tailscale 명령이 실패했습니다. 원문 진단을 확인하세요.</value>
   </data>
   <data name="TunnelDiagnostic_command_timeout" xml:space="preserve">
-    <value>The Tailscale command timed out. Verify its state before retrying.</value>
+    <value>Tailscale 명령의 시간이 초과됐습니다. 재시도하기 전에 상태를 확인하세요.</value>
   </data>
   <data name="TunnelDiagnostic_configuration_changed" xml:space="preserve">
-    <value>Configuration changed during this operation. Reload the current state.</value>
+    <value>작업 중 구성이 변경됐습니다. 현재 상태를 다시 읽으세요.</value>
   </data>
   <data name="TunnelDiagnostic_core_unhealthy" xml:space="preserve">
-    <value>The mapping is configured, but the local AgentDock health check failed.</value>
+    <value>매핑은 구성됐지만 로컬 AgentDock 상태 확인에 실패했습니다.</value>
   </data>
   <data name="TunnelDiagnostic_device_changed" xml:space="preserve">
-    <value>The Tailscale device identity changed. Existing ownership must be checked.</value>
+    <value>Tailscale 장치 ID가 변경됐습니다. 기존 소유권을 확인해야 합니다.</value>
   </data>
   <data name="TunnelDiagnostic_disabled" xml:space="preserve">
-    <value>AgentDock Funnel is disabled.</value>
+    <value>AgentDock Funnel이 사용 중지됐습니다.</value>
   </data>
   <data name="TunnelDiagnostic_funnel_permission_required" xml:space="preserve">
-    <value>Authorize HTTPS 443 Funnel for this device in Tailscale, then detect again.</value>
+    <value>Tailscale 관리 화면에서 이 장치에 HTTPS 443 Funnel 권한을 부여한 뒤 다시 감지하세요.</value>
   </data>
   <data name="TunnelDiagnostic_initialize_failed" xml:space="preserve">
-    <value>MCP initialization did not return valid server or protocol information.</value>
+    <value>MCP 초기화에서 올바른 서버 또는 프로토콜 정보를 반환하지 않았습니다.</value>
   </data>
   <data name="TunnelDiagnostic_initialized_failed" xml:space="preserve">
-    <value>The MCP initialized notification was not accepted.</value>
+    <value>MCP 초기화 완료 알림이 수락되지 않았습니다.</value>
   </data>
   <data name="TunnelDiagnostic_invalid_binary" xml:space="preserve">
-    <value>The Tailscale executable is invalid. Use a verified official installation.</value>
+    <value>Tailscale 실행 파일이 올바르지 않습니다. 검증된 공식 설치본을 사용하세요.</value>
   </data>
   <data name="TunnelDiagnostic_invalid_dns" xml:space="preserve">
-    <value>The device DNS name is invalid or does not belong to the current tailnet.</value>
+    <value>장치 DNS 이름이 올바르지 않거나 현재 tailnet에 속하지 않습니다.</value>
   </data>
   <data name="TunnelDiagnostic_invalid_funnel_json" xml:space="preserve">
-    <value>The Serve/Funnel configuration has an unsupported or invalid structure. Changes were refused.</value>
+    <value>Serve/Funnel 구성의 구조가 올바르지 않거나 지원되지 않아 변경을 거부했습니다.</value>
   </data>
   <data name="TunnelDiagnostic_invalid_oauth_metadata" xml:space="preserve">
-    <value>OAuth metadata is invalid. Public authentication was not verified.</value>
+    <value>OAuth 메타데이터가 올바르지 않아 공개 인증을 검증하지 못했습니다.</value>
   </data>
   <data name="TunnelDiagnostic_invalid_ownership" xml:space="preserve">
-    <value>The Funnel ownership record is invalid. Existing mappings must not be taken over.</value>
+    <value>Funnel 소유권 기록이 올바르지 않습니다. 기존 매핑을 임의로 인수하면 안 됩니다.</value>
   </data>
   <data name="TunnelDiagnostic_invalid_server_metadata" xml:space="preserve">
-    <value>The MCP server description is invalid.</value>
+    <value>MCP 서버 설명이 올바르지 않습니다.</value>
   </data>
   <data name="TunnelDiagnostic_invalid_status_json" xml:space="preserve">
-    <value>Tailscale returned an incompatible or incomplete device status.</value>
+    <value>Tailscale이 호환되지 않거나 불완전한 장치 상태를 반환했습니다.</value>
   </data>
   <data name="TunnelDiagnostic_key_expired" xml:space="preserve">
-    <value>The Tailscale device key expired. Reauthenticate in the official client.</value>
+    <value>Tailscale 장치 키가 만료됐습니다. 공식 클라이언트에서 다시 인증하세요.</value>
   </data>
   <data name="TunnelDiagnostic_key_expiring" xml:space="preserve">
-    <value>The Tailscale device key expires within 14 days. Arrange reauthentication.</value>
+    <value>Tailscale 장치 키가 14일 이내에 만료됩니다. 다시 인증할 준비를 하세요.</value>
   </data>
   <data name="TunnelDiagnostic_mapping_changed" xml:space="preserve">
-    <value>The local mapping changed during verification. Readiness was not confirmed.</value>
+    <value>검증 중 로컬 매핑이 변경돼 준비 상태를 확인하지 못했습니다.</value>
   </data>
   <data name="TunnelDiagnostic_mapping_conflict" xml:space="preserve">
-    <value>HTTPS 443 conflicts with an existing mapping. AgentDock refuses to overwrite it.</value>
+    <value>HTTPS 443이 기존 매핑과 충돌합니다. AgentDock은 이를 덮어쓰지 않습니다.</value>
   </data>
   <data name="TunnelDiagnostic_mapping_missing" xml:space="preserve">
-    <value>The AgentDock Funnel mapping is missing or its local target changed.</value>
+    <value>AgentDock Funnel 매핑이 없거나 로컬 대상이 변경됐습니다.</value>
   </data>
   <data name="TunnelDiagnostic_mcp_protocol_failed" xml:space="preserve">
-    <value>MCP protocol verification failed. Inspect the original diagnostic for the failed stage.</value>
+    <value>MCP 프로토콜 검증에 실패했습니다. 원문 진단에서 실패한 단계를 확인하세요.</value>
   </data>
   <data name="TunnelDiagnostic_missing_identity" xml:space="preserve">
-    <value>Tailscale did not provide a device ID or DNS name.</value>
+    <value>Tailscale이 장치 ID 또는 DNS 이름을 제공하지 않았습니다.</value>
   </data>
   <data name="TunnelDiagnostic_mode_changed" xml:space="preserve">
-    <value>The access mode changed; the previous verification is no longer current.</value>
+    <value>접근 모드가 변경돼 이전 검증 결과는 더 이상 유효하지 않습니다.</value>
   </data>
   <data name="TunnelDiagnostic_needs_login" xml:space="preserve">
-    <value>Complete login or device authorization in the official Tailscale client.</value>
+    <value>공식 Tailscale 클라이언트에서 로그인 또는 장치 승인을 완료하세요.</value>
   </data>
   <data name="TunnelDiagnostic_not_installed" xml:space="preserve">
-    <value>Tailscale is not installed. Install its official client to use this optional feature.</value>
+    <value>Tailscale이 설치되지 않았습니다. 이 선택 기능을 사용하려면 공식 클라이언트를 설치하세요.</value>
   </data>
   <data name="TunnelDiagnostic_not_running" xml:space="preserve">
-    <value>Tailscale is not running. Check the official client.</value>
+    <value>Tailscale이 실행 중이 아닙니다. 공식 클라이언트를 확인하세요.</value>
   </data>
   <data name="TunnelDiagnostic_oauth_origin_mismatch" xml:space="preserve">
-    <value>Authentication metadata or the MCP challenge does not match the current public origin.</value>
+    <value>인증 메타데이터 또는 MCP 인증 요구가 현재 공개 origin과 일치하지 않습니다.</value>
   </data>
   <data name="TunnelDiagnostic_offline" xml:space="preserve">
-    <value>This Tailscale device is offline.</value>
+    <value>이 Tailscale 장치는 오프라인입니다.</value>
   </data>
   <data name="TunnelDiagnostic_origin_mismatch" xml:space="preserve">
-    <value>The mapping and AgentDock origin do not match. Recheck the effective access configuration.</value>
+    <value>매핑과 AgentDock origin이 일치하지 않습니다. 적용 중인 접근 구성을 확인하세요.</value>
   </data>
   <data name="TunnelDiagnostic_output_limit" xml:space="preserve">
-    <value>Tailscale output exceeded the size limit.</value>
+    <value>Tailscale 출력이 크기 제한을 초과했습니다.</value>
   </data>
   <data name="TunnelDiagnostic_ownership_conflict" xml:space="preserve">
-    <value>Funnel ownership conflicts with another configuration. Taking it over was refused.</value>
+    <value>Funnel 소유권이 다른 구성과 충돌해 인수를 거부했습니다.</value>
   </data>
   <data name="TunnelDiagnostic_ownership_required" xml:space="preserve">
-    <value>Verified AgentDock ownership is required before changing this mapping.</value>
+    <value>이 매핑을 변경하기 전에 AgentDock 소유권을 검증해야 합니다.</value>
   </data>
   <data name="TunnelDiagnostic_pending_migration" xml:space="preserve">
-    <value>The previous Funnel mapping needs a verified migration before it can be changed.</value>
+    <value>이전 Funnel 매핑은 검증된 이전 절차를 거친 뒤 변경할 수 있습니다.</value>
   </data>
   <data name="TunnelDiagnostic_private_serve_conflict" xml:space="preserve">
-    <value>An existing private Serve mapping conflicts with the requested public mapping.</value>
+    <value>기존 비공개 Serve 매핑이 요청한 공개 매핑과 충돌합니다.</value>
   </data>
   <data name="TunnelDiagnostic_public_protocol_failed" xml:space="preserve">
-    <value>The public endpoint returned an unexpected HTTP result.</value>
+    <value>공개 엔드포인트가 예상과 다른 HTTP 결과를 반환했습니다.</value>
   </data>
   <data name="TunnelDiagnostic_public_unreachable" xml:space="preserve">
-    <value>The public DNS, TLS or HTTP endpoint is not ready. Verify local state before retrying.</value>
+    <value>공개 DNS·TLS·HTTP 경로가 아직 준비되지 않았습니다. 재시도 전에 로컬 상태를 확인하세요.</value>
   </data>
   <data name="TunnelDiagnostic_response_limit" xml:space="preserve">
-    <value>The public protocol response exceeded the size limit.</value>
+    <value>공개 프로토콜 응답이 크기 제한을 초과했습니다.</value>
   </data>
   <data name="TunnelDiagnostic_rollback_conflict" xml:space="preserve">
-    <value>Recovery conflicts with changed mapping ownership. Verify state before attempting further changes.</value>
+    <value>복구가 변경된 매핑 소유권과 충돌합니다. 추가 변경 전에 상태를 확인하세요.</value>
   </data>
   <data name="TunnelDiagnostic_tools_list_failed" xml:space="preserve">
-    <value>MCP tool discovery returned missing or invalid definitions.</value>
+    <value>MCP 도구 검색에서 정의가 누락됐거나 올바르지 않은 정의를 반환했습니다.</value>
   </data>
   <data name="TunnelDiagnostic_verification_failed" xml:space="preserve">
-    <value>Funnel verification failed. Check the original diagnostic and current state.</value>
+    <value>Funnel 검증에 실패했습니다. 원문 진단과 현재 상태를 확인하세요.</value>
   </data>
   <data name="TunnelDiagnostic_verification_pending" xml:space="preserve">
-    <value>Local configuration is ready; public verification is in progress. Do not rebuild the mapping.</value>
+    <value>로컬 구성이 완료됐으며 공개 경로를 검증하고 있습니다. 매핑을 다시 만들 필요는 없습니다.</value>
   </data>
   <data name="TunnelDiagnostic_write_state_unknown" xml:space="preserve">
-    <value>The mapping write result is unknown. Read actual state before retrying.</value>
+    <value>매핑 쓰기 결과가 확인되지 않았습니다. 재시도 전에 실제 상태를 읽으세요.</value>
   </data>
   <data name="TunnelDiagnostic_not_configured" xml:space="preserve">
-    <value>AgentDock Funnel is not configured.</value>
+    <value>AgentDock Funnel이 구성되지 않았습니다.</value>
   </data>
   <data name="TunnelDiagnostic_probe_failed" xml:space="preserve">
-    <value>Public verification did not complete. Local readiness and public reachability are separate.</value>
+    <value>공개 경로 검증을 완료하지 못했습니다. 로컬 구성 완료와 공개 접근 가능 여부는 별개입니다.</value>
   </data>
   <data name="TunnelDiagnostic_tailscale_error" xml:space="preserve">
-    <value>Tailscale encountered an error. Inspect the original diagnostic.</value>
+    <value>Tailscale 오류가 발생했습니다. 원문 진단을 확인하세요.</value>
   </data>
   <data name="TunnelOriginalDiagnostic" xml:space="preserve">
-    <value>Original AgentDock diagnostic ({0}):
+    <value>AgentDock 원문 진단 ({0}):
 {1}</value>
   </data>
   <data name="ExecutionTool_agentdock_context" xml:space="preserve">
-    <value>AgentDock context</value>
+    <value>AgentDock 컨텍스트</value>
   </data>
   <data name="ExecutionTool_read_file" xml:space="preserve">
-    <value>Read file</value>
+    <value>파일 읽기</value>
   </data>
   <data name="ExecutionTool_list_dir" xml:space="preserve">
-    <value>List directory</value>
+    <value>디렉터리 목록</value>
   </data>
   <data name="ExecutionTool_search_text" xml:space="preserve">
-    <value>Search text</value>
+    <value>텍스트 검색</value>
   </data>
   <data name="ExecutionTool_file_edit" xml:space="preserve">
-    <value>Edit file</value>
+    <value>파일 편집</value>
   </data>
   <data name="ExecutionTool_exec_command" xml:space="preserve">
-    <value>Run command</value>
+    <value>명령 실행</value>
   </data>
   <data name="ExecutionTool_session_observe" xml:space="preserve">
-    <value>Observe command sessions</value>
+    <value>명령 세션 확인</value>
   </data>
   <data name="ExecutionTool_session_act" xml:space="preserve">
-    <value>Act on command sessions</value>
+    <value>명령 세션 제어</value>
   </data>
   <data name="ExecutionTool_task_manage" xml:space="preserve">
-    <value>Manage recoverable tasks</value>
+    <value>작업 관리</value>
   </data>
   <data name="ExecutionTool_workspace_manage" xml:space="preserve">
-    <value>Manage workspaces</value>
+    <value>워크스페이스 관리</value>
   </data>
   <data name="ExecutionTool_mcp_manage" xml:space="preserve">
-    <value>Manage dynamic MCP servers</value>
+    <value>동적 MCP 서버 관리</value>
   </data>
   <data name="ExecutionTool_mcp_tool_search" xml:space="preserve">
-    <value>Search dynamic MCP tools</value>
+    <value>동적 MCP 도구 검색</value>
   </data>
   <data name="ExecutionTool_mcp_tool_inspect" xml:space="preserve">
-    <value>Inspect a dynamic MCP tool</value>
+    <value>동적 MCP 도구 확인</value>
   </data>
   <data name="ExecutionTool_mcp_tool_call" xml:space="preserve">
-    <value>Call a dynamic MCP tool</value>
+    <value>동적 MCP 도구 호출</value>
   </data>
   <data name="ExecutionTool_plugin_manage" xml:space="preserve">
-    <value>Manage plugins</value>
+    <value>플러그인 관리</value>
   </data>
   <data name="ExecutionTool_plugin_load" xml:space="preserve">
-    <value>Load a heavy plugin</value>
+    <value>플러그인 불러오기</value>
   </data>
   <data name="ExecutionTool_skill_package" xml:space="preserve">
-    <value>Manage Skill packages</value>
+    <value>Skill 패키지 관리</value>
   </data>
   <data name="ExecutionTool_view_image" xml:space="preserve">
-    <value>View image</value>
+    <value>이미지 보기</value>
   </data>
   <data name="ExecutionTool_file_publish" xml:space="preserve">
-    <value>Publish signed file</value>
+    <value>서명된 파일 링크 게시</value>
   </data>
   <data name="ExecutionTool_browser_session" xml:space="preserve">
-    <value>Browser session</value>
+    <value>브라우저 세션</value>
   </data>
   <data name="ExecutionTool_browser_act" xml:space="preserve">
-    <value>Browser actions</value>
+    <value>브라우저 동작</value>
   </data>
   <data name="ExecutionTool_browser_snapshot" xml:space="preserve">
-    <value>Browser snapshot</value>
+    <value>브라우저 화면 확인</value>
   </data>
   <data name="ExecutionTool_acp_session" xml:space="preserve">
-    <value>Manage ACP sessions</value>
+    <value>ACP 세션 관리</value>
   </data>
   <data name="ExecutionTool_acp_prompt" xml:space="preserve">
-    <value>Run ACP prompts</value>
+    <value>ACP 프롬프트 실행</value>
   </data>
   <data name="ExecutionTool_acp_interaction" xml:space="preserve">
-    <value>Handle ACP interactions</value>
+    <value>ACP 상호작용 처리</value>
   </data>
   <data name="ExecutionTool_recall_search" xml:space="preserve">
-    <value>Search NexusDock Recall</value>
+    <value>NexusDock Recall 검색</value>
   </data>
   <data name="ExecutionTool_recall_read" xml:space="preserve">
-    <value>Read NexusDock Recall entry</value>
+    <value>NexusDock Recall 항목 읽기</value>
   </data>
   <data name="ExecutionTool_recall_write" xml:space="preserve">
-    <value>Write NexusDock Recall entry</value>
+    <value>NexusDock Recall 항목 작성</value>
   </data>
   <data name="ExecutionTool_recall_maintain" xml:space="preserve">
-    <value>Maintain NexusDock Recall</value>
+    <value>NexusDock Recall 유지관리</value>
   </data>
   <data name="ExecutionTool_private_note_manage" xml:space="preserve">
-    <value>Manage private notes</value>
+    <value>비공개 노트 관리</value>
   </data>
   <data name="ExecutionTool_workflow_template_manage" xml:space="preserve">
-    <value>Manage workflow templates</value>
+    <value>워크플로 템플릿 관리</value>
   </data>
   <data name="ExecutionTool_evolve" xml:space="preserve">
-    <value>Evolve AgentDock knowledge</value>
+    <value>AgentDock 지식 개선</value>
   </data>
   <data name="ExecutionOpen" xml:space="preserve">
-    <value>Open</value>
+    <value>열기</value>
   </data>
   <data name="ExecutionExpandConversations" xml:space="preserve">
-    <value>Expand more conversations</value>
+    <value>대화 더 보기</value>
   </data>
   <data name="ExecutionInsert" xml:space="preserve">
-    <value>Insert</value>
+    <value>삽입</value>
   </data>
   <data name="ExecutionInsertSupplement" xml:space="preserve">
-    <value>Insert a supplemental request</value>
+    <value>보충 요구 삽입</value>
   </data>
   <data name="ExecutionWithdrawInsertion" xml:space="preserve">
-    <value>Withdraw</value>
+    <value>철회</value>
   </data>
   <data name="ExecutionSendInsertion" xml:space="preserve">
-    <value>Send</value>
+    <value>보내기</value>
   </data>
   <data name="ExecutionInsertionHelp" xml:space="preserve">
-    <value>Waits for the next new tool call after sending; expires after 5 minutes without a new call. Attachment does not confirm the model has read it. Shift+Enter adds a line.</value>
+    <value>보낸 뒤 다음 새 도구 호출을 기다립니다. 새 호출이 없으면 5분 후 만료됩니다. 첨부됨은 모델이 확인했다는 뜻이 아닙니다. Shift+Enter로 줄을 바꿉니다.</value>
   </data>
   <data name="ExecutionInsertionInactive" xml:space="preserve">
-    <value>No new tool request in the last 3 minutes; insertion is unavailable.</value>
+    <value>최근 3분 동안 새 도구 요청이 없어 삽입할 수 없습니다.</value>
   </data>
   <data name="ExecutionInsertionUnconfirmedLimit" xml:space="preserve">
-    <value>Too many unconfirmed submissions. Check existing insertion status first.</value>
+    <value>확인되지 않은 제출이 너무 많습니다. 기존 삽입 상태를 먼저 확인하세요.</value>
   </data>
   <data name="ExecutionInsertionDraftLimit" xml:space="preserve">
-    <value>There are already 128 conversation drafts. Send or clear an existing draft first.</value>
+    <value>대화 초안이 이미 128개입니다. 기존 초안을 보내거나 비운 뒤 다시 작성하세요.</value>
   </data>
   <data name="ExecutionInsertionTextLimit" xml:space="preserve">
-    <value>The supplement exceeds 8192 UTF-8 bytes. Shorten it before sending.</value>
+    <value>보충 요구가 UTF-8 기준 8192바이트를 초과합니다. 내용을 줄인 뒤 보내세요.</value>
   </data>
   <data name="ExecutionInsertionTargetChanged" xml:space="preserve">
-    <value>The target task changed. Withdraw the supplement before submitting it again.</value>
+    <value>대상 작업이 바뀌었습니다. 보충 요구를 철회한 뒤 다시 보내세요.</value>
   </data>
   <data name="ExecutionInsertionPending" xml:space="preserve">
-    <value>{0} waiting for the next new tool call; expires 5 minutes after submission.</value>
+    <value>{0}개: 다음 새 도구 호출을 기다림 · 제출 5분 후 만료</value>
   </data>
   <data name="ExecutionInsertionReserved" xml:space="preserve">
-    <value>Claimed by the next new tool call; waiting for its response.</value>
+    <value>다음 새 도구 호출이 수령함 · 응답 반환을 기다리는 중</value>
   </data>
   <data name="ExecutionInsertionAttached" xml:space="preserve">
-    <value>Attached to the tool response; this does not confirm the model has read it.</value>
+    <value>도구 응답에 첨부됨 · 모델이 확인했다는 뜻은 아님</value>
   </data>
   <data name="ExecutionInsertionExpired" xml:space="preserve">
-    <value>Expired: no new tool call arrived within 5 minutes.</value>
+    <value>만료됨: 5분 동안 새 도구 호출이 없었습니다.</value>
   </data>
   <data name="ExecutionInsertionCancelled" xml:space="preserve">
-    <value>Insertion cancelled.</value>
+    <value>삽입이 취소되었습니다.</value>
   </data>
   <data name="ExecutionInsertionDeliveryUnknown" xml:space="preserve">
-    <value>Delivery is unknown. It was not automatically resent.</value>
+    <value>전달 결과를 알 수 없습니다. 자동으로 다시 보내지 않았습니다.</value>
   </data>
   <data name="ExecutionOpenProjectFolder" xml:space="preserve">
-    <value>Open project folder</value>
+    <value>프로젝트 폴더 열기</value>
   </data>
   <data name="ExecutionProjectFolderMissing" xml:space="preserve">
-    <value>The project folder does not exist or has moved.</value>
+    <value>프로젝트 폴더가 없거나 다른 위치로 이동했습니다.</value>
   </data>
   <data name="ExecutionTaskCompletedNotification" xml:space="preserve">
-    <value>Task completed</value>
+    <value>작업 완료</value>
   </data>
   <data name="ExecutionPreferencesInvalid" xml:space="preserve">
-    <value>Display preferences are not a supported JSON object. The original file was preserved.</value>
+    <value>표시 설정이 지원되는 JSON 객체가 아닙니다. 원본 파일은 보존했습니다.</value>
   </data>
   <data name="ExecutionPreferencesUnsupported" xml:space="preserve">
-    <value>The display preferences schema is unsupported. The original file was preserved.</value>
+    <value>지원하지 않는 표시 설정 스키마입니다. 원본 파일은 보존했습니다.</value>
   </data>
   <data name="ExecutionPreferencesNewer" xml:space="preserve">
-    <value>A newer display preferences schema was found. It was not overwritten.</value>
+    <value>더 최신 표시 설정 스키마를 발견했습니다. 덮어쓰지 않았습니다.</value>
   </data>
   <data name="ExecutionUnattributedGroup" xml:space="preserve">
-    <value>Unattributed records</value>
+    <value>귀속되지 않은 기록</value>
   </data>
   <data name="ExecutionUnassignedProject" xml:space="preserve">
-    <value>No linked project</value>
+    <value>연결된 프로젝트 없음</value>
   </data>
   <data name="ExecutionUnidentifiedConversation" xml:space="preserve">
-    <value>Unidentified conversation · standalone calls</value>
+    <value>식별되지 않은 대화 · 독립 호출</value>
   </data>
   <data name="McpStatusUnknownCount" xml:space="preserve">
-    <value>{0} · tool count not yet discovered</value>
+    <value>{0} · 도구 수 미발견</value>
   </data>
   <data name="ExecutionApi_INSERTION_INACTIVE" xml:space="preserve">
-    <value>No new tool request arrived in the last 3 minutes. The supplement was not accepted.</value>
+    <value>최근 3분 동안 새 도구 요청이 없어 보충 요구를 접수하지 않았습니다.</value>
   </data>
   <data name="ExecutionApi_INSERTION_CONFLICT" xml:space="preserve">
-    <value>This submission ID already belongs to a different supplement. Check the existing submission.</value>
+    <value>이 제출 ID는 이미 다른 보충 요구에 사용됐습니다. 기존 제출을 확인하세요.</value>
   </data>
   <data name="ExecutionApi_INSERTION_LIMIT" xml:space="preserve">
-    <value>The insertion queue is full. Check pending supplements before retrying.</value>
+    <value>삽입 대기열이 가득 찼습니다. 대기 중인 보충 요구를 확인한 뒤 다시 시도하세요.</value>
   </data>
   <data name="ExecutionApi_INSERTION_FAILED" xml:space="preserve">
-    <value>The insertion operation failed. Check its state before resubmitting.</value>
+    <value>삽입 작업에 실패했습니다. 다시 제출하기 전에 상태를 확인하세요.</value>
   </data>
   <data name="ExecutionApi_INSERTION_UNAVAILABLE" xml:space="preserve">
-    <value>The insertion queue is unavailable. No supplement was sent.</value>
+    <value>삽입 대기열을 사용할 수 없습니다. 보충 요구를 보내지 않았습니다.</value>
   </data>
   <data name="ExecutionApi_NOTIFICATIONS_UNAVAILABLE" xml:space="preserve">
-    <value>Task completion notifications are unavailable.</value>
+    <value>작업 완료 알림을 사용할 수 없습니다.</value>
   </data>
   <data name="ExecutionApi_SIDEBAR_UNAVAILABLE" xml:space="preserve">
-    <value>The project conversation list is unavailable.</value>
+    <value>프로젝트별 대화 목록을 사용할 수 없습니다.</value>
   </data>
   <data name="DisplayAndTheme" xml:space="preserve">
-    <value>Display and theme</value>
+    <value>표시 및 테마</value>
   </data>
 </root>

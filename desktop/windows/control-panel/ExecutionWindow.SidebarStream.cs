@@ -111,7 +111,7 @@ public partial class ExecutionWindow
         var state = navigation.For(workspace);
         if (!_sidebarGroups.TryGetValue(workspace, out var key))
         {
-            var name = _workspaceNames.GetValueOrDefault(workspace, workspace == "unassigned" ? "未关联项目" : "项目");
+            var name = _workspaceNames.GetValueOrDefault(workspace, workspace == "unassigned" ? UiText.Get("ExecutionUnassignedProject") : "项目");
             _sidebarGroups[workspace] = key = new(workspace, name);
             key.Apply(JsonSerializer.SerializeToElement(new { title = name, workspace_id = workspace, total = 1, recent_count = 1, mode = state.ProtocolMode, last_activity_at = call.Date("last_activity_at") ?? call.Date("request_received_at") }));
         }

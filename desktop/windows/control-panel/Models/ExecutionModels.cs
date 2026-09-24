@@ -16,10 +16,16 @@ public static class ExecutionJson
     public static string Pretty(this JsonElement value) => value.ValueKind == JsonValueKind.Undefined ? "" : JsonSerializer.Serialize(value, new JsonSerializerOptions { WriteIndented = true });
     public static string State(string state) => state switch
     {
-        "created" => "等待执行", "running" or "in_progress" => "运行中", "pending_approval" => "待审批", "succeeded" or "completed" => "已完成",
-        "failed" => "失败", "partial" => "部分完成", "cancelled" => "已取消", "unknown" => "结果待核对", "blocked" => "受阻", "pending" => "未开始", _ => state
+        "created" => UiText.Get("ExecutionWaiting"), "running" or "in_progress" => UiText.Get("ExecutionRunning"), "pending_approval" => UiText.Get("ExecutionPendingApproval"), "succeeded" or "completed" => UiText.Get("ExecutionCompleted"),
+        "failed" => UiText.Get("ExecutionFailed"), "partial" => UiText.Get("ExecutionPartial"), "cancelled" => UiText.Get("ExecutionCancelled"), "unknown" => UiText.Get("ExecutionUnknownResult"), "blocked" => UiText.Get("ExecutionBlocked"), "pending" => UiText.Get("ExecutionNotStarted"), _ => state
     };
-    public static string Mode(string mode) => mode switch { "full" => "完全权限", "readonly" or "read_only" => "只读", "rules" or "ask" or "guarded" or "default" => "需要审批", _ => mode };
+    public static string ApprovalState(string state) => state switch
+    {
+        "pending" => UiText.Get("ExecutionPendingApproval"), "approved" => UiText.Get("ExecutionApprovalApproved"),
+        "rejected" => UiText.Get("ExecutionApprovalRejected"), "cancelled" => UiText.Get("ExecutionCancelled"),
+        "expired" => UiText.Get("ExecutionApprovalExpired"), _ => state
+    };
+    public static string Mode(string mode) => mode switch { "full" => UiText.Get("ExecutionFullPermission"), "readonly" or "read_only" => UiText.Get("ExecutionReadOnly"), "rules" or "ask" or "guarded" or "default" => UiText.Get("ExecutionApprovalRequired"), _ => mode };
     public static bool HasDate(this JsonElement value, string name) => value.Field(name).ValueKind == JsonValueKind.String;
 }
 
@@ -83,7 +89,7 @@ public sealed class ExecutionObject : INotifyPropertyChanged
     public string Detail { get; set; } = "";
     public string Tags { get; set; } = "";
     public string WorkspaceId { get; set; } = "";
-    public WorkspaceGroupKey WorkspaceKey { get; set; } = new("", "未归属工作区");
+    public WorkspaceGroupKey WorkspaceKey { get; set; } = new("", UiText.Get("ExecutionUnassignedWorkspace"));
     public string ManagementDates { get; set; } = "";
     public bool Pinned { get; set; }
     public bool Archived { get; set; }
@@ -98,8 +104,10 @@ public sealed class ExecutionObject : INotifyPropertyChanged
     public static ExecutionObject From(JsonElement value, string kind)
     {
         var title = value.Text("title");
-        var created = DateTimeOffset.TryParse(value.Text("created_at"), out var date) ? date.ToLocalTime().ToString("MM-dd HH:mm") : "历史记录";
-        if (string.IsNullOrWhiteSpace(title) || title == "新对话") title = "对话 · " + created;
+        var created = DateTimeOffset.TryParse(value.Text("created_at"), out var date) ? date.ToLocalTime().ToString("MM-dd HH:mm") : UiText.Get("ExecutionHistory");
+        // A user's title is data, even when it happens to equal the old default.
+        // The backend's stable title_source identifies product-generated titles.
+        if (string.IsNullOrWhiteSpace(title) || (kind == "conversation" && value.Text("title_source") == "fallback")) title = UiText.Format("ExecutionConversationTimestamp", created);
         var workspace = value.Field("state").Text("workspace_id", value.Text("workspace_id"));
         var workspaces = value.Array("workspace_ids");
         if (workspace.Length == 0 && workspaces.Length > 0 && workspaces[0].ValueKind == JsonValueKind.String) workspace = workspaces[0].GetString() ?? "";
@@ -177,25 +185,25 @@ public sealed class ExecutionCallRow : INotifyPropertyChanged
 	public string DeletedLinesText => EditCountsKnown ? "−" + _value.Field("file_edit").Number("deletions") : "";
 	public string EditCountsHint => PartialEditStatistics ? "部分执行：仅计入已确认仍落盘的变化；未核实的路径保留未知。" : EditPreview ? "预演未落盘；拟议行数在文件详情中。" : EditCountsKnown ? "本次根调用实际落盘的新增/删除逻辑行数。" : "本次修改行数未统计或结果未知，未计为零。";
     public string Started => _value.Date("started_at")?.ToLocalTime().ToString("HH:mm:ss.fff") ?? When;
-    public string SourceType => _value.Text("source", "未记录");
+    public string SourceType => _value.Text("source", UiText.Get("ExecutionNotRecorded"));
     public string TimingDetails => string.Join("\n", new[]
     {
         "工具：" + Tool,
-        "RPC 返回：" + (_value.Date("rpc_completed_at")?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff") ?? "未记录"),
+        "RPC 返回：" + (_value.Date("rpc_completed_at")?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff") ?? UiText.Get("ExecutionNotRecorded")),
         TotalTimingDetails,
         "执行阶段：" + ExecutionDuration,
         "执行前等待：" + WaitDuration + "（含已观测到的准备及审批等待）",
         "操作完成耗时：" + FormatDuration(_value.OptionalNumber("operation_elapsed_ms")),
         "后台命令进程：" + FormatDuration(_value.OptionalNumber("process_elapsed_ms")),
-        "RPC 与后台命令分别计时。并发调用的累计耗时不等于实际经过时间。"
+        UiText.Get("ExecutionConcurrentTimingNotice")
     });
     public string FileEditDetails
     {
         get
         {
             var edit = _value.Field("file_edit");
-            if (edit.ValueKind != JsonValueKind.Object) return "文件操作详情未记录。";
-            var changed = edit.Field("changed").ValueKind switch { JsonValueKind.True => "是", JsonValueKind.False => "否", _ => "结果未知" };
+            if (edit.ValueKind != JsonValueKind.Object) return UiText.Get("ExecutionFileDetailsNotRecorded");
+            var changed = edit.Field("changed").ValueKind switch { JsonValueKind.True => UiText.Get("ExecutionYes"), JsonValueKind.False => UiText.Get("ExecutionNo"), _ => UiText.Get("ExecutionResultUnknown") };
             var preview = edit.Flag("dry_run");
             var addedKey = preview ? "proposed_insertions" : "insertions";
             var removedKey = preview ? "proposed_deletions" : "deletions";
@@ -203,13 +211,13 @@ public sealed class ExecutionCallRow : INotifyPropertyChanged
             return $"{Tool} · {edit.Text("action")}\n目标：{edit.Text("path")}\n预览：{(edit.Flag("dry_run") ? "是，未写入" : "否")}\n已派发：{(edit.Flag("executed") ? "是" : "否")}\n实际修改：{changed}\n影响文件数：{edit.OptionalNumber("affected_count")?.ToString() ?? "未记录"}\n统计：{(PartialEditStatistics ? "部分执行，仅含已确认变化" : preview ? "预演计划" : edit.Text("stats_state", "旧记录"))}\n{(preview ? "拟议" : "实际")}新增/删除行：{edit.OptionalNumber(addedKey)?.ToString() ?? "未记录"} / {edit.OptionalNumber(removedKey)?.ToString() ?? "未记录"}\n" + string.Join("\n", files) + (edit.Flag("files_truncated") ? "\n文件明细超过预览上限。" : "") + "\n\n" + edit.Text("diff_preview") + (edit.Flag("diff_truncated") ? "\n差异预览已截断。" : "");
         }
     }
-    private static string FormatDuration(long? milliseconds) => milliseconds is >= 0 ? (milliseconds.Value / 1000.0).ToString("0.000") + " s" : "未记录";
+    private static string FormatDuration(long? milliseconds) => milliseconds is >= 0 ? (milliseconds.Value / 1000.0).ToString("0.000") + " s" : UiText.Get("ExecutionNotRecorded");
     public string When => DateTimeOffset.TryParse(_value.Text("created_at"), out var date) ? date.ToLocalTime().ToString("HH:mm:ss") : "";
     public string Rule => string.Join(" · ", new[] { _value.Text("rule_id"), ExecutionJson.Mode(_value.Text("permission_mode")) }.Where(value => value.Length > 0));
     public string SourceState => _sourceState;
-    public string Origin => ConversationId.Length == 0 ? "未归属" : _sourceState switch
+    public string Origin => ConversationId.Length == 0 ? UiText.Get("ExecutionUnassigned") : _sourceState switch
     {
-        "resolved" => _sourceTitle, "loading" => "正在读取来源", "deleted" => "来源已删除", "error" => "来源读取失败", _ => "来源暂不可用"
+        "resolved" => _sourceTitle, "loading" => UiText.Get("ExecutionSourceLoading"), "deleted" => UiText.Get("ExecutionSourceDeleted"), "error" => UiText.Get("ExecutionSourceFailed"), _ => UiText.Get("ExecutionSourceUnavailable")
     };
     public string SourceTitle { get => _sourceTitle; set => SetSource(value, "resolved"); }
     public void SetSource(string title, string state) { _sourceTitle = title; _sourceState = state; Notify(); }
@@ -226,7 +234,7 @@ public sealed class ExecutionCallRow : INotifyPropertyChanged
 	public string Output => ResponsePayload.Reference.Length == 0 && _output.Length > 0 ? _output : ResponsePayload.Text;
 	public string ProgressOutput => _output;
 	public bool HasSupplementalProgress => ResponsePayload.Reference.Length > 0 && _output.Length > 0;
-    public string HistoryWarning => _value.Flag("history_incomplete") ? "该记录的部分历史已不可用。" : "";
+    public string HistoryWarning => _value.Flag("history_incomplete") ? UiText.Get("ExecutionHistoryIncomplete") : "";
 	public ExecutionCallRow(JsonElement value)
 	{
 		_value = value.Clone();
