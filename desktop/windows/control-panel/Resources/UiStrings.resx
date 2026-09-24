@@ -303,6 +303,9 @@
   <data name="RunningNormally" xml:space="preserve">
     <value>Running normally</value>
   </data>
+  <data name="RuntimeOperationInProgress" xml:space="preserve">
+    <value>A runtime operation is already in progress. Wait for it to finish.</value>
+  </data>
   <data name="ServiceError" xml:space="preserve">
     <value>Service error</value>
   </data>

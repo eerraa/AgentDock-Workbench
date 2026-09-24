@@ -28,6 +28,7 @@ public sealed partial class RuntimeService : IDisposable
     };
 
     private readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
+    private readonly SemaphoreSlim _operation = new(1, 1);
 
     public RuntimeService(string? runtimeRoot = null)
     {
@@ -1016,32 +1017,96 @@ public sealed partial class RuntimeService : IDisposable
         CancellationToken cancellationToken,
         bool allowElevation = true)
     {
-        var manifest = await ReadRuntimeManifestAsync(cancellationToken) ?? new RuntimeManifest();
-        var binaryPath = await ResolveCoreBinaryAsync(cancellationToken);
-        var commandArguments = new List<string> { command };
-        commandArguments.AddRange(arguments);
-        commandArguments.AddRange(["--runtime-root", RuntimeRoot]);
+        if (!await _operation.WaitAsync(0, cancellationToken))
+        {
+            throw new InvalidOperationException(UiText.Get("RuntimeOperationInProgress"));
+        }
+        try
+        {
+            var manifest = await ReadRuntimeManifestAsync(cancellationToken) ?? new RuntimeManifest();
+            if (IsElevatedServiceLifecycle(manifest, command, arguments))
+            {
+                var action = arguments.First(argument => argument is "start" or "stop" or "restart");
+                await RunScheduledServiceActionAsync(manifest, action, cancellationToken);
+                return;
+            }
 
-        var startInfo = CreateRedirectedProcessStartInfo(binaryPath);
-        foreach (var argument in commandArguments)
+            var binaryPath = await ResolveCoreBinaryAsync(cancellationToken);
+            var commandArguments = new List<string> { command };
+            commandArguments.AddRange(arguments);
+            commandArguments.AddRange(["--runtime-root", RuntimeRoot]);
+
+            var startInfo = CreateRedirectedProcessStartInfo(binaryPath);
+            foreach (var argument in commandArguments)
+            {
+                startInfo.ArgumentList.Add(argument);
+            }
+
+            try
+            {
+                _ = await RunProcessAsync(startInfo, cancellationToken);
+            }
+            catch (InvalidOperationException) when (
+                allowElevation &&
+                manifest.PublicAccessProvider != "tailscale" &&
+                !arguments.Contains("tailscale") &&
+                string.Equals(manifest.PrivilegeMode, "elevated", StringComparison.OrdinalIgnoreCase))
+            {
+                // 最高权限计划任务启动的核心进程不能保证允许普通托盘终止。
+                // 原生命令真正失败时才请求 UAC；命令设计为幂等，可安全重试已完成的前置状态变更。
+                await RunElevatedProcessAsync(binaryPath, commandArguments, cancellationToken);
+            }
+        }
+        finally
+        {
+            _operation.Release();
+        }
+    }
+
+    private static bool IsElevatedServiceLifecycle(RuntimeManifest manifest, string command, IReadOnlyCollection<string> arguments)
+    {
+        return string.Equals(manifest.PrivilegeMode, "elevated", StringComparison.OrdinalIgnoreCase) &&
+            command == "service" &&
+            arguments.Any(argument => argument is "start" or "stop" or "restart");
+    }
+
+    private async Task RunScheduledServiceActionAsync(RuntimeManifest manifest, string action, CancellationToken cancellationToken)
+    {
+        var taskName = string.IsNullOrWhiteSpace(manifest.AgentDockTaskName) ? "AgentDock" : manifest.AgentDockTaskName.Trim();
+        var taskPath = "\\" + taskName.TrimStart('\\');
+        if (action is "stop" or "restart")
+        {
+            await RunScheduledTaskCommandAsync(cancellationToken, allowNotRunning: true, "/End", "/TN", taskPath);
+        }
+        if (action is "start" or "restart")
+        {
+            await RunScheduledTaskCommandAsync(cancellationToken, allowNotRunning: false, "/Run", "/TN", taskPath);
+        }
+    }
+
+    private static async Task RunScheduledTaskCommandAsync(CancellationToken cancellationToken, bool allowNotRunning, params string[] arguments)
+    {
+        var startInfo = CreateRedirectedProcessStartInfo(Path.Combine(Environment.SystemDirectory, "schtasks.exe"));
+        foreach (var argument in arguments)
         {
             startInfo.ArgumentList.Add(argument);
         }
-
         try
         {
             _ = await RunProcessAsync(startInfo, cancellationToken);
         }
-        catch (InvalidOperationException) when (
-            allowElevation &&
-            manifest.PublicAccessProvider != "tailscale" &&
-            !arguments.Contains("tailscale") &&
-            string.Equals(manifest.PrivilegeMode, "elevated", StringComparison.OrdinalIgnoreCase))
+        catch (InvalidOperationException ex) when (allowNotRunning && IsTaskNotRunning(ex.Message))
         {
-            // 最高权限计划任务启动的核心进程不能保证允许普通托盘终止。
-            // 原生命令真正失败时才请求 UAC；命令设计为幂等，可安全重试已完成的前置状态变更。
-            await RunElevatedProcessAsync(binaryPath, commandArguments, cancellationToken);
         }
+    }
+
+    private static bool IsTaskNotRunning(string message)
+    {
+        return message.Contains("no running instance", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("当前没有运行", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("没有运行", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("현재 실행", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("실행 중이지", StringComparison.OrdinalIgnoreCase);
     }
 
     private static async Task RunElevatedProcessAsync(
@@ -1133,21 +1198,38 @@ public sealed partial class RuntimeService : IDisposable
     private static async Task<string> RunProcessAsync(ProcessStartInfo startInfo, CancellationToken cancellationToken)
     {
         using var process = Process.Start(startInfo) ?? throw new InvalidOperationException(UiText.Format("ProcessStartFailed", startInfo.FileName));
-        var standardOutput = process.StandardOutput.ReadToEndAsync(cancellationToken);
-        var standardError = process.StandardError.ReadToEndAsync(cancellationToken);
-        await process.WaitForExitAsync(cancellationToken);
-        var output = (await standardOutput).Trim();
-        var error = (await standardError).Trim();
-        if (process.ExitCode != 0)
+        try
         {
-            throw new InvalidOperationException(string.IsNullOrWhiteSpace(error) ? output : error);
-        }
+            var standardOutput = process.StandardOutput.ReadToEndAsync(cancellationToken);
+            var standardError = process.StandardError.ReadToEndAsync(cancellationToken);
+            await process.WaitForExitAsync(cancellationToken);
+            var output = (await standardOutput).Trim();
+            var error = (await standardError).Trim();
+            if (process.ExitCode != 0)
+            {
+                throw new InvalidOperationException(string.IsNullOrWhiteSpace(error) ? output : error);
+            }
 
-        if (string.IsNullOrWhiteSpace(output))
-        {
-            return error;
+            if (string.IsNullOrWhiteSpace(output))
+            {
+                return error;
+            }
+            return string.IsNullOrWhiteSpace(error) ? output : output + Environment.NewLine + error;
         }
-        return string.IsNullOrWhiteSpace(error) ? output : output + Environment.NewLine + error;
+        catch (OperationCanceledException)
+        {
+            try
+            {
+                if (!process.HasExited)
+                {
+                    process.Kill(entireProcessTree: true);
+                }
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or Win32Exception)
+            {
+            }
+            throw;
+        }
     }
 
     private static async Task<string> RunUpdateProcessAsync(
@@ -1574,5 +1656,6 @@ public sealed partial class RuntimeService : IDisposable
         _tailscaleLifetime.Cancel();
         _funnelVerification.Dispose();
         _httpClient.Dispose();
+        _operation.Dispose();
     }
 }
