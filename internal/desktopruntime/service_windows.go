@@ -24,10 +24,19 @@ func platformServiceStatus(ctx context.Context, runtimeRoot string) (ServiceStat
 		return ServiceStatus{}, err
 	}
 	coreBinary := ActiveCoreBinary(runtimeRoot, manifest)
-	running, err := processRunningAtPath(coreBinary)
+	supervisorPID, err := activeTunnelSupervisorPID(runtimeRoot, coreBinary)
 	if err != nil {
 		return ServiceStatus{}, err
 	}
+	excluded := map[uint32]struct{}{}
+	if supervisorPID != 0 {
+		excluded[supervisorPID] = struct{}{}
+	}
+	coreProcesses, err := processIDsAtPathExcept(coreBinary, excluded)
+	if err != nil {
+		return ServiceStatus{}, err
+	}
+	running := len(coreProcesses) > 0
 	healthy := testHealth(ctx, manifest.HealthURL())
 	startupEnabled, err := coreAutostartEnabled(ctx, manifest)
 	if err != nil {

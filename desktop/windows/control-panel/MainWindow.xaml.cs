@@ -100,6 +100,39 @@ public partial class MainWindow : Window
         }
     }
 
+    internal void ApplyLiveRuntimeStatus(RuntimeSnapshot live)
+    {
+        if (!IsVisible || _tunnelChangeInProgress || _snapshot is null)
+        {
+            return;
+        }
+
+        var wasHealthy = _snapshot.Healthy;
+        var snapshot = _snapshot with
+        {
+            Version = string.IsNullOrWhiteSpace(live.Version) ? _snapshot.Version : live.Version,
+            CoreRunning = live.CoreRunning,
+            Healthy = live.Healthy,
+            CloudflaredRunning = live.CloudflaredRunning,
+            LocalMcpUrl = live.LocalMcpUrl,
+            CheckedAt = live.CheckedAt,
+            Tailscale = live.Tailscale ?? _snapshot.Tailscale
+        };
+        _snapshot = snapshot;
+        var tunnelDown = snapshot.PublicTunnelDown;
+        HeaderStatusText.Text = tunnelDown
+            ? UiText.Get("PublicTunnelDown")
+            : snapshot.Healthy ? UiText.Get("RunningNormally") : snapshot.CoreRunning ? UiText.Get("RunningHealthFailed") : UiText.Get("Stopped");
+        StatusDot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, tunnelDown || (snapshot.CoreRunning && !snapshot.Healthy) ? "WarningBrush" : snapshot.Healthy ? "SuccessBrush" : "SecondaryText");
+        ServiceStatusText.Text = snapshot.CoreRunning ? UiText.Get("Running") : UiText.Get("Stopped");
+        HealthStatusText.Text = snapshot.PublicTunnelDown ? UiText.Get("PublicTunnelDown") : snapshot.Healthy ? UiText.Get("Healthy") : UiText.Get("Unavailable");
+        VersionText.Text = string.IsNullOrWhiteSpace(snapshot.Version) ? UiText.Get("Unknown") : snapshot.Version;
+        if (snapshot.Healthy && !wasHealthy)
+        {
+            _ = RefreshActivitySummaryAsync();
+        }
+    }
+
     private void ApplySnapshot(RuntimeSnapshot snapshot)
     {
         _updatingUi = true;
