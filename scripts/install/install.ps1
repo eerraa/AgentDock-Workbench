@@ -756,6 +756,18 @@ function Enable-AgentDockTask {
     Enable-ScheduledTask -TaskName 'AgentDock' -TaskPath '\' -ErrorAction Stop | Out-Null
 }
 
+function Stop-AgentDockScheduledTask {
+    $task = Get-ScheduledTask -TaskName 'AgentDock' -TaskPath '\' -ErrorAction SilentlyContinue
+    if ($null -eq $task) {
+        return
+    }
+    $info = Get-ScheduledTaskInfo -TaskName 'AgentDock' -TaskPath '\'
+    if ($info.State -ne 'Running') {
+        return
+    }
+    Stop-ScheduledTask -TaskName 'AgentDock' -TaskPath '\' -ErrorAction Stop
+}
+
 function Start-AgentDockTask {
     param(
         [Parameter(Mandatory = $true)][string] $AgentDockBinary,
@@ -1714,6 +1726,9 @@ try {
         }
     }
     $agentDockStopAttempted = $true
+    if ($effectivePrivilegeMode -eq 'elevated') {
+        Stop-AgentDockScheduledTask
+    }
     if ($generationLayoutDetected) {
         [void] (Stop-AgentDockForUpgrade -BinaryPath $existingGenerationCore)
         # Also stop a legacy stable Core left by a crash between source-pointer commit and shim install.
@@ -1939,7 +1954,9 @@ exit `$LASTEXITCODE
         if ($effectivePrivilegeMode -eq 'elevated') {
             $engineArgs += @('--task-name', 'AgentDock')
         }
-        if ((-not $RegisterStartup) -or ($InstallChannel -eq 'setup' -and -not $existingInstallDetected)) {
+        if ($effectivePrivilegeMode -eq 'elevated' -or (-not $RegisterStartup) -or ($InstallChannel -eq 'setup' -and -not $existingInstallDetected)) {
+            # An elevated install commits when the scheduled task owns the new generation.
+            # The unelevated installer does not start that task or wait for its port.
             $engineArgs += @('--no-start', '--skip-health')
         }
         if (-not [string]::IsNullOrWhiteSpace($payloadVersion)) {
@@ -2011,7 +2028,9 @@ exit `$LASTEXITCODE
             throw "Windows Task Scheduler is unavailable for immediate Setup activation: $($taskState.SchedulerError)"
         }
 
-        if ($engineOwnsActivation -and $RegisterStartup) {
+        if ($effectivePrivilegeMode -eq 'elevated') {
+            $healthStatus = 'not-started'
+        } elseif ($engineOwnsActivation -and $RegisterStartup) {
             $healthStatus = 'healthy'
             if ($resolvedTunnelMode -eq 'quick') {
                 $publicUrl = Read-TextFile -Path $quickTunnelUrlPath
@@ -2022,9 +2041,7 @@ exit `$LASTEXITCODE
                 $publicUrl = $ServerUrl
             }
         } elseif ($RegisterStartup) {
-            if ($effectivePrivilegeMode -eq 'elevated') {
-                Start-AgentDockTask -AgentDockBinary $destinationBinary -ExpectedUserSid $taskUser.Sid
-            } elseif ($InstallChannel -eq 'setup') {
+            if ($InstallChannel -eq 'setup') {
                 Invoke-SetupRuntimeProcess `
                     -FilePath $sourceBinary `
                     -Arguments "service start --runtime-root `"$runtimeDir`"" `
@@ -2063,9 +2080,7 @@ exit `$LASTEXITCODE
                 }
             }
         } elseif ($mustRestartExistingProcess) {
-            if ($effectivePrivilegeMode -eq 'elevated') {
-                Start-AgentDockTask -AgentDockBinary $destinationBinary -ExpectedUserSid $taskUser.Sid
-            } elseif ($InstallChannel -eq 'setup') {
+            if ($InstallChannel -eq 'setup') {
                 Invoke-SetupRuntimeProcess `
                     -FilePath $sourceBinary `
                     -Arguments "service start --runtime-root `"$runtimeDir`"" `
@@ -2306,24 +2321,13 @@ exit `$LASTEXITCODE
             if ($restoredManifest.PSObject.Properties['port']) { $rollbackHealthPort = [int]$restoredManifest.port }
         }
         $taskWillRestartAgentDock = $false
-        if ($taskRestored -and $taskState.WasRunning) {
+        if ($taskRestored -and $taskState.WasRunning -and $effectivePrivilegeMode -ne 'elevated') {
             Start-AgentDockTask -AgentDockBinary $sourceBinary -ExpectedUserSid $taskUser.Sid
             $taskWillRestartAgentDock = $true
         }
         if ($processWasRunning -and -not $taskWillRestartAgentDock) {
             if ($effectivePrivilegeMode -eq 'elevated') {
-                $rollbackTaskBinary = ''
-                if (Test-Path -LiteralPath $destinationBinary -PathType Leaf) {
-                    $rollbackTaskBinary = $destinationBinary
-                } elseif (Test-Path -LiteralPath $sourceBinary -PathType Leaf) {
-                    $rollbackTaskBinary = $sourceBinary
-                }
-                if (-not [string]::IsNullOrWhiteSpace($rollbackTaskBinary)) {
-                    Start-AgentDockTask -AgentDockBinary $rollbackTaskBinary -ExpectedUserSid $taskUser.Sid
-                    Wait-AgentDockHealth -HealthPort $rollbackHealthPort
-                } elseif (Test-Path -LiteralPath $launcherPath -PathType Leaf) {
-                    Start-AgentDockLauncher -LauncherPath $launcherPath
-                }
+                Stop-AgentDockScheduledTask
             } elseif (Test-Path -LiteralPath $destinationBinary -PathType Leaf) {
                 # The Engine transaction has restored the committed source generation. Wait for the
                 # source Core to become healthy before confirming the outer adapter rollback.
