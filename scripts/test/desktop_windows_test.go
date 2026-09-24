@@ -29,6 +29,8 @@ func TestWindowsControlPanelUsesNativeTunnelCommands(t *testing.T) {
 		`StartTaskTunnelSupervisor`,
 		`startInfo.ArgumentList.Add("launch")`,
 		`await RunScheduledServiceActionAsync(manifest, action, cancellationToken)`,
+		`QueryFullProcessImageName`,
+		`ProcessQueryLimitedInformation`,
 		`"configure"`,
 		`"--token-file"`,
 		`RunNativeAgentDockAsync("config"`,
@@ -46,6 +48,7 @@ func TestWindowsControlPanelUsesNativeTunnelCommands(t *testing.T) {
 		`RunManagementScriptAsync(["-Action", "regenerate-quick"]`,
 		`powershell.exe`,
 		`manage-windows.ps1`,
+		`process.MainModule`,
 	} {
 		if strings.Contains(runtimeService, forbidden) {
 			t.Fatalf("Windows control panel still invokes PowerShell for Tunnel lifecycle %q", forbidden)

@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Principal;
 using System.Text;
@@ -1594,6 +1595,17 @@ public sealed partial class RuntimeService : IDisposable
         }
     }
 
+    private const uint ProcessQueryLimitedInformation = 0x1000;
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr OpenProcess(uint access, bool inheritHandle, int processId);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern bool QueryFullProcessImageName(IntPtr process, uint flags, StringBuilder name, ref uint size);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool CloseHandle(IntPtr handle);
+
     private static bool IsProcessRunningAtPath(string processName, string expectedPath)
     {
         if (string.IsNullOrWhiteSpace(expectedPath))
@@ -1607,22 +1619,36 @@ public sealed partial class RuntimeService : IDisposable
             {
                 using (process)
                 {
-                    try
-                    {
-                        var actual = process.MainModule?.FileName;
-                        return !string.IsNullOrWhiteSpace(actual) &&
-                               string.Equals(Path.GetFullPath(actual), normalizedExpected, StringComparison.OrdinalIgnoreCase);
-                    }
-                    catch
-                    {
-                        return false;
-                    }
+                    // MainModule needs PROCESS_VM_READ and fails for the elevated task's
+                    // cloudflared. Limited query still returns the image path.
+                    var actual = QueryProcessImagePath(process);
+                    return !string.IsNullOrWhiteSpace(actual) &&
+                           string.Equals(Path.GetFullPath(actual), normalizedExpected, StringComparison.OrdinalIgnoreCase);
                 }
             });
         }
         catch
         {
             return false;
+        }
+    }
+
+    private static string? QueryProcessImagePath(Process process)
+    {
+        var handle = OpenProcess(ProcessQueryLimitedInformation, false, process.Id);
+        if (handle == IntPtr.Zero)
+        {
+            return null;
+        }
+        try
+        {
+            var buffer = new StringBuilder(1024);
+            var size = (uint)buffer.Capacity;
+            return QueryFullProcessImageName(handle, 0, buffer, ref size) ? buffer.ToString() : null;
+        }
+        finally
+        {
+            CloseHandle(handle);
         }
     }
 
