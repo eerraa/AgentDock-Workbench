@@ -13,6 +13,7 @@ import (
 	"strings"
 	"unicode/utf16"
 
+	processctl "github.com/uvwt/agentdock/internal/process"
 	"golang.org/x/sys/windows/registry"
 )
 
@@ -62,16 +63,8 @@ func platformSetAutostart(ctx context.Context, runtimeRoot, component string, en
 
 func coreAutostartEnabled(ctx context.Context, manifest Manifest) (bool, error) {
 	if manifest.UsesScheduledTask() {
-		output, err := exec.CommandContext(ctx, "schtasks.exe", "/Query", "/TN", scheduledTaskPath(manifest.AgentDockTaskName), "/XML").Output()
-		if err != nil {
-			return false, err
-		}
-		task, err := parseScheduledTaskXML(output)
-		if err != nil {
-			return false, err
-		}
-		// Task Scheduler 省略 Enabled 时使用 schema 默认值 true。
-		return task.Settings.Enabled == nil || *task.Settings.Enabled, nil
+		state, err := nativeRuntimeTaskAction(ctx, manifest.InstallRoot, manifest, "status")
+		return state.Enabled, err
 	}
 	return runValuePresent(defaultString(manifest.StartupValueName, "AgentDock"))
 }
@@ -121,7 +114,9 @@ func decodeScheduledTaskXML(output []byte) ([]byte, error) {
 }
 
 func runScheduledTaskCommand(ctx context.Context, args ...string) error {
-	output, err := exec.CommandContext(ctx, "schtasks.exe", args...).CombinedOutput()
+	command := exec.CommandContext(ctx, "schtasks.exe", args...)
+	processctl.Configure(command)
+	output, err := command.CombinedOutput()
 	if err != nil {
 		message := strings.TrimSpace(string(output))
 		if message == "" {

@@ -122,6 +122,16 @@ func openRuntimeHostProcess(identity runtimeHostProcess, binary string) (*proces
 	if !runtimePathsEqual(windows.UTF16ToString(buffer[:size]), binary) {
 		return fail(errors.New("runtime process identity path mismatch"))
 	}
+	var token windows.Token
+	if err := windows.OpenProcessToken(handle, windows.TOKEN_QUERY, &token); err != nil {
+		return fail(err)
+	}
+	ownerSID, userErr := tokenUserSID(token)
+	token.Close()
+	current, currentErr := tokenUserSID(windows.GetCurrentProcessToken())
+	if userErr != nil || currentErr != nil || ownerSID != current {
+		return fail(errors.New("runtime process belongs to a different Windows user"))
+	}
 	return child, nil
 }
 func captureRuntimeHostProcesses(root string) ([]*processctl.JobChild, error) {
@@ -153,6 +163,28 @@ func captureRuntimeHostProcesses(root string) ([]*processctl.JobChild, error) {
 		if child != nil {
 			children = append(children, child)
 		}
+	}
+	tunnel, tunnelErr := readRuntimeTunnelChild(root)
+	if tunnelErr == nil && tunnel.Epoch == state.Epoch && tunnel.Generation == state.Generation && tunnel.Supervisor == state.Supervisor {
+		manifest, _, err := loadDesktopManifest(root)
+		if err == nil {
+			child, openErr := openRuntimeHostProcess(tunnel.Child, manifest.CloudflaredBinary)
+			err = openErr
+			if child != nil {
+				children = append(children, child)
+			}
+		}
+		if err != nil {
+			for _, child := range children {
+				child.Close()
+			}
+			return nil, err
+		}
+	} else if tunnelErr != nil && !errors.Is(tunnelErr, os.ErrNotExist) {
+		for _, child := range children {
+			child.Close()
+		}
+		return nil, tunnelErr
 	}
 	return children, nil
 }
@@ -217,7 +249,9 @@ func waitCapturedCoreHealth(ctx context.Context, manifest Manifest, core *proces
 		}
 		health, err := readRuntimeCoreHealth(ctx, manifest.HealthURL())
 		if err == nil && health.PID == core.PID && strings.TrimPrefix(health.Version, "v") == strings.TrimPrefix(generation, "v") && health.OriginHash == originHash {
-			return nil
+			if alive, aliveErr := core.Alive(); aliveErr == nil && alive {
+				return nil
+			}
 		}
 		select {
 		case <-ctx.Done():
@@ -253,7 +287,10 @@ func runtimeHostHealthy(ctx context.Context, root, epoch, generation string) boo
 		return false
 	}
 	health, err := readRuntimeCoreHealth(ctx, manifest.HealthURL())
-	return err == nil && health.PID == core.PID && strings.TrimPrefix(health.Version, "v") == strings.TrimPrefix(state.Generation, "v") && health.OriginHash == state.OriginHash
+	latest, latestErr := readRuntimeHostState(root)
+	hostAlive, hostErr := host.Alive()
+	coreAlive, coreErr := core.Alive()
+	return err == nil && latestErr == nil && latest == state && hostErr == nil && coreErr == nil && hostAlive && coreAlive && health.PID == core.PID && strings.TrimPrefix(health.Version, "v") == strings.TrimPrefix(state.Generation, "v") && health.OriginHash == state.OriginHash
 }
 func waitRuntimeHostHealth(ctx context.Context, root, epoch, generation string) error {
 	ctx, cancel := context.WithCancel(ctx)
@@ -268,4 +305,36 @@ func waitRuntimeHostHealth(ctx context.Context, root, epoch, generation string) 
 		case <-time.After(100 * time.Millisecond):
 		}
 	}
+}
+
+func runtimeHostServiceStatus(ctx context.Context, root string, manifest Manifest) (ServiceStatus, error) {
+	task, err := nativeRuntimeTaskAction(ctx, root, manifest, "status")
+	if err != nil {
+		return ServiceStatus{}, err
+	}
+	result := ServiceStatus{StartupEnabled: task.Enabled}
+	state, err := readRuntimeHostState(root)
+	if errors.Is(err, os.ErrNotExist) {
+		return result, nil
+	}
+	if err != nil {
+		return result, err
+	}
+	layout, err := updateengine.NewWindowsLayout(root)
+	if err != nil {
+		return result, err
+	}
+	host, err := openRuntimeHostProcess(state.Host, layout.TrayShim())
+	if err != nil || host == nil {
+		return result, err
+	}
+	defer host.Close()
+	core, err := openRuntimeHostProcess(state.Core, layout.GenerationCore(state.Generation))
+	if err != nil || core == nil {
+		return result, err
+	}
+	defer core.Close()
+	result.Running = true
+	result.Healthy = runtimeHostHealthy(ctx, root, state.Epoch, state.Generation)
+	return result, nil
 }

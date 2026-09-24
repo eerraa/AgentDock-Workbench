@@ -52,6 +52,9 @@ func runTaskCoreHost(args []string) (int, error) {
 		return 1, fmt.Errorf("task core host runtime root %s does not match stable entry root %s", runtimeRoot, stableRoot)
 	}
 
+	if _, _, err := desktopruntime.ValidateManagedRuntimeTask(context.Background(), runtimeRoot); err != nil {
+		return 1, err
+	}
 	store, err := updateengine.NewStore(runtimeRoot)
 	if err != nil {
 		return 1, err

@@ -84,11 +84,27 @@ func (job *Job) Start(binary string, args []string, directory string, environmen
 	if err != nil {
 		return nil, err
 	}
-	env := append([]string(nil), environment...)
-	for _, entry := range env {
+	// Match os/exec's Windows last-value-wins, case-insensitive environment
+	// contract even though CreateProcess receives our explicit UTF-16 block.
+	values := make(map[string]string, len(environment))
+	for _, entry := range environment {
 		if strings.ContainsRune(entry, 0) {
 			return nil, errors.New("NUL in child environment")
 		}
+		start := 0
+		if strings.HasPrefix(entry, "=") {
+			start = 1
+		}
+		equals := strings.IndexByte(entry[start:], '=')
+		if equals < 0 {
+			return nil, errors.New("child environment entry has no value separator")
+		}
+		equals += start
+		values[strings.ToUpper(entry[:equals])] = entry
+	}
+	env := make([]string, 0, len(values))
+	for _, entry := range values {
+		env = append(env, entry)
 	}
 	sort.SliceStable(env, func(i, j int) bool { return strings.ToUpper(env[i]) < strings.ToUpper(env[j]) })
 	block := utf16.Encode([]rune(strings.Join(env, "\x00") + "\x00\x00"))

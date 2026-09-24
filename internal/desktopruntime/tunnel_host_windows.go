@@ -144,7 +144,8 @@ func waitCloudflaredCoreHealth(ctx context.Context, run tunnelRuntime) error {
 		health, err := readRuntimeCoreHealth(wait, run.localOrigin()+"/healthz")
 		if err == nil {
 			path, pathErr := queryProcessPath(health.PID)
-			if pathErr == nil && runtimePathsEqual(path, binary) {
+			origin, originErr := readTrimmedText(run.files.serverURL)
+			if pathErr == nil && originErr == nil && runtimePathsEqual(path, binary) && health.OriginHash == runtimeOriginDigest(origin) {
 				return nil
 			}
 		}

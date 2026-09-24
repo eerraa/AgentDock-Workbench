@@ -132,7 +132,7 @@ var errCloudflaredChildExit = errors.New("cloudflared child exited")
 func runCloudflaredOnce(ctx context.Context, runtime tunnelRuntime, logs *processLogs) error {
 	logCursors := tunnelLogCursors{}
 	var err error
-	if runtime.mode == "quick" {
+	if runtime.mode == "quick" || runtime.mode == "named" {
 		logCursors, err = captureTunnelLogCursors(runtime.files)
 		if err != nil {
 			return err
@@ -148,6 +148,34 @@ func runCloudflaredOnce(ctx context.Context, runtime tunnelRuntime, logs *proces
 	if err := command.Start(); err != nil {
 		return err
 	}
+	captured, err := captureStartedTunnelProcess(command.Process.Pid, runtime.manifest.CloudflaredBinary)
+	if err != nil {
+		_ = command.Process.Kill()
+		_ = command.Wait()
+		return err
+	}
+	defer captured.Close()
+	var owned *runtimeTunnelChildState
+	if client := tunnelHostFromContext(ctx); client != nil {
+		supervisor, err := currentRuntimeHostIdentity()
+		if err != nil {
+			_ = command.Process.Kill()
+			_ = command.Wait()
+			return err
+		}
+		owned = &runtimeTunnelChildState{SchemaVersion: 1, Epoch: client.epoch, Generation: client.generation, Supervisor: supervisor, Child: hostProcessIdentity(captured), Phase: "provision"}
+		if err := writeRuntimeTunnelChild(runtime.root, *owned); err != nil {
+			_ = command.Process.Kill()
+			_ = command.Wait()
+			return err
+		}
+		defer func() {
+			current, err := readRuntimeTunnelChild(runtime.root)
+			if err == nil && current.Epoch == owned.Epoch && current.Child == owned.Child {
+				_ = os.Remove(filepath.Join(runtime.root, runtimeTunnelStateFile))
+			}
+		}()
+	}
 	startedAt := time.Now()
 	phase := "provision"
 	fmt.Fprintf(logs.stderr, "cloudflared started supervisor_pid=%d child_pid=%d phase=provision\n", os.Getpid(), command.Process.Pid)
@@ -158,6 +186,9 @@ func runCloudflaredOnce(ctx context.Context, runtime tunnelRuntime, logs *proces
 	if runtime.mode == "quick" {
 		publicURL, readyErr := waitQuickTunnelURL(ctx, runtime, logCursors, quickTunnelProvisionAttemptTimeout)
 		if readyErr != nil {
+			if alive, _ := captured.Alive(); !alive {
+				readyErr = errors.Join(errCloudflaredChildExit, readyErr)
+			}
 			_ = command.Process.Kill()
 			_ = command.Wait()
 			return readyErr
@@ -165,6 +196,31 @@ func runCloudflaredOnce(ctx context.Context, runtime tunnelRuntime, logs *proces
 		phase = "apply-url"
 		fmt.Fprintf(logs.stderr, "cloudflared phase=apply-url child_pid=%d\n", command.Process.Pid)
 		if err := applyQuickTunnelURL(ctx, runtime, publicURL); err != nil {
+			_ = command.Process.Kill()
+			_ = command.Wait()
+			return err
+		}
+	}
+	if runtime.mode == "named" {
+		if err := waitNamedTunnelReady(ctx, runtime, logCursors, namedTunnelStartTimeout); err != nil {
+			if alive, _ := captured.Alive(); !alive {
+				err = errors.Join(errCloudflaredChildExit, err)
+			}
+			_ = command.Process.Kill()
+			_ = command.Wait()
+			return err
+		}
+	}
+	if alive, err := captured.Alive(); err != nil || !alive {
+		if err != nil {
+			_ = command.Process.Kill()
+		}
+		_ = command.Wait()
+		return errors.Join(errCloudflaredChildExit, err)
+	}
+	if owned != nil {
+		owned.Ready, owned.Phase = true, "serving"
+		if err := writeRuntimeTunnelChild(runtime.root, *owned); err != nil {
 			_ = command.Process.Kill()
 			_ = command.Wait()
 			return err
@@ -186,6 +242,9 @@ func platformTunnelStatus(ctx context.Context, runtimeRoot string) (TunnelStatus
 	}
 	if runtime.mode == "funnel" {
 		return platformTailscaleStatus(ctx, runtimeRoot, "")
+	}
+	if runtime.manifest.UsesScheduledTask() {
+		return runtimeHostTunnelStatus(ctx, runtime)
 	}
 	running, err := processRunningAtPath(runtime.manifest.CloudflaredBinary)
 	if err != nil {
@@ -422,7 +481,7 @@ func cloudflaredCommand(ctx context.Context, runtime tunnelRuntime) (*exec.Cmd, 
 	if err != nil {
 		return nil, err
 	}
-	environment := environmentWithout(os.Environ(), "TUNNEL_TOKEN")
+	environment := environmentWithout(environmentWithout(environmentWithout(os.Environ(), "TUNNEL_TOKEN"), runtimeHostEpochEnv), runtimeHostGenerationEnv)
 	if runtime.mode == "quick" {
 		arguments = append(arguments, "--url", fmt.Sprintf("http://127.0.0.1:%d", runtime.settings.Port))
 	} else {
@@ -464,6 +523,25 @@ func applyQuickTunnelURL(ctx context.Context, runtime tunnelRuntime, publicURL s
 	}
 	if err := ctx.Err(); err != nil {
 		return err
+	}
+	if client := tunnelHostFromContext(ctx); client != nil {
+		release, err := acquireTunnelOperation(ctx, runtime.root)
+		if err != nil {
+			return err
+		}
+		defer release()
+		current, err := loadTunnelRuntime(runtime.root)
+		if err != nil {
+			return err
+		}
+		if current.mode != "quick" {
+			return errors.New("Quick configuration changed before publication")
+		}
+		// Use the latest manifest so an unrelated saved setting is not overwritten.
+		if err := current.updateManifest("quick", publicURL); err != nil {
+			return err
+		}
+		return writeRuntimeText(current.files.quickURL, publicURL)
 	}
 	if err := runtime.updateManifest("quick", publicURL); err != nil {
 		return err

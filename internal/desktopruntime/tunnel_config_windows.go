@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -59,6 +60,9 @@ func configureCloudflareTunnel(ctx context.Context, request TunnelConfigureReque
 		}
 	}
 	paths := []string{runtime.files.manifest, runtime.files.mode, runtime.files.serverURL, runtime.files.namedServerURL, runtime.files.quickURL, runtime.files.token}
+	for _, name := range []string{"auth-token.dpapi", "oauth-password.dpapi", "oauth-token-secret.dpapi", credentialOwnerSIDFile} {
+		paths = append(paths, filepath.Join(runtime.root, name))
+	}
 	var snapshots []fileSnapshot
 	for _, path := range paths {
 		value, err := snapshotFile(path)
@@ -67,26 +71,24 @@ func configureCloudflareTunnel(ctx context.Context, request TunnelConfigureReque
 		}
 		snapshots = append(snapshots, value)
 	}
-	if err := ensureDesktopCredentials(runtime.root); err != nil {
-		return err
-	}
-	if err := preserveNamedServerURL(runtime); err != nil {
-		return err
-	}
-	if providedToken != "" {
-		if err := writeProtectedText(runtime.files.token, providedToken, tunnelTokenEntropy); err != nil {
-			return err
-		}
-	}
-	if !runtime.manifest.UsesScheduledTask() {
-		if err := stopCloudflareTunnel(ctx, runtime); err != nil {
-			return err
-		}
-	}
-	// The caller owns the operation gate. A failed write/handoff restores the
-	// exact prior config; runtime restart acceptance remains a separate fact.
+	// The caller owns the operation gate. Every mutation below is restored on failure.
 	apply := func() error {
-
+		if err := ensureDesktopCredentials(runtime.root); err != nil {
+			return err
+		}
+		if err := preserveNamedServerURL(runtime); err != nil {
+			return err
+		}
+		if providedToken != "" {
+			if err := writeProtectedText(runtime.files.token, providedToken, tunnelTokenEntropy); err != nil {
+				return err
+			}
+		}
+		if !runtime.manifest.UsesScheduledTask() {
+			if err := stopCloudflareTunnel(ctx, runtime); err != nil {
+				return err
+			}
+		}
 		switch request.Mode {
 		case "none":
 			if err := writeRuntimeText(runtime.files.mode, "none"); err != nil {

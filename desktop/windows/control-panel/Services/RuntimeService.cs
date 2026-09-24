@@ -528,6 +528,7 @@ public sealed partial class RuntimeService : IDisposable
         var snapshot = await GetSnapshotAsync(cancellationToken);
         var backupDirectory = Path.Combine(Path.GetTempPath(), $"agentdock-privilege-{Guid.NewGuid():N}");
         var taskTransitionPrepared = false;
+        var preserveRecovery = false;
         Directory.CreateDirectory(backupDirectory);
 
         try
@@ -571,23 +572,25 @@ public sealed partial class RuntimeService : IDisposable
         }
         catch (Exception transitionError)
         {
-            if (!taskTransitionPrepared)
+            if (!taskTransitionPrepared && !File.Exists(Path.Combine(backupDirectory, "state.json")))
             {
                 throw;
             }
 
             try
             {
-                await RunTaskAdminTransitionAsync("restore", manifest, backupDirectory, cancellationToken);
-                await WritePrivilegeModeAsync(wasElevated, cancellationToken);
+                using var recovery = new CancellationTokenSource(TimeSpan.FromSeconds(45));
+                await RunTaskAdminTransitionAsync("restore", manifest, backupDirectory, recovery.Token);
+                await WritePrivilegeModeAsync(wasElevated, recovery.Token);
                 SetStandardCoreStartup(manifest, !wasElevated && snapshot.CoreStartupEnabled);
-                if (!wasElevated && snapshot.CoreRunning)
+                if (snapshot.CoreRunning)
                 {
-                    await RunCoreActionAsync("start", cancellationToken);
+                    await RunCoreActionAsync("start", recovery.Token);
                 }
             }
             catch (Exception rollbackError)
             {
+                preserveRecovery = true;
                 throw new AggregateException(UiText.Get("PrivilegeSwitchRollbackFailed"), transitionError, rollbackError);
             }
             throw;
@@ -596,7 +599,7 @@ public sealed partial class RuntimeService : IDisposable
         {
             try
             {
-                Directory.Delete(backupDirectory, recursive: true);
+                if (!preserveRecovery) Directory.Delete(backupDirectory, recursive: true);
             }
             catch
             {

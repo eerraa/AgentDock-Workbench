@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/url"
 	"strings"
+	"unicode/utf8"
 )
 
 const RuntimeHostFrameLimit = 16 * 1024
@@ -40,7 +41,7 @@ func ReadRuntimeHostFrame(reader *bufio.Reader, value any) error {
 	if err != nil {
 		return err
 	}
-	if len(data) > RuntimeHostFrameLimit {
+	if len(data) > RuntimeHostFrameLimit || !utf8.Valid(data) {
 		return errors.New("runtime host frame exceeds limit")
 	}
 	decoder := json.NewDecoder(bytes.NewReader(data))
@@ -83,7 +84,7 @@ func validateQuickRuntimeOrigin(origin string) error {
 		return errors.New("runtime host requires a canonical Quick HTTPS origin")
 	}
 	label := strings.TrimSuffix(parsed.Host, ".trycloudflare.com")
-	if label == "" || strings.Contains(label, ".") {
+	if label == "" || len(label) > 63 || strings.Contains(label, ".") || strings.HasPrefix(label, "-") || strings.HasSuffix(label, "-") {
 		return errors.New("invalid Quick hostname")
 	}
 	for _, c := range label {

@@ -20,7 +20,10 @@ type runtimeTaskContract struct {
 	Name, UserSID, Path, Arguments, WorkingDirectory string
 	LogonType, RunLevel, Actions, ActionType         int
 }
-type runtimeTaskState struct{ Enabled, Running bool }
+type runtimeTaskState struct {
+	Enabled bool `json:"enabled"`
+	Running bool `json:"running"`
+}
 
 func validateRuntimeTaskContract(root, name, sid string, contract runtimeTaskContract) error {
 	layout, err := updateengine.NewWindowsLayout(root)
@@ -34,8 +37,7 @@ func validateRuntimeTaskContract(root, name, sid string, contract runtimeTaskCon
 		return errors.New("task working directory differs from runtime root")
 	}
 	canonical := `--run-core-task --runtime-root "` + filepath.Clean(root) + `"`
-	legacy := `--run-core-task --runtime-root "` + filepath.Clean(root) + `"`
-	if !strings.EqualFold(contract.Arguments, canonical) && !strings.EqualFold(contract.Arguments, legacy) {
+	if !strings.EqualFold(contract.Arguments, canonical) {
 		return errors.New("task arguments are not the exact native runtime host action")
 	}
 	return nil
@@ -372,4 +374,15 @@ func elevatedRuntimeAction(ctx context.Context, root string, manifest Manifest, 
 	}
 	defer release()
 	return elevatedRuntimeActionLocked(ctx, root, manifest, action)
+}
+
+// ValidateManagedRuntimeTask is read-only. Setup uses the exact same owner and
+// action contract as ordinary runtime commands, after staging its manifest.
+func ValidateManagedRuntimeTask(ctx context.Context, root string) (bool, bool, error) {
+	manifest, root, err := loadDesktopManifest(root)
+	if err != nil {
+		return false, false, err
+	}
+	state, err := nativeRuntimeTaskAction(ctx, root, manifest, "validate")
+	return state.Enabled, state.Running, err
 }

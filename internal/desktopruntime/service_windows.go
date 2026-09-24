@@ -23,6 +23,9 @@ func platformServiceStatus(ctx context.Context, runtimeRoot string) (ServiceStat
 	if err != nil {
 		return ServiceStatus{}, err
 	}
+	if manifest.UsesScheduledTask() {
+		return runtimeHostServiceStatus(ctx, runtimeRoot, manifest)
+	}
 	coreBinary := ActiveCoreBinary(runtimeRoot, manifest)
 	running, err := processRunningAtPath(coreBinary)
 	if err != nil {

@@ -203,8 +203,20 @@ func RunTaskRuntime(parent context.Context, root, coreBinary, generation string)
 			}
 			next++
 			replace := func() error {
-				if err := writeRuntimeText(run.files.serverURL, request.Origin); err != nil {
+				release, err := acquireTunnelOperation(ctx, root)
+				if err != nil {
 					return err
+				}
+				current, loadErr := loadTunnelRuntime(root)
+				if loadErr == nil && current.mode != "quick" {
+					loadErr = errors.New("Quick mode changed before origin replacement")
+				}
+				if loadErr == nil {
+					loadErr = writeRuntimeText(run.files.serverURL, request.Origin)
+				}
+				release()
+				if loadErr != nil {
+					return loadErr
 				}
 				stop, stopCancel := context.WithTimeout(ctx, 5*time.Second)
 				defer stopCancel()
