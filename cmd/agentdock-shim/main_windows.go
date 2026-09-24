@@ -59,7 +59,7 @@ func run() error {
 		return err
 	}
 	tray := strings.EqualFold(filepath.Base(executable), updateengine.StableTrayShimName)
-	active, err := resolveActiveWithRecovery(root, store, layout, !tray && coreLaunchRequiresParentLifetime(os.Args[1:]))
+	active, err := resolveActiveWithRecovery(root, store, layout, installerTrialHostEntry(tray, os.Args[1:]))
 	if err != nil {
 		return err
 	}
@@ -148,6 +148,21 @@ func policyRecoveryCommand(args []string) bool {
 		return len(args) >= 2 && (args[1] == "stop" || args[1] == "status")
 	}
 	return false
+}
+
+// The elevated core task enters through the stable tray shim (--run-core-task),
+// not through service launch-core. Both entries must see a live installer trial.
+// Every other command stays fail-closed while that trial is uncommitted.
+func installerTrialHostEntry(tray bool, args []string) bool {
+	if tray {
+		for _, argument := range args {
+			if strings.EqualFold(strings.TrimSpace(argument), "--run-core-task") {
+				return true
+			}
+		}
+		return false
+	}
+	return coreLaunchRequiresParentLifetime(args)
 }
 
 func coreLaunchRequiresParentLifetime(args []string) bool {

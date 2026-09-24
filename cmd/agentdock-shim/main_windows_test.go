@@ -57,6 +57,28 @@ func TestCoreLaunchRequiresParentLifetimeOnlyForServiceHost(t *testing.T) {
 	}
 }
 
+func TestInstallerTrialHostEntryUsesTheScheduledTaskTray(t *testing.T) {
+	tests := []struct {
+		name string
+		tray bool
+		args []string
+		want bool
+	}{
+		{name: "core launch-core", args: []string{"service", "launch-core"}, want: true},
+		{name: "tray run-core-task", tray: true, args: []string{"--run-core-task", "--runtime-root", `C:\AgentDock`}, want: true},
+		{name: "tray background", tray: true, args: []string{"--background"}},
+		{name: "tray task admin", tray: true, args: []string{"--task-admin", "prepare-elevated"}},
+		{name: "core service start", args: []string{"service", "start"}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := installerTrialHostEntry(test.tray, test.args); got != test.want {
+				t.Fatalf("installerTrialHostEntry(tray=%v, args=%q) = %v, want %v", test.tray, test.args, got, test.want)
+			}
+		})
+	}
+}
+
 func TestShimChildRequiresParentLifetimeForBothScheduledTaskHosts(t *testing.T) {
 	tests := []struct {
 		name string
