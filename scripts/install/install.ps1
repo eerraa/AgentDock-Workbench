@@ -2063,7 +2063,9 @@ exit `$LASTEXITCODE
                 }
             }
         } elseif ($mustRestartExistingProcess) {
-            if ($InstallChannel -eq 'setup') {
+            if ($effectivePrivilegeMode -eq 'elevated') {
+                Start-AgentDockTask -AgentDockBinary $destinationBinary -ExpectedUserSid $taskUser.Sid
+            } elseif ($InstallChannel -eq 'setup') {
                 Invoke-SetupRuntimeProcess `
                     -FilePath $sourceBinary `
                     -Arguments "service start --runtime-root `"$runtimeDir`"" `
@@ -2309,7 +2311,20 @@ exit `$LASTEXITCODE
             $taskWillRestartAgentDock = $true
         }
         if ($processWasRunning -and -not $taskWillRestartAgentDock) {
-            if (Test-Path -LiteralPath $destinationBinary -PathType Leaf) {
+            if ($effectivePrivilegeMode -eq 'elevated') {
+                $rollbackTaskBinary = ''
+                if (Test-Path -LiteralPath $destinationBinary -PathType Leaf) {
+                    $rollbackTaskBinary = $destinationBinary
+                } elseif (Test-Path -LiteralPath $sourceBinary -PathType Leaf) {
+                    $rollbackTaskBinary = $sourceBinary
+                }
+                if (-not [string]::IsNullOrWhiteSpace($rollbackTaskBinary)) {
+                    Start-AgentDockTask -AgentDockBinary $rollbackTaskBinary -ExpectedUserSid $taskUser.Sid
+                    Wait-AgentDockHealth -HealthPort $rollbackHealthPort
+                } elseif (Test-Path -LiteralPath $launcherPath -PathType Leaf) {
+                    Start-AgentDockLauncher -LauncherPath $launcherPath
+                }
+            } elseif (Test-Path -LiteralPath $destinationBinary -PathType Leaf) {
                 # The Engine transaction has restored the committed source generation. Wait for the
                 # source Core to become healthy before confirming the outer adapter rollback.
                 if ($InstallChannel -eq 'setup') {
