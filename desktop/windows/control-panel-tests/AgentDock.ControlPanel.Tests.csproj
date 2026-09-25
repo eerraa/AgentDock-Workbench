@@ -31,5 +31,6 @@
     </EmbeddedResource>
     <Compile Include="../control-panel/Services/NativeStatusReader.cs" Link="NativeStatusReader.cs" />
     <Compile Include="../control-panel/Services/NativeStatusProbe.cs" Link="NativeStatusProbe.cs" />
+    <Compile Include="../control-panel/Services/TailscaleObservationCache.cs" Link="TailscaleObservationCache.cs" />
   </ItemGroup>
 </Project>
