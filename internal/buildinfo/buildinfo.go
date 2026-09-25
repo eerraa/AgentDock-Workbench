@@ -8,13 +8,13 @@ import (
 	"github.com/uvwt/agentdock/internal/executioncompat"
 )
 
-const Version = "1.1.16101"
+const Version = "1.1.16102"
 const Distribution = "eerraa"
 const UpstreamVersion = "1.1.6"
 
 // Main-only release ordinal. Version is explicitly assigned, not arithmetically
 // encoded from UpstreamVersion or DownstreamRevision.
-const DownstreamRevision = 101
+const DownstreamRevision = 102
 
 var (
 	Commit    string

@@ -47,7 +47,7 @@ and publication are separate delivery states. Report unexecuted checks honestly.
 Canonical implementation and delivery plan: `docs/eerraa/implementation-plan-1.1.6100.ko.md`.
 
 Feature branches retain upstream version 1.1.6. Change the product version only
-on main; the current explicit main version is 1.1.16101. Follow the canonical
+on main; the current explicit main version is 1.1.16102. Follow the canonical
 plan's bounded local offline-package procedure and reuse unchanged verification.
 Do not run Setup or replace production Core; installation and manual desktop
 acceptance are separate user-run steps. Do not push, dispatch CI, open PRs or

@@ -1,4 +1,4 @@
-# AgentDock 1.1.6 → 1.1.16101 병목 최소화 구현 계획
+# AgentDock 1.1.6 → 1.1.16102 병목 최소화 구현 계획
 
 문서 ID: AD-116-6100-IMPLEMENTATION-20260924
 정본: `D:\Engineering\agentdock-eerraa\docs\eerraa\implementation-plan-1.1.6100.ko.md`
@@ -12,8 +12,8 @@
 | 제품 기준 | **AgentDock 1.1.6** |
 | BASE | `df7c22f64438ec317e0518eec44d035ad98be2b2` |
 | 소스 출처 | `A-m-o-r-F-a-t-i/agentdock`의 `feat/1.1.6-release` |
-| 최종 제품 | **1.1.16101 / DownstreamRevision 101 / UpstreamVersion 1.1.6 / Distribution eerraa** |
-| 버전 정책 | **main에서만 명시적으로 1.1.16101을 부여한다.** UpstreamVersion=1.1.6과 DownstreamRevision=101은 독립 메타데이터이며 버전 산식으로 추론하지 않는다. 기능 작업 브랜치는 upstream 1.1.6을 유지한다 |
+| 최종 제품 | **1.1.16102 / DownstreamRevision 102 / UpstreamVersion 1.1.6 / Distribution eerraa** |
+| 버전 정책 | **main에서만 명시적으로 1.1.16102을 부여한다.** UpstreamVersion=1.1.6과 DownstreamRevision=101은 독립 메타데이터이며 버전 산식으로 추론하지 않는다. 기능 작업 브랜치는 upstream 1.1.6을 유지한다 |
 | 작업 저장소 | `D:\Engineering\agentdock-eerraa` |
 | 원격 | origin=`eerraa/agentdock`, upstream=`A-m-o-r-F-a-t-i/agentdock` |
 | 브랜치 시작점 | 모든 기능 브랜치를 같은 BASE에서 새로 만든다. BASE와 승인된 기능 범위 밖의 코드를 일괄 이식하지 않는다 |
@@ -25,13 +25,13 @@
 
 문서 수정 요청에서는 이 정본만 갱신하며 제품 소스·시험 코드·index·main·버전·운영 설정은 변경하지 않는다. 제품 시험·커밋·빌드·설치를 실행하지 않는다.
 
-구현 세션의 허용 범위는 해당 단위의 최소 진입 확인, 기능별 로컬 브랜치 구현, §8의 최소 필수 검증, 로컬 커밋, 지정된 오프라인 Setup 제작이다. main의 마지막 다운스트림 릴리스 커밋에서만 제품 버전을 1.1.16101으로 변경한다. 실기기/VM 설치·운영 교체·push·PR·릴리스 게시를 하지 않는다.
+구현 세션의 허용 범위는 해당 단위의 최소 진입 확인, 기능별 로컬 브랜치 구현, §8의 최소 필수 검증, 로컬 커밋, 지정된 오프라인 Setup 제작이다. main의 마지막 다운스트림 릴리스 커밋에서만 제품 버전을 1.1.16102으로 변경한다. 실기기/VM 설치·운영 교체·push·PR·릴리스 게시를 하지 않는다.
 
-PR은 사용자가 **최종 1.1.16101 Setup**을 직접 설치해 시험한 뒤 별도 세션에서만 연다.
+PR은 사용자가 **최종 1.1.16102 Setup**을 직접 설치해 시험한 뒤 별도 세션에서만 연다.
 
 ### 신속 개발 원칙 — 검증·병목 최소화
 
-**이 개발의 최우선 실행 목표는 검증과 절차상의 병목을 최소화하여 1.1.16101 구현과 설치파일 제작을 최대한 빠르게 완료하는 것이다.** 검증 범위·보고서·브랜치 수를 늘리는 것이 목표가 아니다. 요구한 기능과 실패 처리 계약은 유지하되, 불필요한 검토와 중복 실행을 없앤다. 각 절의 검토·회귀 목록은 위험과 확인할 동작을 뜻하며, 모든 환경·상태·언어의 조합을 매번 실행하라는 뜻이 아니다. 구체적인 실행량은 §8을 따른다.
+**이 개발의 최우선 실행 목표는 검증과 절차상의 병목을 최소화하여 1.1.16102 구현과 설치파일 제작을 최대한 빠르게 완료하는 것이다.** 검증 범위·보고서·브랜치 수를 늘리는 것이 목표가 아니다. 요구한 기능과 실패 처리 계약은 유지하되, 불필요한 검토와 중복 실행을 없앤다. 각 절의 검토·회귀 목록은 위험과 확인할 동작을 뜻하며, 모든 환경·상태·언어의 조합을 매번 실행하라는 뜻이 아니다. 구체적인 실행량은 §8을 따른다.
 
 - **확인한 것은 재사용한다.** 같은 소스·의존성·실행 조건에서 얻은 실제 읽기/검증 결과는 다시 만들지 않는다. BASE·작업 트리·도구 입력은 시작 때 묶어 확인하고, 이후에는 변경된 부분과 최종 산출물만 확인한다. upstream 문서의 pass를 우리 실행 결과로 복사하지는 않는다.
 - **검토는 구현에 필요한 만큼만 한다.** 수정할 파일 전체와 직접 호출자·인접 시험을 한 번 확인한 뒤 구현한다. 저장소 전수 재감사, 무관한 이력 조사, 범위 밖 결함 탐색, 대안 설계의 반복 비교로 구현 착수를 늦추지 않는다. 재구현은 책임 중복을 없애는 최소 범위이며 새 프레임워크를 만드는 기회가 아니다.
@@ -268,6 +268,10 @@ discovery: optional SDK params의 interface 안 typed-nil과 nil ListToolsResult
 
 receipt: `ERROR_SHARING_VIOLATION`/`ERROR_LOCK_VIOLATION` 및 미완료 파일 읽기는 기존 deadline 안의 pending이다. launch nonce 불일치·잘못된 JSON·기타 I/O는 성공으로 바꾸지 않는다. 일시적 읽기 경합 해결을 설치 실패 warning 성공과 혼동하지 않는다.
 
+### T. Tailscale 상태 일관성
+
+`fix/tailscale-status-consistency`는 같은 BASE에서 독립된 검증·관측 책임을 소유한다. 공개 검증을 시작하기 전에 이전 성공 기록을 pending으로 전환하고 성공한 새 검증만 Ready를 확정한다. 검증 시도끼리의 직렬화는 설정·중지 잠금과 분리하며, 오래된 성공이 변경된 설정에 기록되지 않아야 한다. UI 캐시는 공급자·모드·공개 주소·로컬 대상·설정 세대와 응답 순서에 귀속하고 다른 대상의 관측이나 늦은 응답을 현재 상태로 사용하지 않는다. Core 재시작이나 매핑 재생성으로 상태를 맞추지 않는다.
+
 ### D. downstream 전용
 
 온라인 업데이트 정책·자체 URL·Distribution·현재 계획은 integration 전용이다. online check는 최신 버전을 안다고 주장하지 않고 offline-manual/online-updates-disabled를 반환한다. online apply는 네트워크/파일 변경 전에 실패한다. upstream 패키지를 fallback으로 내려받지 않는다.
@@ -283,7 +287,7 @@ receipt: `ERROR_SHARING_VIOLATION`/`ERROR_LOCK_VIOLATION` 및 미완료 파일 �
 3. R은 controller/host→Quick→installer/rollback→역할/미사용 입구 순으로 연속 구현한다. K/S/H/A/Q/C는 실제 의존성만 고려해 진행한다. 하나가 막히면 독립 단위로 전환하며 승인된 단계 사이에 재승인을 기다리지 않는다. 한글화의 모든 코드·리소스·시험은 K branch에 둔다.
 4. 각 기능이 의미 있는 단위로 완성되면 변경 경계의 compile/정적 검사와 최소 회귀를 묶어 한 번 수행하고 로컬 commit한다. 중간 compile은 실제 컴파일 위험을 줄이는 데 필요할 때만 실행한다. 실패 시 그 실패와 영향 범위만 재검증한다.
 5. 완료한 branch를 integration에 정상 merge한다. 단독 branch 검증 결과는 재사용하고, 통합 시에는 merge 충돌·공유 호출 경로·기능 조합을 한 번 확인한다. **전체 suite는 기본 필수 관문이 아니다.** 공통 admission·직렬화·저장 형식·응답 조립처럼 실제 영향이 넓거나 표적 실패가 파급을 보여줄 때만 관련 suite로 넓힌다. 그때도 가능한 최소 범위로 한 번 실행하며 전체 OS 행렬로 확대하지 않는다.
-6. main의 마지막 downstream release commit에서만 1.1.16101/Revision101/UpstreamVersion1.1.6을 적용한다. 버전만 바뀌면 이전 기능 회귀를 반복하지 않고 version/resource/source 정합성을 확인한다. clean commit에서 amd64 최종 package를 한 번 만들고 산출물을 검사한다. 코드/패키징 결함으로 결과가 무효가 된 경우에만 해당 검증과 package를 다시 실행한다.
+6. main의 마지막 downstream release commit에서만 1.1.16102/Revision102/UpstreamVersion1.1.6을 적용한다. 버전만 바뀌면 이전 기능 회귀를 반복하지 않고 version/resource/source 정합성을 확인한다. clean commit에서 amd64 최종 package를 한 번 만들고 산출물을 검사한다. 코드/패키징 결함으로 결과가 무효가 된 경우에만 해당 검증과 package를 다시 실행한다.
 
 ### 8.2 실제 실행할 최소 검사
 
@@ -313,11 +317,11 @@ receipt: `ERROR_SHARING_VIOLATION`/`ERROR_LOCK_VIOLATION` 및 미완료 파일 �
 
 상세 결과 문서를 새로 만들지 않고 단위별로 실행 명령, pass/fail/not-run, 다음 행동만 남긴다. skip·assertion 약화·오류를 경고 성공으로 바꾸는 방식은 사용하지 않는다. 실기기/VM 설치는 사용자가 최종 파일로 진행하므로 미실행으로 남긴다.
 
-## 9. 1.1.16101 릴리스 계약과 실행 명령
+## 9. 1.1.16102 릴리스 계약과 실행 명령
 
-- Core·WPF·Setup 버전은 1.1.16101, DownstreamRevision=101, UpstreamVersion=1.1.6, Distribution=eerraa다. buildinfo와 release tool의 명시적 릴리스 식별자·버전 정렬·전체 source_commit을 확인한다.
+- Core·WPF·Setup 버전은 1.1.16102, DownstreamRevision=102, UpstreamVersion=1.1.6, Distribution=eerraa다. buildinfo와 release tool의 명시적 릴리스 식별자·버전 정렬·전체 source_commit을 확인한다.
 - PowerShell 7과 clean 최종 main commit이 필수다. 원본 main의 문서를 삭제/stash해서 억지로 clean하게 만들지 않는다.
-- 출력: `D:\Engineering\agentdock-eerraa\dist\windows-release-1.1.16101`.
+- 출력: `D:\Engineering\agentdock-eerraa\dist\windows-release-1.1.16102`.
 - Windows payload/Setup은 amd64만. 기존 공통 WSL helper의 Linux payload 계약은 Windows 아키텍처 선택과 별개이며 임의 제거하지 않는다.
 - cloudflared: `D:\Engineering\agentdock-eerraa\dist\windows-release\cloudflared.exe` 그대로 재사용. 빌드 직전 Authenticode Valid·예상 Cloudflare 서명자를 확인하며 자동 latest 다운로드로 대체하지 않는다.
 - Inno: `D:\Engineering\.agentdock-build-tools\inno\ISCC.exe`.
@@ -329,7 +333,7 @@ G0-5에서 실제 script param을 확인하고, 아래 지원 계약을 만족�
 ```powershell
 $ErrorActionPreference = 'Stop'
 $repo = 'D:\Engineering\agentdock-eerraa'
-$out = 'D:\Engineering\agentdock-eerraa\dist\windows-release-1.1.16101'
+$out = 'D:\Engineering\agentdock-eerraa\dist\windows-release-1.1.16102'
 $cf = 'D:\Engineering\agentdock-eerraa\dist\windows-release\cloudflared.exe'
 $inno = 'D:\Engineering\.agentdock-build-tools\inno\ISCC.exe'
 if ($PSVersionTable.PSVersion.Major -lt 7) { throw 'PowerShell 7 required.' }
@@ -352,7 +356,7 @@ script 안의 각 native tool exit code도 검사해야 한다. 기존 script가
 
 ## 10. 단일 정본과 문서 소유권
 
-**개발 실행 계획의 정본은 `docs\eerraa\implementation-plan-1.1.6100.ko.md` 하나다.** 이 파일이 1.1.6 기반·1.1.16101 목표·병목 최소화 원칙·기능별 구현·최소 검증·패키징·다음 세션 지시를 모두 소유한다. 변경은 같은 파일에 반영하며 별도 실행안이나 중복 정본을 만들지 않는다. 첨부용 사본도 같은 파일명과 내용으로 제공한다.
+**개발 실행 계획의 정본은 `docs\eerraa\implementation-plan-1.1.6100.ko.md` 하나다.** 이 파일이 1.1.6 기반·1.1.16102 목표·병목 최소화 원칙·기능별 구현·최소 검증·패키징·다음 세션 지시를 모두 소유한다. 변경은 같은 파일에 반영하며 별도 실행안이나 중복 정본을 만들지 않는다. 첨부용 사본도 같은 파일명과 내용으로 제공한다.
 
 본문에는 현재 적용할 기준·결정·필요한 착수 조건만 작성한다. 변경 이력·폐기안 비교·과거 세션 지시·삭제 기록은 넣지 않는다. 실제 제품의 데이터 호환·복원 요구는 현재 기능 계약으로 기술한다.
 
@@ -375,7 +379,7 @@ OS 설계 참고: Microsoft Learn `UpdateProcThreadAttribute`의 JOB_LIST/HANDLE
 
 ## 12. 후속 작업 지시
 
-정본 경로는 `docs\eerraa\implementation-plan-1.1.6100.ko.md`로 유지한다. 고정 BASE와 독립 기능 브랜치의 기존 검증을 재사용한다. 기능 변경은 기존 소유 브랜치에서 수행하며 그 제품 버전은 upstream 1.1.6이다. 검증된 결과를 main에 정상 merge한 뒤 main에서만 명시적 제품 버전 1.1.16101, DownstreamRevision 101, UpstreamVersion 1.1.6을 적용한다. 버전 산식으로 다른 값으로 고치지 않는다. clean main의 지정 amd64 오프라인 Setup을 생성하고 파일·버전·source SHA·무결성을 확인한다. 설치 실행·운영 교체·push·PR·릴리스 게시는 하지 않는다.
+정본 경로는 `docs\eerraa\implementation-plan-1.1.6100.ko.md`로 유지한다. 고정 BASE와 독립 기능 브랜치의 기존 검증을 재사용한다. 기능 변경은 기존 소유 브랜치에서 수행하며 그 제품 버전은 upstream 1.1.6이다. 검증된 결과를 main에 정상 merge한 뒤 main에서만 명시적 제품 버전 1.1.16102, DownstreamRevision 102, UpstreamVersion 1.1.6을 적용한다. 버전 산식으로 다른 값으로 고치지 않는다. clean main의 지정 amd64 오프라인 Setup을 생성하고 파일·버전·source SHA·무결성을 확인한다. 설치 실행·운영 교체·push·PR·릴리스 게시는 하지 않는다.
 
 ## 현재 구현 상태 및 재개 경계
 
@@ -387,7 +391,8 @@ OS 설계 참고: Microsoft Learn `UpdateProcThreadAttribute`의 JOB_LIST/HANDLE
 | K | `feat/korean-localization` / `2cabf2f21021f9b3c0729d403a2be6a591a8fb01` | 실제 제품 어셈블리 3언어 리소스·표시 6,096개, 기존 pure model 674개, producer 원문 보존·backend·공식 Inno 한국어/라이선스 핀 검사 통과. |
 | G | `feat/windows-bundled-ripgrep` / `9f3fba36d08f1c5465171f09498fd1c6c2d55335` | 실제 rg 고정 번들·검색·generation 검사와 캐시-only 8개 결과 재사용. legacy source 자신의 sidecar 보존/변조 거절 추가 회귀 통과. 최초 외부 명령 세션 timeout과 네 패키지의 ok 출력은 구분한다. |
 | A | `fix/workspace-acl-boundary` / `adf8acceaeedadd1b183844528e29458bd5f6aa4` | 실제 Windows 임시 workspace/root/child/file DACL 불변, AgentDockHome의 별도 private ACL 및 경로 검증 통과. |
-| O | `feat/windows-loopback-health` / `d46a4fcc905bbd2a407cef3ecdbecd2cfcf4c7c1` | 기존 loopback 건강/cache 89개 및 WPF 검증 결과 재사용. 설치 버전 읽기에서 실행파일을 호출하지 않는다. |
+| O | `feat/windows-loopback-health` / `6954475cc333ce730c475d4d0154f1456cc78983` | loopback 건강/cache 95개 통과. 실제 generation Core 생성·삭제·교체·조회 중 변경을 캐시 의존성으로 확인하며 설치 버전 읽기에서 실행파일을 호출하지 않는다. |
+| T | `fix/tailscale-status-consistency` / `8be7a8ce0e50e9ffef07652ff3e1b80d6c6b49df` | 공개 검증 시작 전 Pending 기록, timeout/cancel 이후 이전 Ready 복원 차단, 설정 identity·응답 순서 귀속. 순수 정책 31개·실제 RuntimeService 연결 11개 및 native Tailscale/Funnel 12개 최상위 시험·하위 사례 통과. |
 | S | `fix/activity-summary-refresh` / `1fc380e3e1f330e1a359424e433f2712d339cbe8` | 메인 표시 중 자동 0→1→0, pending/unknown, strict schema/null 거절·last-good stale·숨김/재표시·late result 34개 통과. |
 | H | `fix/runtime-health-display` / `2620fdb8eb642e14c8f9b4bc34270012c285a6b3` | full/live/tray 공통 로컬 건강·공개 터널 분리, 이전 snapshot 거절·편집 초안 보존 19개 통과. |
 | C-discovery | `fix/mcp-discovery-null-boundary` / `02d60bf69ee2c0a9106f7dbadb9b50b65835345a` | 실제 tools:[null] SDK panic 재현 후 pre-SDK 검증과 last-good catalog 보존 회귀 통과. 정상 optional metadata 및 원본 오류 보존. |
@@ -395,7 +400,7 @@ OS 설계 참고: Microsoft Learn `UpdateProcThreadAttribute`의 JOB_LIST/HANDLE
 | D | `feat/eerraa-offline-distribution` / `b9a645c766b6d01d842854eeda62f1d2675e3449` | 온라인 check/update 0 HTTP 요청·upstream fallback 차단, own distribution/source SHA metadata 검사 및 compile 통과. |
 | 추가 지시 미리보기 | `feat/activity-insert-summary` / `d04f1187b7d088927760baf3bf8479d41dedd6e5` | 160 rune 파생 미리보기와 원문 단일 저장·응답·중복 방지·만료 기존 결과 재사용. 메인 요약 S와 별개 기능이다. |
 
-최종 기능 통합 소스는 `4d1e699982cd2948a94395afc0afe016c51f4865`이며 main은 이 제품 소스와 기존 자체 문서·게시 권한 경계를 함께 보존한다. 충돌이 있었던 R/O health 응답은 service·PID·origin hash를 함께 유지하고 해시값·원문 비노출·GET/HEAD 계약을 검사했다. K 리소스 병합은 기존 키와 자리표시자를 보존했고 S의 독립 observer를 유지했다. 통합 WPF는 경고 0/오류 0이며, 통합 S 34개·H 19개·설치 AST 20개 및 한국어 설치 계약이 통과했다. 동일 기능 전체 suite는 반복하지 않았다.
+최종 기능 통합 소스는 `88dbd2d566290e1ae8297b530279ba97c213ffeb`이며 main은 이 제품 소스와 기존 자체 문서·게시 권한 경계를 함께 보존한다. 충돌이 있었던 R/O health 응답은 service·PID·origin hash를 함께 유지하고 해시값·원문 비노출·GET/HEAD 계약을 검사했다. K 리소스 병합은 기존 키와 자리표시자를 보존했고 S의 독립 observer를 유지했다. 통합 WPF는 경고 0/오류 0이며, 통합 S 34개·H 19개·설치 AST 20개 및 한국어 설치 계약이 통과했다. 동일 기능 전체 suite는 반복하지 않았다.
 
 `fix/windows-named-state-security`는 BASE 그대로이며 별도 변경이나 PR 단위로 취급하지 않는다. 필요한 same-user runtime coordination 보안은 R이 소유한다. 과거 Q의 지정 5개 참조 객체는 로컬에 없어서 그 객체 자체를 검증했다고 주장하지 않는다. 실제 현재 소스에서 재현된 discovery/receipt와 메인 요약·상태 표시 문제는 위 기능 단위로 처리했다.
 
@@ -403,8 +408,10 @@ OS 설계 참고: Microsoft Learn `UpdateProcThreadAttribute`의 JOB_LIST/HANDLE
 
 이번 검증은 임시 fixture/프로세스와 모의 OS adapter에 한정한다. 실제 설치된 elevated Task의 UAC·session 전환, 실기기/VM Setup 설치·업그레이드·복구, 실제 Cloudflare/Tailscale 인터넷 준비, 전수 UI/DPI/OS 행렬은 실행하지 않았다. 운영 교체·push·PR·릴리스 게시는 하지 않는다.
 
-main의 최종 downstream release commit에서만 `Version=1.1.16101`, `DownstreamRevision=101`, `UpstreamVersion=1.1.6`을 적용한다. 버전·문서만 바뀌면 위 기능 결과를 재사용한다. 최종 clean 소스는 PowerShell 7에서 지정 cloudflared/ISCC를 사용하여 `D:\Engineering\agentdock-eerraa\dist\windows-release-1.1.16101`에 amd64 오프라인 Setup 하나를 만든다. 실제 생성 성공·파일 크기·SHA-256·서명은 생성 뒤 산출물과 기존 build-report로 확인하며, 이 소스 checkpoint 자체를 설치/실행 시험 완료 증거로 쓰지 않는다.
+main의 최종 downstream release commit에서만 `Version=1.1.16102`, `DownstreamRevision=102`, `UpstreamVersion=1.1.6`을 적용한다. 버전·문서만 바뀌면 위 기능 결과를 재사용한다. 최종 clean 소스는 PowerShell 7에서 지정 cloudflared/ISCC를 사용하여 `D:\Engineering\agentdock-eerraa\dist\windows-release-1.1.16102`에 amd64 오프라인 Setup 하나를 만든다. 실제 생성 성공·파일 크기·SHA-256·서명은 생성 뒤 산출물과 기존 build-report로 확인하며, 이 소스 checkpoint 자체를 설치/실행 시험 완료 증거로 쓰지 않는다.
 
 상태 후속 검증은 native 상태 파서/조회 수명 39개, 표시 판정 27개, 기존 활동 요약 34개가 통과했고 WPF compile은 경고 0/오류 0이다. 통합 어셈블리의 현재 설치본 읽기 전용 상태 조회에서 Core/health/cloudflared/ready=true, named, RunningNormally를 확인했다. 일반 권한 운영 UI의 실제 화면 교체 검증은 미실행이다.
 
 `fix/core-skill-bundle-manifest`의 `0eda649fd8a51bdf3bb23aa6731afad5cd10770d`는 bundle manifest의 필수 Skill version 누락을 수정한다. 실제 bundle 생성→격리 bootstrap과 LF/CRLF 불변·잘못된 version 필드 거절 회귀가 통과했다. R의 후속 COM null BSTR 수정은 빈 작업 디렉터리를 숫자 0으로 오판하지 않으며, 소유 root 허용과 다른 root·정수·missing 거절 6사례 및 기존 순서/소유권 회귀를 통과했다. 원래 설치 후속 worktree의 미커밋 파일은 그대로 보존한다. 패키징은 이 두 설치 수정이 포함된 clean main만 사용한다.
+
+현재 main 조합 검증은 WPF Release 경고 0/오류 0, 데스크톱 표적 237개 assertion(관측 31·RuntimeService 11·건강/cache 95·표시 27·native 조회 39·활동 요약 34), native Tailscale/Funnel 시험 통과다. 버전·문서만 바뀌면 이 결과를 재사용하고 최종 패키지의 버전·source SHA·구성·체크섬을 별도로 검사한다. 설치·운영 교체는 미실행이다.

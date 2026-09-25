@@ -33,7 +33,7 @@ func TestDownstreamIdentityAndCompleteSourceSHA(t *testing.T) {
 	}
 	// The release owner assigns the main product version explicitly; the upstream
 	// baseline and downstream release ordinal remain independent metadata.
-	if Version != "1.1.16101" || UpstreamVersion != "1.1.6" || DownstreamRevision != 101 {
+	if Version != "1.1.16102" || UpstreamVersion != "1.1.6" || DownstreamRevision != 102 {
 		t.Fatalf("main release identity mismatch: version=%s upstream=%s revision=%d", Version, UpstreamVersion, DownstreamRevision)
 	}
 }
