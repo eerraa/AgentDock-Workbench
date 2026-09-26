@@ -46,11 +46,19 @@ and publication are separate delivery states. Report unexecuted checks honestly.
 
 Canonical implementation and delivery plan: `docs/eerraa/implementation-plan-1.1.6100.ko.md`.
 
-Feature branches retain upstream version 1.1.6. Change the product version only
-on main; the current explicit main version is 1.1.16102. Follow the canonical
-plan's bounded local offline-package procedure and reuse unchanged verification.
-Do not run Setup or replace production Core; installation and manual desktop
-acceptance are separate user-run steps. Do not push, dispatch CI, open PRs or
-publish a release without the user's separate authorization.
-Keep the 120s activity, 180s request eligibility and 300s next-call insertion
-expiry independent. Manual desktop and installation checks remain not run.
+Follow the current upstream-first convergence policy in the canonical plan.
+Start integration from the freshly observed local main, not a historical fixed
+1.1.6 base. Prefer validated Workbench implementations when they meet user-visible
+requirements; keep only justified minimal downstream differences. Preserve auth,
+explicit deny, ownership, user data/ACLs, original output and rollback contracts,
+not particular helper names or runtime shapes. Keep activity, request eligibility
+and insertion expiry separate; do not silently change a user-visible contract.
+
+The last explicit distribution version is 1.1.16102. No new deployment version has
+been authorized for this integration: do not build an installer with an invented
+version or reuse the deployed version for new code. Source verification, local
+main merge, packaging, installation and publication are separate states.
+Do not run Setup or replace/restart production Core. Do not push, dispatch CI,
+open PRs or publish without separate user authorization. Keep worktrees and
+intermediate outputs outside the product checkout. Update the single canonical
+plan with actual verification and the precise next step at interruption.
