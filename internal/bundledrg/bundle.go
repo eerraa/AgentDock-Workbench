@@ -115,6 +115,9 @@ func openBundle(ctx context.Context, root string, requireManifest bool) (*Verifi
 		data, err := io.ReadAll(io.LimitReader(contextReader{ctx, file}, 16*1024+1))
 		file.Close()
 		if err != nil || len(data) > 16*1024 {
+			if ctx.Err() != nil {
+				return nil, ctx.Err()
+			}
 			return nil, fmt.Errorf("%w: unreadable or oversized component manifest", ErrIntegrity)
 		}
 		var manifest Spec
