@@ -40,14 +40,37 @@ changed behavior; do not remove tests or weaken assertions to obtain a green bui
 Use injected time for activity boundaries. Verify concurrent conversations, calls
 without tasks, old records, rejected writes and asynchronous command completion.
 
-Build the final Windows package with `.github/workflows/windows-package.yml` in
-`A-m-o-r-F-a-t-i/agentdock`. Source, tests, package construction, installation tests
-and publication are separate delivery states. Report unexecuted checks honestly.
+Canonical implementation and delivery record:
+`docs/eerraa/implementation-plan-1.1.6100.ko.md`. Its historical filename is not a
+release version. The fixed source baseline is Workbench v1.1.7,
+`b367eaab95202873fb213b8713440bf7822878c4`. Keep only pinned rg, Korean
+presentation and reproducer-proven minimal fixes at the existing owners. Do not
+reintroduce composite hosts, Origin pipes, epochs or parallel state systems.
 
-Implementation map: `docs/implementation-1.1.5.md`.
+The 2026-09-28 user request explicitly authorizes normal main integration and
+push, a new consistent version/tag, CI dispatch and a formal Windows x64 Release
+only in `eerraa/AgentDock-Workbench`. Prefer the existing Windows package workflow.
+This supersedes the old source-only restriction, but not any integrity check.
+Never push upstream, rewrite shared history, move public tags, overwrite released
+bytes, change open PR heads or publish incomplete product work as finished.
 
-For the 1.1.5 delivery, run static and isolated automated regression only. Do not
-launch the desktop app or Setup, install/uninstall/upgrade/rollback, or change the
-production Core. Dispatch windows-package.yml with installation_tests=false.
-Keep the 120s activity, 180s request eligibility and 300s next-call insertion
-expiry independent. Manual desktop and installation checks remain not run.
+Never run Setup or install/upgrade/uninstall/recover the operational PC. Never
+replace/restart production Core or change production Cloudflare/Tailscale or
+credentials. Real installer acceptance requires a genuine isolated Windows runner
+or disposable VM; do not impersonate one through environment variables. Local
+explicit disposable unit/native fixtures are allowed. Preserve runner-only test
+guards and distinguish a local build from an unexecuted runner test.
+
+A new distribution must compare above the supported historical 1.1.16102 release;
+never reuse that version for new bytes or confuse it with the upstream baseline.
+Source, tests, packaging, installation, publication and actual asset redownload
+verification are separate delivery states. A formal release requires all of them,
+including Korean and rg content in the actual payload, immutable source identity,
+checksums, honest signing status, draft=false and prerelease=false. The release
+approval is already explicit; missing tests are not missing user approval.
+
+Keep other worktrees, uncommitted evidence and open PR branches intact. Preserve
+failed tests and blocked-request messages. Do not retry an explicit safety or
+permission denial through another tool, encoding or argument decomposition; only
+independent permitted work may continue. Checkpoint the exact remaining boundary.
+Keep the 120s activity, 180s request eligibility and 300s insertion expiry separate.
