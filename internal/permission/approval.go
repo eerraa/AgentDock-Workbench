@@ -18,8 +18,13 @@ var ErrApprovalNotFound = errors.New("approval not found")
 var ErrApprovalExpired = errors.New("approval expired or no longer matches the effective policy")
 
 type Approval struct {
-	OwnerPID      int    `json:"owner_pid,omitempty"`
-	OwnerInstance string `json:"owner_instance,omitempty"`
+	Reviewer       string     `json:"approval_reviewer,omitempty"`
+	Settings       *Settings  `json:"permission_settings,omitempty"`
+	ReviewDecision string     `json:"review_decision,omitempty"`
+	ReviewReason   string     `json:"review_reason,omitempty"`
+	ReviewedAt     *time.Time `json:"reviewed_at,omitempty"`
+	OwnerPID       int        `json:"owner_pid,omitempty"`
+	OwnerInstance  string     `json:"owner_instance,omitempty"`
 	activity.Binding
 	ID                string     `json:"approval_id"`
 	SchemaVersion     int        `json:"schema_version"`
@@ -97,6 +102,20 @@ func (s *Store) Create(ctx context.Context, a Approval) (Approval, error) {
 		} else if !os.IsNotExist(err) {
 			return err
 		}
+		effective := effectivePolicy(p, a.Binding)
+		if effective.Settings.Approval.Mode == Never {
+			return errors.New("approval policy never does not accept pending requests")
+		}
+		if a.Reviewer == "" {
+			a.Reviewer = effective.Settings.Reviewer
+		}
+		if a.Reviewer != effective.Settings.Reviewer {
+			return errors.New("approval reviewer differs from effective settings")
+		}
+		a.Settings = &effective.Settings
+		if a.Reviewer != ReviewerUser && a.Reviewer != ReviewerAuto {
+			return errors.New("invalid approval reviewer")
+		}
 		a.SchemaVersion = 1
 		a.OwnerPID = os.Getpid()
 		a.OwnerInstance = s.instance
@@ -104,7 +123,7 @@ func (s *Store) Create(ctx context.Context, a Approval) (Approval, error) {
 		a.ExpiresAt = a.CreatedAt.Add(15 * time.Minute)
 		a.Status = "pending"
 		a.DispatchCount = 0
-		return writeJSON(path, a)
+		return writeJSON(ctx, path, a)
 	})
 	return a, err
 }
@@ -145,6 +164,9 @@ func (s *Store) Claim(ctx context.Context, id string) (a Approval, claimed bool,
 	return s.ClaimWithWorkspaceRule(ctx, id, false)
 }
 func (s *Store) ClaimWithWorkspaceRule(ctx context.Context, id string, grantWorkspace bool) (a Approval, claimed bool, err error) {
+	return s.ClaimReviewed(ctx, id, grantWorkspace, ReviewerUser)
+}
+func (s *Store) ClaimReviewed(ctx context.Context, id string, grantWorkspace bool, reviewer string) (a Approval, claimed bool, err error) {
 	err = s.locked(ctx, func() error {
 		var err error
 		a, err = s.loadApproval(id)
@@ -164,11 +186,22 @@ func (s *Store) ClaimWithWorkspaceRule(ctx context.Context, id string, grantWork
 			a.Summary = "授权已过期或权限策略已变化，原操作未派发。"
 			a.DecidedAt = &now
 			path, _ := s.approvalPath(id)
-			if err = writeJSON(path, a); err != nil {
+			if err = writeJSON(ctx, path, a); err != nil {
 				return err
 			}
 			return ErrApprovalExpired
 		}
+		selected := a.Reviewer
+		if selected == "" {
+			selected = ReviewerUser
+		}
+		if reviewer != selected || (reviewer != ReviewerUser && reviewer != ReviewerAuto) {
+			return errors.New("approval reviewer mismatch")
+		}
+		if reviewer == ReviewerAuto && (grantWorkspace || a.ReviewDecision != "approve") {
+			return errors.New("auto_review requires a recorded affirmative verdict and cannot create persistent grants")
+		}
+		commitCtx := ctx
 		if grantWorkspace {
 			if a.WorkspaceID == "" {
 				return errors.New("workspace rule requires a fixed workspace")
@@ -180,9 +213,12 @@ func (s *Store) ClaimWithWorkspaceRule(ctx context.Context, id string, grantWork
 			if err = validatePolicy(p); err != nil {
 				return err
 			}
-			if err = writeJSON(filepath.Join(s.root, "policy.json"), p); err != nil {
+			if err = writeJSON(ctx, filepath.Join(s.root, "policy.json"), p); err != nil {
 				return err
 			}
+			// The grant is durable. Finish its associated claim rather than
+			// reporting cancellation as though no permission was committed.
+			commitCtx = context.WithoutCancel(ctx)
 			a.PolicyRevision = p.Revision
 			a.GrantedRuleID = ruleID
 		}
@@ -190,8 +226,11 @@ func (s *Store) ClaimWithWorkspaceRule(ctx context.Context, id string, grantWork
 		a.DispatchCount = 1
 		a.DecidedAt = &now
 		a.DecidedBy = "local_user"
+		if reviewer == ReviewerAuto {
+			a.DecidedBy = ReviewerAuto
+		}
 		path, _ := s.approvalPath(id)
-		if err = writeJSON(path, a); err != nil {
+		if err = writeJSON(commitCtx, path, a); err != nil {
 			return err
 		}
 		claimed = true
@@ -202,6 +241,12 @@ func (s *Store) ClaimWithWorkspaceRule(ctx context.Context, id string, grantWork
 
 // Settle never re-opens a claimed approval. Repeated decisions are safe no-ops.
 func (s *Store) Settle(ctx context.Context, id, status, summary string) (Approval, error) {
+	return s.SettleReviewed(ctx, id, status, summary, "local_user")
+}
+func (s *Store) SettleReviewed(ctx context.Context, id, status, summary, actor string) (Approval, error) {
+	if actor != "local_user" && actor != ReviewerAuto {
+		return Approval{}, errors.New("invalid approval actor")
+	}
 	var a Approval
 	err := s.locked(ctx, func() error {
 		var err error
@@ -228,9 +273,11 @@ func (s *Store) Settle(ctx context.Context, id, status, summary string) (Approva
 		}
 		now := time.Now().UTC()
 		a.DecidedAt = &now
-		a.DecidedBy = "local_user"
+		if a.DecidedBy == "" {
+			a.DecidedBy = actor
+		}
 		path, _ := s.approvalPath(id)
-		return writeJSON(path, a)
+		return writeJSON(ctx, path, a)
 	})
 	return a, err
 }

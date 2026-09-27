@@ -2,7 +2,7 @@
 
 정본: `docs/eerraa/implementation-plan-1.1.6100.ko.md`  
 실행일: 2026-09-27 KST  
-상태: 실험 독립 보관·검증·선택적 정리 완료. 제품 통합과 회귀 검증 진행 중. 아직 main에 병합하지 않았다.
+상태: **통합 소스·Windows 필수 로컬 검증 완료 / 로컬 main 정상 병합 대기**. 최초 27개 충돌을 모두 해결했다. 마지막 Windows 5파일의 실제 해결본, 전체 Go suite, Windows desktop 및 다국어·실제 격리 task/복구 검증을 확보했다. 아래 결과와 보류 범위를 확인하고 정상 commit/merge로만 main에 반영한다. 새 패키징·운영 설치·원격 게시는 이 완료 범위에 포함하지 않는다.
 
 ## 1. 현재 기준과 권한
 
@@ -57,32 +57,98 @@ bundle SHA-256: `85d4d3373343604eee23e810f325db91f3d21ed1efe5baccc2d53ec3b333480
 
 미정리: 현재 연결을 유지하는 생산 Core가 소유한 oai_fixture, 공유 journal/diagnostics, 위 미완료 task. 해당 메모리/공유 기록의 선택적 export·정리 완료를 주장하지 않는다. 확보하지 못한 과거 첨부는 재구성하지 않았으며 로컬 보관본 밖의 존재 여부는 unknown이다. 생산 Core와 운영 설치는 변경하지 않았다.
 
-## 4. 통합 원칙과 구현 범위
+## 4. 채택한 구현과 잔여 제품 차이
 
-LOCAL_BASE에서 만든 외부 worktree에 WB_BASE를 정상 merge한다. 공통 기능은 필요한 동작·권한·데이터 호환·복구 조건을 충족하는 upstream 구현을 채택하고 중복 자체 helper/캐시/수명/우회책을 제거한다. 자동 병합된 부분도 중복 책임을 확인한다. upstream 구현이 부족한 실제 사용자 요구만 좁은 downstream 변경으로 유지한다. 익숙함·먼저 구현함·과거 PASS만으로 자체 구현을 보호하지 않는다.
+공통 구현은 고정한 Workbench에 수렴한다. 최초 27개 충돌을 모두 해결했으며 `git ls-files -u`가 비어 있다. 파일 전체를 한쪽 것으로 일괄 대체하지 않고 실제 책임과 사용자 계약에 따라 병합했다. 새 실행기, task 시스템, native typed extension, 모델 API controller 또는 A–G 시험은 추가하지 않았다.
 
-discovery nil/last-good, receipt retry, runtime ownership, health/cache, Tailscale, Plugin/Skill lifecycle, 출력·insertion, 설치·migration·rollback 모두 대체 검토 대상이다. 특정 클래스/함수명·기존 timeout 선택을 제품 요구 자체로 간주하지 않는다. 실행·취소·종료·재조회·conversation/call 귀속·unknown 정확성, 한국어 제품 표시와 실제 입력/출력 원문, 재현 가능한 core Skill/도구 공급, 자체 distribution 및 수동 게시 경계는 보존한다.
+### 4.1. 중복 제거와 공통 책임
 
-새 모델 API controller, 실행기/task 시스템, A–G 변형, native typed extension 실험은 추가하지 않는다. 새 승인 방식·자동 reviewer·OAuth provider·업데이트/게시 동작은 소스 도입과 운영 활성화를 분리한다. 저장 schema 변경은 migration/rollback 호환을 확인하며 구 실행파일로 되돌리는 것만으로 새 데이터 복원이 된다고 가정하지 않는다.
+- activity binding·실행 사실·수명 전이는 Workbench `call_transitions`로 모았고 journal은 batch admission을 사용한다.
+- insertion의 중복 `Summary`/`Summarize` 및 footer를 제거하고 Workbench timeline/presentation을 사용한다. 추가 메시지 원문·호출/대화 ID·만료·수신 확인을 보존하며 재조회·재전달이 원 도구를 실행하지 않는다.
+- Core Skill builder/bootstrap/version 검증을 Workbench 자산으로 통합하고 quoted-empty/nested-only 반례를 보존했다.
+- Windows privilege 전환은 Workbench `PrivilegeTransition`과 `TaskSecurityDescriptor`가 담당한다. 사용하지 않는 C# `KillOnCloseJob`은 제거했다. native Go의 이미 존재하는 process owner를 사용하며 두 번째 호스트를 만들지 않았다.
+- MCP manager/catalog, Plugin manager·snapshot·format·types·tool service, managed Skill state/install/uninstall/tool, app runtime, permission, 위 전환/SD owner는 실제 `git diff WB_BASE -- <scope>`가 0이다. 경로와 결과는 `completion-132145/owner-convergence-review.json`에 있다.
 
-수용하지 않은 upstream을 `merge -s ours`로 숨기지 않는다. `-X theirs`나 전체 파일 일괄 덮어쓰기로 충돌을 처리하지 않는다. 필요한 uvwt adaptation은 repository·원commit·변형 이유를 기록한다. 코드 통합 후 남는 자체 차이만 아래 표에 실제 근거로 확정한다.
+이전 중단 기록의 “Workbench Plugin은 versioned storage”라는 포괄 서술을 정정한다. Plugin은 `plugins/<name>` 직접 저장과 host state를 사용하고, managed Skill의 versioned state와 구분한다. 주 추종의 관리·수명·rollback owner 자체가 그대로 채택되어 있으므로 별도 uvwt 저장 runtime이나 형식 전환을 추가하지 않는다. 필요한 복사 보완만 아래의 독립 함수 집합으로 연결했다.
 
-| 실제 사용자 요구 | upstream만으로 부족한 이유 | 남기는 최소 변경 | 검증 | 제거 조건 |
+### 4.2. 보조 upstream의 실제 적용 범위
+
+| 원본 repository·commit | 채택 범위 | 의존성/검증 |
+|---|---|---|
+| uvwt/agentdock `18e12e5592efea3d83c85de6ae23f20d611e519b` | browser WebSocket URL 대기를 요청 timeout에 결합 | 원 소스/Unix 회귀의 두 blob 정확히 일치; Windows disposable child timeout·회수 회귀 추가 |
+| uvwt/agentdock `a4848d1908638aa7b0a0f9fae859f03d6251eb4c` | managed/Plugin/workspace Skill 설명 원문 보존 | WB context snapshot/filesystem owner에 adaptation. 수정 전 3개 truncation FAIL 재현; 수정 후 app PASS. shared 50개/120 bytes 기존 제한은 별도 유지 |
+| uvwt/agentdock `120527c7a385e24fcbe98ef1786c824b086e7aae` | `snapshotPluginTree`, `validatePluginSnapshotPath`, `snapshotPluginRegularFile` | 세 함수 원문 동일, 의존성 완결 단위. 기존 49행 copy loop는 한 호출로 대체. os.Root·열기 전후 identity·실제 byte 상한·O_EXCL을 채택; 새 snapshot 11개 PASS |
+
+Plugin 복사 상한 20,000은 upstream처럼 디렉터리를 포함한 항목 수로 바뀌었다. 512 MiB는 유지한다. 후속 metadata-ignore 정책이나 새 저장 schema는 도입하지 않으며 원문 metadata를 보존한다. 이 제한의 차이는 숨기지 않는다.
+
+24개 계보상 고유 commit은 기능 수가 아니다. 정확한 변경 경로/patch는 `uvwt-review-history.txt`, `uvwt-path-review.json`과 원 commit별 review patch에 남겼다. 처리는 다음과 같다.
+
+| 나머지 변경군 | 이번 결정 |
+|---|---|
+| Plugin/Skill 수명·상태/저장/계약 (`c3db3f15`, `120527c7`, `e121e69b`, `b36b40c2`, `436d0b0c`) | 주 추종의 기존 완결 관리/수명 구현을 채택하고 실제 Plugin/Skill/app 회귀로 확인. 별도 저장 모델/중복 runtime은 도입하지 않음. 안전한 snapshot 함수 집합만 위처럼 채택 |
+| 새 chat/workspace 카드, 이미지 context, Remote MCP OAuth | 필수 제품 요구의 누락으로 확인되지 않은 추가 기능이므로 이번 안정화에 도입·활성화하지 않음 |
+| SignPath/저자 Release 파이프라인, 자체 버전 bump | eerraa의 수동 승인 배포 pipeline과 식별을 대체하지 않음. 기존 SHA·hash·tag 검증과 명시적 게시 승인을 유지 |
+| Windows 후속 cold-start/migration/cleanup (`5b354d94`, `37e7e4b6`, `e026a712`, `8625d8c6`) | 추가 변경 수용은 보류. 공개 patch는 확인했으나 현재 파일 조합의 추가 조회가 차단되어 해당 의존성 전체의 검증을 완료했다고 하지 않음. 고정 WB의 이번 통합/검증 범위를 유지하며 불완전한 부분 이식은 하지 않음 |
+
+보류된 변경은 이미 포함되었다거나 불필요성이 모두 입증되었다고 기록하지 않는다. 특히 추가 migration 변경의 수용은 별도 후속 검토 대상이며, 이번 소스 통합 성공을 전체 uvwt HEAD의 수용 또는 운영 migration 성공으로 확대하지 않는다.
+
+### 4.3. 남기는 제품 차이
+
+| 실제 사용자 요구 | 선택한 WB만으로 부족한 경계 | 최소 차이 | 관련 검증 | 제거 조건 |
 |---|---|---|---|---|
-| 자체 배포 식별·오프라인 수동 업데이트·게시 승인 | Workbench 배포와 eerraa 배포의 소유자가 다름 | 기존 distribution 경계와 승인 gate를 검토 후 유지 | 통합본 검증 전 | 사용자가 배포 정책을 명시적으로 변경할 때 |
+| 자체 배포 식별·오프라인 수동 업데이트·명시적 게시 승인 | 저자 배포와 eerraa의 소유자/승인 정책이 다름 | distribution·고정 다운로드·수동 gate와 immutable build evidence 연결 | scripts/test 92 PASS, cache-only component 8 PASS | 사용자의 배포 정책 변경 또는 upstream의 동일 정책 지원 |
+| 한국어 UI와 실제 입력/출력 원문 보존 | 한국어 리소스·원문에 hash 결합한 표시 metadata가 없음 | 기존 resources/OwnedText를 WB formatter/timeline/HTTP UI에 연결 | 3개 locale key/format parity·원문/receipt 검사, policy 7,156 assertions, 실제 WPF 63 samples | upstream이 같은 한국어/원문 계약 제공 |
+| 잘못된 discovery가 Core를 중단하거나 last-good를 지우지 않음 | SDK v1.7.0 ListTools는 conversion guard보다 먼저 null 항목을 참조함 | sending middleware의 최소 validation/구조화 오류 보존 | hook 제외 overlay에서 panic, 실제 client 42 PASS; manager/catalog WB 동일 | SDK/상류가 참조 이전 검증과 같은 회귀 제공 |
+| 실행/복구 결과의 nonce·오류·exit 원문 정확성 | 유효 receipt 재시도와 잘못된 identity/누락 exit를 구분해야 함 | 기존 receipt reader에 nonce·bounded JSON·pending sharing/lock 구분 | native receipt/broker 선택 14 PASS, exit·잘못된 nonce·원문 반례 | 같은 읽기/복구 계약이 상류에 제공 |
+| Windows 상태가 unknown/stale를 성공/종료로 오인하지 않음 | 연결 origin·프로세스/파일 세대·provider 변경과 부정확한 JSON에 대한 제품 계약 필요 | 기존 strict health/passive version 및 native/Tailscale observation 경계, UI는 한 display owner 사용 | health/version 95, native status 39, display 27, Tailscale 31+11 assertions | 동일 identity·unknown·invalid/cancellation 계약 제공 시 해당 보완 제거 |
+| Core 종료 시 첫 명령 이전부터 자식 수명 소유, Tunnel과 분리 | 실행 뒤 Job attach만으로는 생성 직후 gap을 보장할 수 없음 | 기존 native creation-time Job/supervised host만 유지; 미사용 C# Job wrapper 제거 | 실제 child/forced host 종료·Tunnel 분리·shim 회귀 PASS | upstream이 creation-time 소유와 해당 동작 제공 |
+| 사용자/설치 root에 귀속된 기존 복구 자료 보존 | 로컬 schema 1의 root/SID와 새 schema 2 무결성을 함께 지원해야 함 | TaskAdmin의 좁은 binding/schema adapter; 전환·SD 비교는 WB 동일 | 실제 COM/NTFS 21 scenarios·223 assertions, backup/SD 78, ownership 29 | upstream이 같은 과거 데이터와 소유권 guard 수용 |
+| 재현 가능한 도구 공급 및 검증 중 변경 금지 | PATH의 외부 rg 선택과 자체 공급/rollback 요구가 다름 | 실행 세대에 결합한 pinned rg·license/manifest/hash·read-lock 선택 | 실제 번들 4개 패키지 370 PASS, cache-only 8 PASS, NTFS 11 PASS | upstream이 동일 번들/무결성/rollback 계약 제공 |
 
-다른 자체 패치의 유지 여부는 아직 확정하지 않았다. 미검토 항목을 최종 잔여 차이로 승인한 표가 아니다.
+`--local-isolated`와 `AGENTDOCK_TEST_LOCAL_METADATA=1`은 격리 테스트 전용 명시 opt-in이다. GitHub 환경을 위조하지 않고 기존 CI 조건과 assertion을 유지한다. 실제 task는 고유 acceptance 이름과 임시 root만 쓰며 새 UAC·생산 Core·설치/서비스 설정을 변경하지 않는다. TaskDefinitionPolicy는 이름만으로 권한을 부여하지 않고 정확한 root/실행파일/인자/interactive SID를 계속 검사한다.
 
-## 5. 검증과 종료 관문
+### 4.4. 데이터와 rollback 경계
 
-upstream 시험 자산을 우선 재사용한다. 내부 함수명을 고정한 시험은 동작 계약 중심으로 정리하되 assertion 약화·skip·행동 회귀 삭제로 실패를 없애지 않는다. 변경된 공통 admission·저장·직렬화·응답 조립의 영향을 고려해 관련 Go suite와 Windows desktop compile/회귀를 실행한다. 한국어 resource key/placeholder, 사용자 원문, 명시적 deny, root identity, 동시성, 출력 예산, 추가 메시지 전달, stale/last-good, metadata·migration·부분 실패·rollback을 관련 경계에서 검증한다.
+Task Scheduler가 기본 LeastPrivilege의 RunLevel을 생략하는 실제 직렬화를 확인했다. 생략은 LeastPrivilege로만 해석하며, 일반 최고권한 검사는 여전히 이를 거절한다. 명시적인 기존 task 검증/복원에서만 standard/highest를 허용하며, 다른 SID/root/추가 인자/다른 action/Password logon은 거절한다. Core 상태가 unknown이면 privilege 변경 전에 실패한다.
 
-native exec/session/task는 격리된 실제 실행·관찰·취소·exit code·output 및 결과 재조회가 재실행하지 않는지 검사한다. COMMON240로 대체하거나 새 240단계 캠페인을 만들지 않는다. 정상 제품/운영 설치에 Setup을 실행하지 않는다. 기존 결과는 동일 소스·의존성·조건일 때만 재사용한다.
+새 Task backup은 schema 2의 XML digest/원 SD에 root·task name·SID를 함께 기록한다. 기존 bound schema 1은 원문을 변경하지 않고 읽고 검증한다. 다른 root/user의 backup, 누락/null 식별, tampered XML, unbound absent-task 기록을 거절한다. Native unknown에서는 충돌하는 복구를 시작하지 않고 evidence를 보존한다. 복원 후 정의와 SD를 검증하며 명시적 deny 또는 추가 권한을 허용 목록 정규화로 숨기지 않는다.
 
-현재 실제 상태: 백업·독립 복원·실험 정리 PASS; 공개 기준선 fetch 완료; 제품 merge/compile/회귀/main 통합 not-run. 현재 설치·게시 not-run. 과거 1.1.16102 PASS 기록은 Git/보관본에 남기고 새 조합의 PASS로 복사하지 않는다.
+**실행파일만 되돌리는 것은 데이터 rollback이 아니다.** schema 2를 생성한 뒤 이전 1.1.16102 helper가 그 자료를 읽는다고 가정하지 않는다. 전환 완료 또는 현재 버전 helper의 검증된 복구를 먼저 마치고, 현재 schema 2/transition 기록과 원 schema 1을 별도로 보존한 후 실행파일을 되돌려야 한다. 이번에는 운영 전환/Setup을 실행하지 않아 생산 복구 자료를 새 schema로 변환하지 않았다. 일반 installer journal/schema 변경도 선택한 WB 단위로 수용하며 실제 운영 downgrade는 별도 배포 검증 범위다.
 
-모든 필수 검증 후 main의 현재 상태를 다시 확인하고 정상 merge한다. main이 바뀌었으면 덮어쓰지 않고 변경 조합을 검토한다. 정본·필요한 제품 코드/시험/자산/라이선스만 main에 남기고 원시 실험 자료·임시 빌드·설치파일은 외부에 둔다.
+## 5. 실제 검증 결과
 
-## 6. 현재 재개 지점
+외부 원시 근거: `D:\Engineering\archives\agentdock\2026-09-27\completion-132145`.
+숫자는 test/subtest 이벤트 또는 명시한 assertion 수다. 부분/반복 실행을 더해서 시험 수를 부풀리지 않는다.
 
-외부 integration worktree가 LOCAL_BASE에 만들어졌다. 다음 행동은 고정 WB_BASE 정상 병합과 실제 충돌의 upstream 우선 해결이다. main은 아직 LOCAL_BASE이며 배포 버전 결정 전 패키징을 하지 않는다. 실제 완료 경계와 남은 검사만 이 정본에서 갱신한다.
+| 검사 | 실제 결과 |
+|---|---|
+| 최종 `go test -json -p 1 -count=1 -timeout=180s ./...` | **PASS / exit 0**. 57개 시험 패키지, test/subtest 2,217 PASS, 기존 조건 SKIP 81. 시험 없는 패키지는 별도 집계 |
+| 최종 `go vet ./...` / `go build ./...` | 각각 **PASS / exit 0** |
+| scripts/test 전체 | **92 PASS, 0 FAIL, 0 SKIP**. 이전 6개 실패 해소; 제거된 내부 helper assertion은 실제 owner 및 행동 검사로 이관 |
+| Windows desktop/native/layout/policy Release win-x64 compile | **PASS**, 최종 compiler 경고/오류 0 |
+| 다국어 pure-policy | **7,156 assertions PASS**. en/zh-CN/ko-KR key·format slot parity, receipt/provenance/Unicode·CRLF·공백 원문 확인 |
+| task ownership / backup·SD 호환 | **29 / 78 assertions PASS**. schema1/2, 원문 불변, 다른 root/SID/name·XML변조·unbound absence 거절 |
+| 실제 격리 Windows task/권한 전환·복원 | **21 scenarios, 223 assertions PASS**. native COM/NTFS, standard/elevated 양 방향, prepare/apply/verify/cancel/rollback/unknown/tamper/absent/deny 검증 |
+| 실제 offscreen WPF | **29,032 assertions, 63 rendered samples PASS**. 기존 input/layout과 세 locale 표시. 운영 Core/tray/visible window 실행 없음 |
+| 상태·health·Tailscale·summary | health/version 95, summary 34, native status 39, display 27, Tailscale 31 및 실제 runtime 연결 11 assertions PASS |
+| 실제 native process/shim 수명 | first-instruction Job·부모 종료·descendant·Tunnel 분리 등 선택 회귀 PASS; 원 도구 재실행 없는 session/receipt 기존 전체 Go 회귀 포함 |
+| 실제 pinned rg 통합 | **4개 패키지 370 PASS**, 플랫폼/helper 조건 SKIP 37. 설치된 구성 요소를 source spec 4개 파일 hash/크기로 검증하여 임시 복사한 뒤 실행; 생산 Core 실행 아님 |
+| 캐시 전용 rg 구성 요소 검증 | **8 PASS, 0 SKIP**. 다운로드/다른 process를 금지한 유효/변조/partial/license/architecture 반례. AgentDock 설치파일 생성 아님 |
+| 실제 NTFS backup/복구 | **11 PASS, 0 SKIP**. owner/ACL/attributes·ADS/EA 비파괴 거절·sharing lock·변조 metadata 거절 |
+| Race detector 추가 검사 | **실행 환경 실패**. 시험 진입 전에 모든 test process가 `0xc0000139`로 종료, 0 test PASS. 설치된 gcc 외 대체 compiler는 확인되지 않음. race PASS라고 하지 않으며 제품 assertion 실패와 구분 |
+| Setup/생산 Core 교체·재시작/운영 설치·migration/게시 | **NOT-RUN**, 사용자 허용 범위 밖. native 격리 복구 성공과 구분 |
+| ARM64/macOS/Linux 실기기 및 물리 DPI·실제 키보드 | **NOT-RUN**, 현재 Windows x64 로컬 결과를 다른 플랫폼 성공으로 확대하지 않음 |
+
+최초 마지막 묶음 Go 실행에는 기존 `TestWorkspaceContextSkillIndexTruncatesWithWarning`가 9.99초 후 context timeout으로 실패했다(2,216 PASS/1 FAIL). 당시 다른 verification이 겹쳤다. 해당 실행을 그대로 보존하고 모든 다른 verification 종료를 확인한 뒤 소스·assertion·timeout 불변으로 전체 suite를 단독 실행하여 위 PASS를 얻었다. 리소스 경합이 원인이라고 확정하지 않으며 이 간헐적 timeout 기록을 숨기지 않는다.
+
+초기 Windows XML/connection 오류 및 첫 native 실행의 10개 실패도 덮지 않았다. 충돌/남은 connection 변수는 실제 owner에 맞게 수정했고, native 실패는 Scheduler 기본 RunLevel 생략을 lowest로 처리하여 원래 반례들을 통과시켰다. 안전 검사 차단과 compiler/test 오류를 구분했다. 이번 두 추가 소스 조회의 pre-dispatch 차단은 해당 요청을 재전송하지 않고 그대로 기록한다. 이 통합이 OpenAI pre-dispatch 차단을 해결했다는 주장은 하지 않는다.
+
+과거 검증은 `partial-validation`, `continuation-validation`, `upstream-fixes-validation`, `mcp-convergence-121938`, `compatibility-convergence-122052`, `plugin-snapshot-convergence-122456`, `windows-completion-gate-131137`에 그대로 있다. 최신 PASS는 이전 FAIL의 기록을 소급 변경하지 않는다. 새로운 240단계 campaign은 없다.
+
+## 6. 소스 반영과 배포 경계
+
+통합 source의 필수 로컬 compile/회귀·권한/원문/데이터 복원 관문을 통과했다. 마지막 단계는 현재 main과 working tree를 확인한 뒤 고정 LOCAL_BASE 이력을 보존하는 정상 merge다. main에 다른 변경이 있으면 강제로 덮지 않는다. 원시 테스트/임시 build·반례·screenshots는 외부 archive에만 두고, main에는 제품과 필요한 회귀·라이선스·upstream 문서·이 정본만 둔다.
+
+반영 상태: **로컬 commit/정상 main merge 대기**. 실제 commit과 최종 main 검증은 병합 후 이 절과 외부 final-state 기록에 추가한다.
+
+새 배포 버전은 미정이다. 기존 1.1.16102는 마지막 배포 식별이며 새 소스의 설치파일을 같은 이름으로 만들지 않았다. 로컬 소스 통합, 설치파일 패키징, 실제 설치/rollback, 원격 게시는 서로 다른 상태다. 다음 배포 단계에서는 새 버전과 정확한 source commit을 먼저 명시하고, 보류된 후속 Windows 변경/운영 migration 및 필요한 플랫폼/race 환경 검증 범위를 확정한다. 사용자 승인 없이 Setup·Core 재시작·push·PR·dispatch·tag·Release를 수행하지 않는다.

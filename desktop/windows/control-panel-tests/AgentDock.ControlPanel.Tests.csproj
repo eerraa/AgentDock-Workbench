@@ -33,4 +33,11 @@
     <Compile Include="../control-panel/Services/NativeStatusProbe.cs" Link="NativeStatusProbe.cs" />
     <Compile Include="../control-panel/Services/TailscaleObservationCache.cs" Link="TailscaleObservationCache.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../control-panel/Models/ExecutionTitleFormatter.cs" Link="ExecutionTitleFormatter.cs"/>
+    <Compile Include="../control-panel/Services/PrivilegeTransition.cs" Link="PrivilegeTransition.cs"/>
+    <Compile Include="../control-panel/Models/ToolOutputSettings.cs" Link="ToolOutputSettings.cs"/>
+    <Compile Include="../control-panel/Models/InsertionPresentation.cs" Link="InsertionPresentation.cs"/>
+    <Compile Include="../control-panel/Models/InsertionTimeline.cs" Link="InsertionTimeline.cs"/>
+  </ItemGroup>
 </Project>

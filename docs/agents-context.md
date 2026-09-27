@@ -84,6 +84,19 @@ go build -o ./bin/agentdock-context.exe ./cmd/agentdock
 
 `workspace_context` 接收同样的可选 `workdir`，返回工作区规则与 `.agents/skills/*/SKILL.md` 摘要及可直接读取的精确来源引用。它是定向入口，不替代当前 fork 的完整 `agentdock_context`，也不要求同一规则作用域内每一步同时调用两者。共享或工作区 Skill 与已安装同名 Skill 保持不同身份，不合并正文或借用已安装 Skill 的凭据。
 
+## Skill 路由 description 预算
+
+`agentdock_context.skills` 中的 standalone managed 与 Plugin-owned Skill，以及
+`workspace_context.workspace_skills`，保留解析校验后的完整 description（去除首尾空白），
+不再按 160/120 bytes 截断使用条件。此规则沿用各来源既有的 metadata 校验、路径保护、
+取消与快照失效边界；不会把 Skill 正文装入索引或改变任何凭据来源。
+
+workspace 索引仍按稳定顺序最多返回 50 项并报告截断。共享目录
+`agentdock_context.common_skills` 继续最多 50 项、每项 description 最多 120 bytes。
+作者应把 Use when、Do not use 和相邻 Skill 的边界写入 description，不能依赖正文补全
+路由条件。此行为适配自 uvwt/agentdock `a4848d1908638aa7b0a0f9fae859f03d6251eb4c`；
+Workbench 的共享快照是现有实现责任，不引入第二套索引或更改 Skill 存储 schema。
+
 ## 上下文复用
 
 首次缺少规则时调用一次 `agentdock_context`。同一规则作用域后续直接使用业务工具，无新增 AGENTS.md 的子目录操作不重载。后台命令继续观察原 session；普通失败或短暂网络错误先核对原调用；MCP 变化只定向刷新该服务。工作区/规则变化或模型压缩后缺少必要内容时可以再次请求，返回完整有效快照，不需要每次填写 conversation_id/task_id。

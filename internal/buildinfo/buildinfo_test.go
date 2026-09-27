@@ -15,7 +15,7 @@ func TestDownstreamIdentityAndCompleteSourceSHA(t *testing.T) {
 	if info.SourceCommit != Commit || info.Commit != Commit[:12] {
 		t.Fatalf("source identity lost: %+v", info)
 	}
-	if info.Distribution != "eerraa" || info.UpstreamVersion != "1.1.6" || info.DownstreamRevision != DownstreamRevision {
+	if info.Distribution != "eerraa" || info.UpstreamVersion != "1.1.7" || info.DownstreamRevision != DownstreamRevision {
 		t.Fatalf("downstream identity: %+v", info)
 	}
 	if _, err := json.Marshal(info); err != nil {
@@ -33,7 +33,7 @@ func TestDownstreamIdentityAndCompleteSourceSHA(t *testing.T) {
 	}
 	// The release owner assigns the main product version explicitly; the upstream
 	// baseline and downstream release ordinal remain independent metadata.
-	if Version != "1.1.16102" || UpstreamVersion != "1.1.6" || DownstreamRevision != 102 {
+	if Version != "1.1.16102" || UpstreamVersion != "1.1.7" || DownstreamRevision != 102 {
 		t.Fatalf("main release identity mismatch: version=%s upstream=%s revision=%d", Version, UpstreamVersion, DownstreamRevision)
 	}
 }

@@ -566,7 +566,11 @@ func TestWindowsTaskAdminUsesNativeAgentDockHelper(t *testing.T) {
 		"fallback_version",
 		"--task-name",
 		"request.TaskName",
-		"state.WasEnabled && state.WasRunning",
+		"if (state.WasRunning)",
+		"task.Enabled = state.WasEnabled",
+		"ReadBackup(backupDirectory)",
+		"RecoveryFiles.WriteText",
+		"VerifyRestoredBackup",
 		"process.Kill(entireProcessTree: true)",
 	} {
 		if !strings.Contains(source, want) {
@@ -584,38 +588,27 @@ func TestWindowsTaskAdminUsesNativeAgentDockHelper(t *testing.T) {
 	}
 }
 func TestWindowsElevatedCoreHostUsesKillOnCloseJob(t *testing.T) {
-	jobData, err := os.ReadFile(filepath.Join("..", "..", "desktop", "windows", "control-panel", "Services", "KillOnCloseJob.cs"))
+	// The native Go owner replaces the unused WPF Job wrapper. Verify the
+	// create-time boundary and retain the stable-shim supervision assertion.
+	data, err := os.ReadFile(filepath.Join("..", "..", "internal", "process", "job_start_windows.go"))
 	if err != nil {
-		t.Fatalf("read KillOnCloseJob.cs: %v", err)
+		t.Fatal(err)
 	}
-	jobSource := string(jobData)
-	for _, want := range []string{
-		"CreateJobObject",
-		"JobObjectLimitKillOnJobClose",
-		"SetInformationJobObject",
-		"AssignProcessToJobObject",
+	source := string(data)
+	for _, required := range []string{
+		"windows.CreateJobObject", "windows.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE",
+		"attributes.Update(jobList", "windows.PROC_THREAD_ATTRIBUTE_HANDLE_LIST",
+		"windows.CREATE_NO_WINDOW", "windows.SW_HIDE", "windows.CloseHandle(h)",
 	} {
-		if !strings.Contains(jobSource, want) {
-			t.Fatalf("KillOnCloseJob.cs missing %q", want)
+		if !strings.Contains(source, required) {
+			t.Fatalf("native process lifetime contract missing %q", required)
 		}
 	}
-
-	runtimeData, err := os.ReadFile(filepath.Join("..", "..", "desktop", "windows", "control-panel", "Services", "RuntimeService.cs"))
-	if err != nil {
-		t.Fatalf("read RuntimeService.cs: %v", err)
+	assigned := strings.Index(source, "attributes.Update(jobList")
+	created := strings.Index(source, "windows.CreateProcess(")
+	if assigned < 0 || created <= assigned {
+		t.Fatal("job must own children before their first instruction")
 	}
-	runtimeSource := string(runtimeData)
-	for _, want := range []string{
-		"KillOnCloseJob.Create()",
-		"job.Assign(process)",
-		"CreateNoWindow = true",
-		"WindowStyle = ProcessWindowStyle.Hidden",
-	} {
-		if !strings.Contains(runtimeSource, want) {
-			t.Fatalf("RuntimeService.cs missing elevated Core host behavior %q", want)
-		}
-	}
-
 	shimData, err := os.ReadFile(filepath.Join("..", "..", "cmd", "agentdock-shim", "main_windows.go"))
 	if err != nil {
 		t.Fatalf("read stable Windows shim: %v", err)
@@ -913,7 +906,8 @@ func TestWindowsSetupUsesNativeNoConsoleLaunchBroker(t *testing.T) {
 	for _, want := range []string{
 		"windows.CREATE_NO_WINDOW", "startInteractiveScheduledTaskNative(request.TaskName, sid)",
 		"<LogonType>InteractiveToken</LogonType><RunLevel>LeastPrivilege</RunLevel>",
-		"result.PID = command.Process.Pid", "result.TaskName != request.TaskName",
+		"result.PID = command.Process.Pid", `readSetupReceipt(filepath.Join(root, "result.json"), request.TaskName)`,
+		`if result.TaskName != expected || expected == ""`,
 		"deleteSetupTask(request.TaskName", "command.Process.Release()",
 	} {
 		if !strings.Contains(native, want) {
@@ -1227,7 +1221,7 @@ func TestWindowsSetupDirectorySelectionUsesAgentDockIdentity(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, want := range []string{
-		"AppName=AgentDock", "DefaultDirName={localappdata}\\AgentDock",
+		"AppName=AgentDock Workbench", "DefaultDirName={localappdata}\\AgentDock",
 		"DisableDirPage=no", "UsePreviousAppDir=yes", "AgentDockSetup-amd64", "AgentDockSetup-arm64",
 	} {
 		if !strings.Contains(string(data), want) {

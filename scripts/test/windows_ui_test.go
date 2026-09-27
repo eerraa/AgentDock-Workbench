@@ -135,8 +135,8 @@ func TestWindowsControlPanelShowsLiveNexusStatusInsideRuntimeStatus(t *testing.T
 		},
 		filepath.Join("Services", "RuntimeService.cs"): {
 			`bool includeNexusConnection = false`,
-			`ReadNexusConnectionAsync`,
-			`"service", "status", "--runtime-root", RuntimeRoot`,
+			`ReadNativeStatusAsync(binaryPath, "service", NativeStatusReader.ParseService, cancellationToken)`,
+			`service?.NexusConnected == true`,
 		},
 	}
 

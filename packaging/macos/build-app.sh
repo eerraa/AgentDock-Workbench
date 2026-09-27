@@ -136,6 +136,7 @@ HELPERS_DIR="$CONTENTS_DIR/Helpers"
 LAUNCH_AGENTS_DIR="$CONTENTS_DIR/Library/LaunchAgents"
 MENU_LOGIN_HELPER="$HELPERS_DIR/AgentDockLoginHelper"
 mkdir -p "$MACOS_DIR" "$RESOURCES_DIR" "$HELPERS_DIR" "$LAUNCH_AGENTS_DIR"
+cp "$ROOT_DIR/LICENSE" "$RESOURCES_DIR/LICENSE"
 for localization in en zh-Hans; do
   source_lproj="$LOCALIZATION_DIR/$localization.lproj"
   [[ -d "$source_lproj" && ! -L "$source_lproj" ]] || die "缺少 macOS 本地化目录：$source_lproj"
@@ -341,7 +342,7 @@ cat > "$CONTENTS_DIR/Info.plist" <<PLIST
   <key>CFBundleDevelopmentRegion</key>
   <string>en</string>
   <key>CFBundleDisplayName</key>
-  <string>AgentDock</string>
+  <string>AgentDock Workbench</string>
   <key>CFBundleExecutable</key>
   <string>AgentDock</string>
   <key>CFBundleIdentifier</key>
@@ -351,7 +352,7 @@ cat > "$CONTENTS_DIR/Info.plist" <<PLIST
   <key>CFBundleInfoDictionaryVersion</key>
   <string>6.0</string>
   <key>CFBundleName</key>
-  <string>AgentDock</string>
+  <string>AgentDock Workbench</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>
@@ -365,7 +366,7 @@ cat > "$CONTENTS_DIR/Info.plist" <<PLIST
   <key>NSHighResolutionCapable</key>
   <true/>
   <key>NSAppleEventsUsageDescription</key>
-  <string>AgentDock needs to control System Events and Finder to perform desktop automation tasks you request.</string>
+  <string>AgentDock Workbench needs to control System Events and Finder to perform desktop automation tasks you request.</string>
   <key>NSHumanReadableCopyright</key>
   <string>Copyright © AgentDock contributors</string>
 </dict>
@@ -422,7 +423,7 @@ ln -s /Applications "$DMG_STAGE_DIR/Applications"
 
 print -- "==> 创建 AgentDock DMG"
 hdiutil create \
-  -volname "AgentDock" \
+  -volname "AgentDock Workbench" \
   -srcfolder "$DMG_STAGE_DIR" \
   -ov \
   -format UDZO \

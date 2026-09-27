@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -686,53 +685,7 @@ func firstMapIntersection[A, B any](left map[string]A, right map[string]B) (stri
 }
 
 func copyPackageTree(source, destination string) error {
-	var files int
-	var total int64
-	return filepath.WalkDir(source, func(path string, entry fs.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return newError("PLUGIN_INSTALL_FAILED", "read plugin package", map[string]any{"path": path}, walkErr)
-		}
-		relative, err := filepath.Rel(source, path)
-		if err != nil {
-			return err
-		}
-		if relative == "." {
-			return os.MkdirAll(destination, 0o700)
-		}
-		if entry.Type()&os.ModeSymlink != 0 {
-			return newError("PLUGIN_SOURCE_INVALID", "symbolic links are not allowed in plugin packages", map[string]any{"path": relative}, nil)
-		}
-
-		target := filepath.Join(destination, relative)
-		if entry.IsDir() {
-			return os.MkdirAll(target, 0o700)
-		}
-		info, err := entry.Info()
-		if err != nil || !info.Mode().IsRegular() {
-			return newError("PLUGIN_SOURCE_INVALID", "plugin package contains a non-regular file", map[string]any{"path": relative}, err)
-		}
-		files++
-		total += info.Size()
-		if files > maxPluginFiles || total > maxPluginBytes {
-			return newError("PLUGIN_SOURCE_TOO_LARGE", "plugin package exceeds file or byte limits", map[string]any{"files": files, "bytes": total}, nil)
-		}
-		if err := os.MkdirAll(filepath.Dir(target), 0o700); err != nil {
-			return err
-		}
-		input, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-		output, err := os.OpenFile(target, os.O_CREATE|os.O_EXCL|os.O_WRONLY, info.Mode().Perm()&0o755)
-		if err != nil {
-			input.Close()
-			return err
-		}
-		_, copyErr := io.Copy(output, input)
-		closeOutErr := output.Close()
-		closeInErr := input.Close()
-		return errors.Join(copyErr, closeOutErr, closeInErr)
-	})
+	return snapshotPluginTree(source, destination, maxPluginBytes, maxPluginFiles)
 }
 
 func extractZip(path, destination string) error {

@@ -15,6 +15,22 @@ internal static class TaskOwnerRegression
    foreach(var otherRoot in new[]{Path.Combine(root,"nested"),"relative"}) {
      try{TaskDefinitionPolicy.Validate(xml,"AgentDock",otherRoot,sid,value=>value);throw new Exception("other root accepted");}catch(InvalidOperationException){assertions++;}
    }
+   foreach (var name in new[] { "AgentDock", "AgentDock-Acceptance-fixture", "Custom AgentDock" }) {
+     TaskDefinitionPolicy.Validate(xml, name, root, sid, value => value); assertions++;
+     TaskDefinitionPolicy.Validate(xml.Replace("HighestAvailable", "LeastPrivilege"), name, root, sid, value => value, allowStandardTask: true); assertions++;
+   }
+   foreach (var name in new[] { "", "..", "Other/AgentDock", "Other\\AgentDock", "AgentDock\nOther" }) {
+     try { TaskDefinitionPolicy.Validate(xml, name, root, sid, value => value, allowStandardTask: true); throw new Exception("invalid task path accepted"); }
+     catch (InvalidOperationException) { assertions++; }
+   }
+   foreach (var invalid in new[] { xml.Replace(sid,"S-1-5-18"), xml.Replace("--run-core-task", "--background"), xml.Replace("InteractiveToken", "Password"), xml.Replace("HighestAvailable", "UnknownLevel") }) {
+     try { TaskDefinitionPolicy.Validate(invalid,"AgentDock",root,sid,value=>value,allowStandardTask:true); throw new Exception("standard restoration broadened task ownership"); }
+     catch (InvalidOperationException) { assertions++; }
+   }
+   var omittedLevel = xml.Replace("<RunLevel>HighestAvailable</RunLevel>", "");
+   TaskDefinitionPolicy.Validate(omittedLevel, "AgentDock", root, sid, value => value, allowStandardTask: true); assertions++;
+   try { TaskDefinitionPolicy.Validate(omittedLevel,"AgentDock",root,sid,value=>value); throw new Exception("omitted level became elevated"); }
+   catch (InvalidOperationException) { assertions++; }
    Console.WriteLine($"Task definition ownership: {assertions} assertions passed; no task, elevation, service or UI operation executed.");
  }
 }

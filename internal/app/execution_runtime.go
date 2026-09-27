@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"sort"
 	"strings"
 	"time"
@@ -71,7 +72,7 @@ func (r *Runtime) RuntimeExecutionOverview(ctx context.Context) (Result, error) 
 	if err != nil {
 		return nil, err
 	}
-	return Result{"statistics": stats, "conversation_activity": conversations, "in_flight": r.confirmedConversationActivity(), "server_now": time.Now().UTC(), "permission_mode": policy.GlobalMode, "policy_revision": policy.Revision, "schema_version": 2}, nil
+	return Result{"statistics": stats, "append_queue": r.activity.AppendStatistics(), "conversation_activity": conversations, "in_flight": r.confirmedConversationActivity(), "server_now": time.Now().UTC(), "permission_mode": policy.GlobalMode, "policy_revision": policy.Revision, "schema_version": 2}, nil
 }
 func (r *Runtime) RuntimeConversations(ctx context.Context, query ExecutionListQuery) (ConversationPage, error) {
 	page := ConversationPage{Conversations: []ConversationItem{}, ServerNow: time.Now().UTC()}
@@ -419,15 +420,36 @@ func (r *Runtime) localManagementStart(ctx context.Context, tool string, binding
 	if err = binding.Validate(); err != nil {
 		return binding, err
 	}
-	err = r.appendExecution(activity.Event{Binding: binding, Kind: "call.created", ToolName: tool, Title: title, Status: "created"})
+	reservation, err := r.activity.ReserveAppend(ctx, 3)
 	if err != nil {
 		return binding, err
 	}
-	err = r.appendExecution(activity.Event{Binding: binding, Kind: "call.started", ToolName: tool, Title: title, Status: "running"})
+	retained := false
+	defer func() {
+		if !retained {
+			reservation.Close()
+		}
+	}()
+	err = r.appendReservedExecution(reservation, activity.Event{Binding: binding, Kind: "call.created", ToolName: tool, Title: title, Status: "created"})
+	if err != nil {
+		return binding, err
+	}
+	err = r.appendReservedExecution(reservation, activity.Event{Binding: binding, Kind: "call.started", ToolName: tool, Title: title, Status: "running"})
+	if err == nil {
+		r.localCompletions.Store(binding.CallID, reservation)
+		retained = true
+	}
 	return binding, err
 }
 func (r *Runtime) localManagementFinish(binding activity.Binding, tool, status, summary string) {
-	_ = r.appendExecution(activity.Event{Binding: binding, Kind: "call.completed", ToolName: tool, Status: status, Summary: r.executionRedactor(nil).Text(summary, 4096)})
+	var reservation *activity.AppendReservation
+	if value, found := r.localCompletions.LoadAndDelete(binding.CallID); found {
+		reservation = value.(*activity.AppendReservation)
+		defer reservation.Close()
+	}
+	if err := r.appendReservedExecution(reservation, activity.Event{Binding: binding, Kind: "call.completed", ToolName: tool, Status: status, Summary: r.executionRedactor(nil).Text(summary, 4096)}); err != nil {
+		slog.Error("local management outcome was not journaled", "call_id", binding.CallID, "tool", tool, "status", status, "error", err)
+	}
 }
 func (r *Runtime) RuntimePermissions(ctx context.Context, binding activity.Binding) (Result, error) {
 	if binding.ConversationID != "" && binding.WorkspaceID == "" {
@@ -449,7 +471,7 @@ func (r *Runtime) RuntimePermissions(ctx context.Context, binding activity.Bindi
 	if err != nil {
 		return nil, err
 	}
-	return Result{"policy": policy, "effective": effective, "workspaces": workspaces, "conversation_id": binding.ConversationID, "workspace_id": binding.WorkspaceID, "os_privileges_unchanged": true}, nil
+	return Result{"policy": policy, "effective": effective, "workspaces": workspaces, "conversation_id": binding.ConversationID, "workspace_id": binding.WorkspaceID, "os_privileges_unchanged": true, "sandbox_enforcement": "tool_admission_only", "native_os_sandbox_available": false}, nil
 }
 func (r *Runtime) RuntimePermissionsUpdate(ctx context.Context, change permission.Change) (Result, error) {
 	r.executionMu.Lock()
@@ -486,7 +508,7 @@ func (r *Runtime) RuntimePermissionsUpdate(ctx context.Context, change permissio
 		return nil, err
 	}
 	r.localManagementFinish(binding, "permission.update", "succeeded", fmt.Sprintf("scope=%s scope_id=%s mode=%s revision=%d；操作系统权限未改变。", change.Scope, change.ScopeID, change.Mode, policy.Revision))
-	return Result{"policy": policy, "os_privileges_unchanged": true}, nil
+	return Result{"policy": policy, "os_privileges_unchanged": true, "sandbox_enforcement": "tool_admission_only", "native_os_sandbox_available": false}, nil
 }
 func (r *Runtime) RuntimeApprovals(ctx context.Context, status string, offset, limit int) (Result, error) {
 	r.expirePendingApprovals(ctx)
@@ -530,6 +552,9 @@ func (r *Runtime) RuntimeApprovalRequest(ctx context.Context, id string) (Result
 	return result, nil
 }
 func (r *Runtime) RuntimeApprovalDecision(ctx context.Context, id, action string, allowWorkspace bool) (Result, error) {
+	return r.runtimeApprovalDecision(ctx, id, action, allowWorkspace, permission.ReviewerUser)
+}
+func (r *Runtime) runtimeApprovalDecision(ctx context.Context, id, action string, allowWorkspace bool, reviewer string) (Result, error) {
 	if action != "approve" && action != "reject" {
 		return nil, errors.New("invalid approval decision")
 	}
@@ -543,19 +568,38 @@ func (r *Runtime) RuntimeApprovalDecision(ctx context.Context, id, action string
 		r.executionMu.Unlock()
 		return Result{"approval": a, "already_decided": true, "dispatched": false}, nil
 	}
+	selectedReviewer := a.Reviewer
+	if selectedReviewer == "" {
+		selectedReviewer = permission.ReviewerUser
+	}
+	if action == "approve" && reviewer != selectedReviewer {
+		r.executionMu.Unlock()
+		return nil, errors.New("approval is assigned to another reviewer")
+	}
+	actor := "local_user"
+	if reviewer == permission.ReviewerAuto {
+		actor = permission.ReviewerAuto
+	}
 	p := r.pendingCalls[id]
 	cancelPending := func(reason string) (Result, error) {
-		settled, settleErr := r.permissions.Settle(ctx, id, "expired", reason)
+		settled, settleErr := r.permissions.SettleReviewed(ctx, id, "expired", reason, actor)
 		delete(r.pendingCalls, id)
 		r.executionMu.Unlock()
 		_ = r.appendExecution(activity.Event{Binding: a.Binding, Kind: "call.completed", ToolName: a.Tool, ApprovalID: id, Status: "cancelled", Summary: reason})
 		return Result{"approval": settled, "dispatched": false}, settleErr
 	}
 	if action == "reject" {
-		settled, settleErr := r.permissions.Settle(ctx, id, "rejected", "用户拒绝，原操作未执行。")
+		summary := "用户拒绝，原操作未执行。"
+		if reviewer == permission.ReviewerAuto {
+			summary = "自动审查拒绝，原操作未执行。"
+			if a.ReviewReason != "" {
+				summary = a.ReviewReason
+			}
+		}
+		settled, settleErr := r.permissions.SettleReviewed(ctx, id, "rejected", summary, actor)
 		delete(r.pendingCalls, id)
 		r.executionMu.Unlock()
-		_ = r.appendExecution(activity.Event{Binding: a.Binding, Kind: "call.completed", ToolName: a.Tool, ApprovalID: id, Status: "cancelled", Summary: "用户拒绝，原操作未执行。"})
+		_ = r.appendExecution(activity.Event{Binding: a.Binding, Kind: "call.completed", ToolName: a.Tool, ApprovalID: id, Status: "cancelled", Summary: summary})
 		return Result{"approval": settled, "dispatched": false}, settleErr
 	}
 	if p == nil {
@@ -573,7 +617,7 @@ func (r *Runtime) RuntimeApprovalDecision(ctx context.Context, id, action string
 	if err = r.executionAdmissionLocked(ctx, p.state.binding, p.spec.Name, stringArg(p.args, "action"), p.state.binding.CallID); err != nil {
 		return cancelPending(err.Error())
 	}
-	a, claimed, claimErr := r.permissions.ClaimWithWorkspaceRule(ctx, id, allowWorkspace)
+	a, claimed, claimErr := r.permissions.ClaimReviewed(ctx, id, allowWorkspace, reviewer)
 	if claimErr != nil {
 		if errors.Is(claimErr, permission.ErrApprovalExpired) {
 			return cancelPending("审批已过期或权限策略已变化，原操作未执行。")
@@ -590,10 +634,18 @@ func (r *Runtime) RuntimeApprovalDecision(ctx context.Context, id, action string
 	if a.GrantedRuleID != "" {
 		p.decision.RuleID = a.GrantedRuleID
 	}
-	runCtx, cancel := context.WithCancel(r.commandCtx)
+	parentCtx := r.commandCtx
+	if reviewer == permission.ReviewerAuto {
+		parentCtx = ctx
+		p.approvalInline = true
+	}
+	runCtx, cancel := context.WithCancel(parentCtx)
 	r.activeCalls[p.state.binding.CallID] = &liveExecution{binding: p.state.binding, cancel: cancel, source: p.source}
 	r.executionWG.Add(1)
 	r.executionMu.Unlock()
+	if reviewer == permission.ReviewerAuto {
+		return r.executePrepared(runCtx, p)
+	}
 	go func() { _, _ = r.executePrepared(runCtx, p) }()
 	return Result{"approval": a, "dispatched": true}, nil
 }

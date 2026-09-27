@@ -52,11 +52,11 @@ func TestCIWorkflowUsesFreshBoundedGoTests(t *testing.T) {
 	workflow := readWorkflow(t, "ci.yml")
 	for _, want := range []string{
 		"timeout-minutes: 20",
-		"go test -p 2 ./... -count=1 -timeout=3m",
+		"go test -p 2 ./... -count=1 -timeout=8m",
 		"name: ACP prompt and steering race regression",
 		"-count=20",
 		"-timeout=90s",
-		"go test -race ./... -count=1 -timeout=3m",
+		"go test -race -p 2 ./internal/activity ./internal/permission ./internal/insertion ./internal/fs/... ./internal/snapshot ./internal/acp ./internal/selfupdate -count=1 -timeout=8m",
 		"go test -race -tags browser_integration ./internal/tool/browser ./internal/app -count=1 -timeout=3m",
 		"timeout-minutes: 15",
 	} {
@@ -126,13 +126,13 @@ func TestWindowsReleaseKeepsBoundedCompleteValidation(t *testing.T) {
 	}
 }
 
-func TestWindowsPackageOwnsAutomaticVersionTagRelease(t *testing.T) {
+func TestWindowsPackageReusableAndSingleAutomaticReleaseOwner(t *testing.T) {
 	workflow := readWorkflow(t, "windows-package.yml")
 	for _, want := range []string{
-		"push:\n    tags:\n      - 'v*'",
+		"workflow_call:",
 		"workflow_dispatch:",
-		"name: Build verified unsigned Windows x64 package",
-		"Architectures = @('amd64')",
+		"name: Build verified unsigned Windows packages",
+		"inputs.architectures",
 		"build-windows-release.ps1",
 		"verify-windows-release-assets.ps1",
 		"name: Verify offline Setup installation and uninstall",
@@ -151,9 +151,18 @@ func TestWindowsPackageOwnsAutomaticVersionTagRelease(t *testing.T) {
 		}
 	}
 
+	if strings.Contains(workflow, "push:\n    tags:") {
+		t.Fatal("Windows-only workflow must not race all-platform publication")
+	}
+	unified := readWorkflow(t, "workbench-release.yml")
+	for _, required := range []string{"push:\n    tags:", "windows-package.yml", "needs: [resolve-source, windows, windows-arm-package, unix, macos-app]", "publish-workbench.py"} {
+		if !strings.Contains(unified, required) {
+			t.Fatalf("all-platform release gate missing %q", required)
+		}
+	}
 	crossPlatform := readWorkflow(t, "release.yml")
 	if strings.Contains(crossPlatform, "push:\n    tags:") {
-		t.Fatal("cross-platform signed release must remain manual; windows-package.yml owns automatic version tags")
+		t.Fatal("cross-platform signed release must remain manual; workbench-release.yml owns automatic version tags")
 	}
 }
 

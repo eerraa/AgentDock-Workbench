@@ -14,7 +14,7 @@ internal sealed partial class ActivityClient
     {
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(token);
         deadline.CancelAfter(TimeSpan.FromSeconds(4));
-        var connection = await runtime.GetActivityConnectionAsync(deadline.Token).ConfigureAwait(false);
+        var connection = await _connection(deadline.Token).ConfigureAwait(false);
         using var request = Request(HttpMethod.Get, new Uri(connection.Origin, "/internal/runtime/execution"), connection.BearerToken);
         using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, deadline.Token).ConfigureAwait(false);
         var data = await ReadBoundedAsync(response.Content, 8 * 1024 * 1024, deadline.Token).ConfigureAwait(false);
@@ -23,7 +23,7 @@ internal sealed partial class ActivityClient
         var value = document.RootElement.Clone();
         var summary = ExecutionSummarySnapshot.Parse(value);
         // Never publish a response from the previous port/authentication binding.
-        var current = await runtime.GetActivityConnectionAsync(deadline.Token).ConfigureAwait(false);
+        var current = await _connection(deadline.Token).ConfigureAwait(false);
         if (connection != current) throw new InvalidDataException("Execution overview connection changed during the request.");
         return new(value, summary);
     }
@@ -37,7 +37,7 @@ internal sealed partial class ActivityClient
             try
             {
                 using var connect = CancellationTokenSource.CreateLinkedTokenSource(token); connect.CancelAfter(TimeSpan.FromSeconds(10));
-                var connection = await runtime.GetActivityConnectionAsync(connect.Token).ConfigureAwait(false);
+                var connection = await _connection(connect.Token).ConfigureAwait(false);
                 using var request = Request(HttpMethod.Get, new Uri(connection.Origin, "/internal/runtime/calls/stream?" + query + "&after=" + after), connection.BearerToken);
                 request.Headers.TryAddWithoutValidation("Last-Event-ID", after.ToString(System.Globalization.CultureInfo.InvariantCulture));
                 request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));

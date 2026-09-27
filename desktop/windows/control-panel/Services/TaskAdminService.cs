@@ -2,6 +2,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
+using System.Security.AccessControl;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 
 namespace AgentDock.ControlPanel;
@@ -12,6 +15,8 @@ internal static class TaskAdminService
     private const int TaskActionExec = 0;
     private const int TaskTriggerLogon = 9;
     private const int TaskCreateOrUpdate = 6;
+    private const int TaskDontAddPrincipalAce = 0x10;
+    private const int TaskIgnoreRegistrationTriggers = 0x20;
     private const int TaskLogonInteractiveToken = 3;
     private const int TaskRunLevelHighest = 1;
     private const int TaskInstancesIgnoreNew = 2;
@@ -24,7 +29,7 @@ internal static class TaskAdminService
             var request = Parse(arguments);
             EnsureAdministrator();
             RequireRuntimeRoot(request);
-            if (request.TaskName != "AgentDock") throw new InvalidOperationException("task_owner_mismatch: unsupported managed task name.");
+            if (!TaskDefinitionPolicy.IsValidTaskName(request.TaskName)) throw new InvalidOperationException("task_owner_mismatch: invalid managed task name.");
             using var identity = WindowsIdentity.GetCurrent();
             var currentSid = identity.User?.Value ?? throw new InvalidOperationException("task_owner_mismatch: current SID is missing.");
             if (request.UserSid.Length > 0) EnsureSameWindowsUser(request.UserSid);
@@ -116,7 +121,7 @@ internal static class TaskAdminService
         {
             return DefaultTaskName;
         }
-        if (value.Contains('\\') || value.Contains('/'))
+        if (!TaskDefinitionPolicy.IsValidTaskName(value))
         {
             throw new InvalidOperationException(UiText.Format("MissingAdminArgument", "--task-name"));
         }
@@ -205,7 +210,7 @@ internal static class TaskAdminService
 
     private static void RequireRuntimeRoot(TaskAdminRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.RuntimeRoot))
+        if (!Path.IsPathFullyQualified(request.RuntimeRoot))
         {
             throw new InvalidOperationException(UiText.Get("RuntimeDirectoryRequired"));
         }
@@ -312,76 +317,143 @@ internal static class TaskAdminService
     {
         var taskName = request.TaskName; var backupDirectory = request.BackupDirectory;
         Directory.CreateDirectory(backupDirectory);
+        if (File.Exists(Path.Combine(backupDirectory, "state.json")))
+            throw new IOException("不得覆盖仍有恢复价值的计划任务备份。");
         dynamic? task = FindTask(root, taskName);
-        var state = new TaskBackupState { SchemaVersion = 1, RuntimeRoot = request.RuntimeRoot, TaskName = request.TaskName, UserSid = request.UserSid };
+        var state = new TaskBackupState { SchemaVersion = 2, RuntimeRoot = request.RuntimeRoot, TaskName = request.TaskName, UserSid = request.UserSid };
         if (task is not null)
         {
             state.Exists = true;
             state.WasEnabled = task.Enabled;
             state.WasRunning = Convert.ToInt32(task.State) == 4;
             state.SecurityDescriptor = task.GetSecurityDescriptor(DaclSecurityInformation);
-            if (string.IsNullOrWhiteSpace(state.SecurityDescriptor))
-                throw new InvalidOperationException("task_backup_invalid: the original task security descriptor is unavailable.");
-            File.WriteAllText(
-                Path.Combine(backupDirectory, "task.xml"),
-                (string)task.Xml,
-                System.Text.Encoding.Unicode);
+            if (string.IsNullOrWhiteSpace(state.SecurityDescriptor)) throw new IOException("未取得计划任务权限描述符，未开始变更。");
+            _ = new RawSecurityDescriptor(state.SecurityDescriptor);
+            var xml = (string)task.Xml;
+            _ = ReadTaskUserId(xml);
+            state.XmlDigest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(xml)));
+            RecoveryFiles.WriteText(Path.Combine(backupDirectory, "task.xml"), xml, Encoding.Unicode);
         }
-        File.WriteAllText(
+        RecoveryFiles.WriteText(
             Path.Combine(backupDirectory, "state.json"),
-            JsonSerializer.Serialize(state),
-            new System.Text.UTF8Encoding(false));
+            JsonSerializer.Serialize(state));
+    }
+
+    private static (TaskBackupState State, string Xml, string UserId) ReadBackup(string backupDirectory)
+    {
+        var statePath = Path.Combine(backupDirectory, "state.json");
+        if (!File.Exists(statePath) || new FileInfo(statePath).Length > 65536)
+            throw new InvalidOperationException(UiText.Format("TaskBackupStateMissing", statePath));
+        var json = File.ReadAllText(statePath);
+        using var document = JsonDocument.Parse(json);
+        if (!document.RootElement.TryGetProperty("Exists", out var exists) || exists.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+            throw new IOException("计划任务备份缺少明确的原始存在状态。");
+        var state = JsonSerializer.Deserialize<TaskBackupState>(json)
+            ?? throw new InvalidOperationException(UiText.Get("TaskBackupStateReadFailed"));
+        if (state.SchemaVersion is not (0 or 1 or 2)) throw new IOException("Unsupported task backup format.");
+        if (state.SchemaVersion == 1 && (state.RuntimeRoot.Length == 0 || state.TaskName.Length == 0 || state.UserSid.Length == 0))
+            throw new IOException("task_backup_invalid: legacy backup omitted its original runtime or user binding.");
+        if (!state.Exists) return (state, "", "");
+        if (state.SchemaVersion == 0 || string.IsNullOrWhiteSpace(state.SecurityDescriptor))
+            throw new IOException("旧备份缺少可验证的任务安全信息；请保留恢复材料并使用匹配版本处理。");
+        var xmlPath = Path.Combine(backupDirectory, "task.xml");
+        if (!File.Exists(xmlPath) || new FileInfo(xmlPath).Length > 1048576)
+            throw new InvalidOperationException(UiText.Format("TaskBackupXmlMissing", xmlPath));
+        var xml = File.ReadAllText(xmlPath);
+        var userId = ReadTaskUserId(xml);
+        if (state.SchemaVersion == 2 && !string.Equals(state.XmlDigest,
+            Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(xml))), StringComparison.Ordinal))
+            throw new IOException("计划任务 XML 与备份完整性记录不符。");
+        if (!string.IsNullOrWhiteSpace(state.SecurityDescriptor)) _ = new RawSecurityDescriptor(state.SecurityDescriptor);
+        return (state, xml, userId);
     }
 
     private static void RestoreBackup(dynamic root, TaskAdminRequest request)
     {
+        // Validate every restoration input before stopping or deleting anything.
         var taskName = request.TaskName; var backupDirectory = request.BackupDirectory;
-        var statePath = Path.Combine(backupDirectory, "state.json");
-        if (!File.Exists(statePath))
-        {
-            throw new InvalidOperationException(UiText.Format("TaskBackupStateMissing", statePath));
-        }
-        var state = JsonSerializer.Deserialize<TaskBackupState>(File.ReadAllText(statePath))
-            ?? throw new InvalidOperationException(UiText.Get("TaskBackupStateReadFailed"));
-
-        if (state.SchemaVersion != 1 || state.TaskName != request.TaskName ||
-            !TaskDefinitionPolicy.Same(state.RuntimeRoot, request.RuntimeRoot) || state.UserSid != request.UserSid)
-            throw new InvalidOperationException("task_backup_invalid: backup does not belong to this runtime and user.");
+        var (state, xml, userId) = ReadBackup(backupDirectory);
+        ValidateBackupOwnership(state, xml, request);
         ValidateExistingTask(root, request);
-        if (!state.Exists) { RemoveTask(root, taskName); return; }
-        if (string.IsNullOrWhiteSpace(state.SecurityDescriptor))
-            throw new InvalidOperationException("task_backup_invalid: original security descriptor was not preserved.");
-        var xmlPath = Path.Combine(backupDirectory, "task.xml");
-        if (!File.Exists(xmlPath))
-        {
-            throw new InvalidOperationException(UiText.Format("TaskBackupXmlMissing", xmlPath));
-        }
-        var xml = File.ReadAllText(xmlPath);
-        TaskDefinitionPolicy.Validate(xml, request.TaskName, request.RuntimeRoot, request.UserSid, ResolveUserSid);
-        var userId = ReadTaskUserId(xml);
+        StopInstalledCore(request.RuntimeRoot);
         RemoveTask(root, taskName);
+        if (!state.Exists) return;
         dynamic task = root.RegisterTask(
             taskName,
             xml,
-            TaskCreateOrUpdate,
+            TaskCreateOrUpdate | TaskDontAddPrincipalAce | TaskIgnoreRegistrationTriggers,
             userId,
             null,
             TaskLogonInteractiveToken,
-            null);
+            string.IsNullOrWhiteSpace(state.SecurityDescriptor) ? null : state.SecurityDescriptor);
         task.Enabled = state.WasEnabled;
+        // Registration received the complete original DACL and explicitly
+        // disabled principal-ACE insertion. Do not rewrite it a second time.
+        if (state.WasRunning)
+        {
+            task.Enabled = true;
+            task.Run(null);
+            task.Enabled = state.WasEnabled;
+        }
+    }
+
+    internal static void VerifyCurrentTask(string taskName, bool elevated, bool enabled)
+    {
+        using var scheduler = new SchedulerSession();
+        dynamic? task = FindTask(scheduler.Root, taskName);
+        if (!elevated)
+        {
+            if (task is not null) throw new IOException("普通权限转换后仍存在高权限计划任务。");
+            return;
+        }
+        if (task is null || (bool)task.Enabled != enabled || Convert.ToInt32(task.Definition.Principal.RunLevel) != TaskRunLevelHighest)
+            throw new IOException("高权限计划任务未达到预期状态。");
+    }
+
+    internal static TaskSecurityMatch VerifyRestoredBackup(string taskName, string backupDirectory)
+    {
+        var (state, xml, userId) = ReadBackup(backupDirectory);
+        using var scheduler = new SchedulerSession();
+        dynamic? task = FindTask(scheduler.Root, taskName);
+        if (!state.Exists)
+        {
+            if (task is not null) throw new IOException("原本不存在的计划任务未移除。");
+            return TaskSecurityMatch.Exact;
+        }
+        if (task is null || (bool)task.Enabled != state.WasEnabled ||
+            !string.Equals(ReadTaskUserId((string)task.Xml), userId, StringComparison.OrdinalIgnoreCase))
+            throw new IOException("计划任务恢复后的身份或启用状态不符。");
+        var expectedDefinition = System.Xml.Linq.XDocument.Parse(xml);
+        var actualDefinition = System.Xml.Linq.XDocument.Parse((string)task.Xml);
+        foreach (var section in new[] { "Principals", "Triggers", "Settings", "Actions" })
+        {
+            var expectedSection = expectedDefinition.Root?.Elements().SingleOrDefault(element => element.Name.LocalName == section);
+            var actualSection = actualDefinition.Root?.Elements().SingleOrDefault(element => element.Name.LocalName == section);
+            if (!System.Xml.Linq.XNode.DeepEquals(expectedSection, actualSection))
+                throw new IOException($"计划任务恢复后的 {section} 定义不符，保留恢复材料。");
+        }
         if (!string.IsNullOrWhiteSpace(state.SecurityDescriptor))
         {
-            task.SetSecurityDescriptor(state.SecurityDescriptor, 0);
+            var comparison = TaskSecurityDescriptor.Compare(state.SecurityDescriptor, (string)task.GetSecurityDescriptor(DaclSecurityInformation));
+            if (comparison == TaskSecurityMatch.Mismatch) throw new IOException("计划任务恢复后的权限不符，保留原始描述符和恢复材料。");
+            return comparison;
         }
-        TaskDefinitionPolicy.Validate((string)task.Xml, request.TaskName, request.RuntimeRoot, request.UserSid, ResolveUserSid);
-        if ((bool)task.Enabled != state.WasEnabled)
-            throw new InvalidOperationException("task_backup_invalid: restored enabled state differs.");
-        var restoredSecurity = new System.Security.AccessControl.RawSecurityDescriptor((string)task.GetSecurityDescriptor(DaclSecurityInformation));
-        var originalSecurity = new System.Security.AccessControl.RawSecurityDescriptor(state.SecurityDescriptor);
-        if (restoredSecurity.GetSddlForm(System.Security.AccessControl.AccessControlSections.Access) != originalSecurity.GetSddlForm(System.Security.AccessControl.AccessControlSections.Access))
-            throw new InvalidOperationException("task_backup_invalid: restored task DACL differs.");
-        // No Run here: the outer adapter must restore source files/manifest
-        // first, then submit at most one non-waiting resume to its controller.
+        return TaskSecurityMatch.Exact;
+    }
+
+    private static void ValidateBackupOwnership(TaskBackupState state, string xml, TaskAdminRequest request)
+    {
+        // Schema 1 is the previous downstream format. Keep its original binding
+        // checks; schema 2 adds upstream XML integrity and DACL verification.
+        var bound = state.RuntimeRoot.Length > 0 || state.TaskName.Length > 0 || state.UserSid.Length > 0;
+        if (bound && (state.TaskName != request.TaskName ||
+            !TaskDefinitionPolicy.Same(state.RuntimeRoot, request.RuntimeRoot) ||
+            !string.Equals(state.UserSid, request.UserSid, StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidOperationException("task_backup_invalid: backup belongs to another runtime or Windows user.");
+        if (!bound && !state.Exists)
+            throw new InvalidOperationException("task_backup_invalid: an absent-task backup must identify its original runtime and user.");
+        if (state.Exists)
+            TaskDefinitionPolicy.Validate(xml, request.TaskName, request.RuntimeRoot, request.UserSid, ResolveUserSid, allowStandardTask: true);
     }
 
     private static string ReadTaskUserId(string xml)
@@ -403,7 +475,7 @@ internal static class TaskAdminService
     {
         dynamic? task = FindTask(root, request.TaskName);
         if (task is not null)
-            TaskDefinitionPolicy.Validate((string)task.Xml, request.TaskName, request.RuntimeRoot, request.UserSid, ResolveUserSid);
+            TaskDefinitionPolicy.Validate((string)task.Xml, request.TaskName, request.RuntimeRoot, request.UserSid, ResolveUserSid, allowStandardTask: true);
     }
 
     private static void RemoveTask(dynamic root, string taskName)
@@ -535,6 +607,7 @@ internal static class TaskAdminService
         public string RuntimeRoot { get; set; } = "";
         public string TaskName { get; set; } = "";
         public string UserSid { get; set; } = "";
+        public string XmlDigest { get; set; } = "";
         public bool Exists { get; set; }
         public bool WasEnabled { get; set; }
         public bool WasRunning { get; set; }

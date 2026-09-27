@@ -8,9 +8,9 @@ namespace AgentDock.ControlPanel;
 // changing them. This does not participate in normal runtime task control.
 internal static class TaskDefinitionPolicy
 {
-    internal static void Validate(string xml, string taskName, string root, string sid, Func<string,string> resolveSid)
+    internal static void Validate(string xml, string taskName, string root, string sid, Func<string,string> resolveSid, bool allowStandardTask = false)
     {
-        if (taskName != "AgentDock" || !Path.IsPathFullyQualified(root) || string.IsNullOrWhiteSpace(sid))
+        if (!IsValidTaskName(taskName) || !Path.IsPathFullyQualified(root) || string.IsNullOrWhiteSpace(sid))
             throw new InvalidOperationException("task_owner_mismatch: task name, runtime root or user is not valid.");
         using var reader = XmlReader.Create(new StringReader(xml), new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null, MaxCharactersInDocument = 65536 });
         var document = XDocument.Load(reader);
@@ -21,8 +21,12 @@ internal static class TaskDefinitionPolicy
         if (principals.Length != 1 || principals[0].Name != ns+"Principal" || actions.Length != 1 || actions[0].Name != ns+"Exec")
             throw new InvalidOperationException("task_owner_mismatch: expected one principal and one executable action.");
         var principal = principals[0]; var action = actions[0];
+        // Task Scheduler omits its default least-privilege RunLevel when serializing.
+        var runLevel = principal.Element(ns+"RunLevel")?.Value ?? "LeastPrivilege";
         if (!string.Equals(resolveSid(principal.Element(ns+"UserId")?.Value ?? ""), sid, StringComparison.OrdinalIgnoreCase) ||
-            principal.Element(ns+"LogonType")?.Value != "InteractiveToken" || principal.Element(ns+"RunLevel")?.Value != "HighestAvailable")
+            principal.Element(ns+"LogonType")?.Value != "InteractiveToken" ||
+            (runLevel != "HighestAvailable" &&
+             !(allowStandardTask && runLevel == "LeastPrivilege")))
             throw new InvalidOperationException("task_owner_mismatch: principal, session type or privilege differs.");
         var executable = action.Element(ns+"Command")?.Value ?? "";
         var arguments = action.Element(ns+"Arguments")?.Value ?? "";
@@ -36,6 +40,11 @@ internal static class TaskDefinitionPolicy
             string.Equals(arguments,$"service launch-core --runtime-root \"{canonicalRoot}\"",StringComparison.OrdinalIgnoreCase);
         if (!native && !legacy) throw new InvalidOperationException("task_owner_mismatch: action is not an exact known stable AgentDock entry.");
     }
+    // Names identify a task within the scheduler root, not its authority. The
+    // exact runtime/action/principal checks above remain mandatory for each name.
+    internal static bool IsValidTaskName(string value) => !string.IsNullOrWhiteSpace(value) &&
+        value.Length <= 238 && value is not ("." or "..") && !value.Any(char.IsControl) &&
+        !value.Contains('\\') && !value.Contains('/');
     internal static bool Same(string left, string right) => Path.IsPathFullyQualified(left) && Path.IsPathFullyQualified(right) &&
         string.Equals(Path.GetFullPath(left).TrimEnd(Path.DirectorySeparatorChar),Path.GetFullPath(right).TrimEnd(Path.DirectorySeparatorChar),StringComparison.OrdinalIgnoreCase);
 }

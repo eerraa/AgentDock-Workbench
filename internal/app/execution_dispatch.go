@@ -11,8 +11,10 @@ import (
 	"time"
 
 	"github.com/uvwt/agentdock/internal/activity"
+	"github.com/uvwt/agentdock/internal/config"
 	mcpclient "github.com/uvwt/agentdock/internal/mcp/client"
 	"github.com/uvwt/agentdock/internal/permission"
+	toolfile "github.com/uvwt/agentdock/internal/tool/file"
 	"github.com/uvwt/agentdock/internal/workspace"
 )
 
@@ -28,14 +30,18 @@ type preparedExecution struct {
 	state               executionObservation
 	source              activity.Source
 	decision            permission.Decision
+	approvalInline      bool
 	approvalID          string
 	approvalRequestedAt time.Time
 	executionStartedAt  time.Time
 	sessionIDs          []string
 	mcpTarget           string
+	outputPolicy        config.ToolOutputSettings
+	completion          *activity.AppendReservation
 }
 
 func (r *Runtime) callObserved(ctx context.Context, spec ToolSpec, original map[string]any) (result Result, returnErr error) {
+	outputPolicy := r.MCPPresentationSettings().ToolOutput
 	received := time.Now()
 	callID, err := activity.NewExecutionID("call_")
 	if err != nil {
@@ -60,7 +66,18 @@ func (r *Runtime) callObserved(ctx context.Context, spec ToolSpec, original map[
 		stamp := received.UTC()
 		created.RequestReceivedAt = &stamp
 	}
-	if err = r.appendExecution(created); err != nil {
+	initialEvents := []activity.Event{created}
+	if resolveErr == nil {
+		payloadCtx, payloadCancel := context.WithTimeout(context.Background(), 2*time.Second)
+		if payloadEvent, ok := r.executionPayloadEvent(payloadCtx, initial, spec.Name, "request", original, r.executionRedactor(original)); ok {
+			initialEvents = append(initialEvents, payloadEvent)
+		}
+		payloadCancel()
+	}
+	if err = r.appendExecutions(initialEvents...); err != nil {
+		if errors.Is(err, activity.ErrAppendCapacity) {
+			return nil, r.executionError(err, state)
+		}
 		return nil, toolError("AUDIT_UNAVAILABLE", "The execution journal is unavailable; the tool was not dispatched.", "runtime")
 	}
 	defer func() {
@@ -97,9 +114,6 @@ func (r *Runtime) callObserved(ctx context.Context, spec ToolSpec, original map[
 			}
 		}
 	}()
-	if resolveErr == nil {
-		r.recordExecutionPayload(initial, spec.Name, "request", original, r.executionRedactor(original))
-	}
 	fail := func(failure error) (Result, error) {
 		event := activity.Event{Binding: state.binding, Kind: "call.completed", Status: "failed", ToolName: spec.Name, Title: spec.Title, ElapsedMS: time.Since(state.started).Milliseconds(), Summary: r.executionRedactor(original).Text(failure.Error(), 4096)}
 		if event.Binding.Validate() != nil {
@@ -142,7 +156,9 @@ func (r *Runtime) callObserved(ctx context.Context, spec ToolSpec, original map[
 	if err != nil {
 		return fail(toolError("INVALID_ARGUMENT", "tool arguments must be JSON-compatible", "validation"))
 	}
-	r.reserveInsertion(ctx, snapshot, received)
+	if spec.Name != "insertion_ack" {
+		r.reserveInsertion(ctx, snapshot, received)
+	}
 	if spec.Name == "task_manage" && (stringArg(args, "action") == "create" || stringArg(args, "workspace_id") != "") {
 		workspaceID := stringArg(args, "workspace_id")
 		if workspaceID == "" && stringArg(args, "project") == "" {
@@ -205,10 +221,10 @@ func (r *Runtime) callObserved(ctx context.Context, spec ToolSpec, original map[
 	if local, _ := ctx.Value(localUserActionKey{}).(bool); local && decision.Effect == permission.Ask {
 		decision.Effect, decision.RuleID, decision.Reason = permission.Allow, "local-user-action", "已认证本地控制面板明确发起的固定管理操作。"
 	}
-	prepared := &preparedExecution{spec: spec, args: args, state: state, source: activity.SourceFromContext(ctx), decision: decision}
+	prepared := &preparedExecution{spec: spec, args: args, state: state, source: activity.SourceFromContext(ctx), decision: decision, outputPolicy: outputPolicy}
 	if decision.Effect == permission.Deny {
 		r.executionMu.Unlock()
-		return fail(toolErrorDetails("PERMISSION_DENIED", decision.Reason, "permission", map[string]any{"rule_id": decision.RuleID, "mode": decision.Mode, "executed": false}))
+		return fail(toolErrorDetails("PERMISSION_DENIED", decision.Reason, "permission", map[string]any{"rule_id": decision.RuleID, "mode": decision.Mode, "permission": decision, "executed": false}))
 	}
 	if spec.Name == "mcp_tool_call" {
 		prepared.mcpTarget, err = r.dynamicMCP.PermissionTargetFingerprint(ctx, stringArg(args, "name"))
@@ -231,7 +247,7 @@ func (r *Runtime) callObserved(ctx context.Context, spec ToolSpec, original map[
 			operation = command
 		}
 		redactor := r.executionRedactor(args)
-		a := permission.Approval{Binding: state.binding, Tool: spec.Name, Action: stringArg(args, "action"), Operation: redactor.Text(operation, 16384), ScopeDescription: redactor.Text(r.executionScope(prepared), 4096), RuleID: decision.RuleID, Reason: decision.Reason, Mode: decision.Mode, PolicyRevision: decision.Revision}
+		a := permission.Approval{Reviewer: decision.Settings.Reviewer, Settings: &decision.Settings, Binding: state.binding, Tool: spec.Name, Action: stringArg(args, "action"), Operation: redactor.Text(operation, 16384), ScopeDescription: redactor.Text(r.executionScope(prepared), 4096), RuleID: decision.RuleID, Reason: decision.Reason, Mode: decision.Mode, PolicyRevision: decision.Revision}
 		if state.selected != nil {
 			a.WorkspaceRevision = state.selected.RulesRevision
 		}
@@ -250,6 +266,9 @@ func (r *Runtime) callObserved(ctx context.Context, spec ToolSpec, original map[
 		r.executionMu.Unlock()
 		if err != nil {
 			return fail(err)
+		}
+		if decision.Settings.Reviewer == permission.ReviewerAuto {
+			return r.autoReviewPrepared(ctx, prepared, approval)
 		}
 		return r.decorateExecution(Result{"status": "pending_approval", "executed": false, "approval_id": approval.ID, "approval": approval, "next_required_action": "Wait for the local user to approve or reject this fixed request. Do not change arguments or retry to bypass approval."}, prepared), nil
 	}
@@ -275,19 +294,31 @@ func cloneExecutionArguments(input map[string]any) (map[string]any, error) {
 	return result, nil
 }
 func (r *Runtime) appendExecution(event activity.Event) error {
-	event = describeOwnedManagement(event)
-	if event.OwnerInstance == "" {
-		event.OwnerPID = os.Getpid()
-		event.OwnerInstance = r.executionInstance
+	return r.appendExecutions(event)
+}
+func (r *Runtime) appendExecutions(events ...activity.Event) error {
+	for index := range events {
+		events[index] = describeOwnedManagement(events[index])
+		if events[index].OwnerInstance == "" {
+			events[index].OwnerPID = os.Getpid()
+			events[index].OwnerInstance = r.executionInstance
+		}
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	_, err := r.activity.Append(ctx, event)
+	_, err := r.activity.AppendBatch(ctx, events)
 	return err
 }
 func (r *Runtime) executionError(err error, state executionObservation) error {
 	var toolErr *ToolError
-	if !errors.As(err, &toolErr) {
+	if errors.Is(err, activity.ErrAppendCapacity) {
+		message := "The activity journal has no admission capacity. No tool handler was dispatched."
+		if state.executed {
+			message = "Activity capacity was exhausted after dispatch. Inspect the recorded outcome before retrying."
+		}
+		toolErr = &ToolError{Code: "ACTIVITY_CAPACITY", Message: message, Category: "resource_limit", Details: map[string]any{"executed": state.executed}}
+	}
+	if toolErr == nil && !errors.As(err, &toolErr) {
 		toolErr = &ToolError{Code: "EXECUTION_FAILED", Message: err.Error(), Category: "runtime"}
 	}
 	copy := *toolErr
@@ -396,6 +427,9 @@ func (r *Runtime) executionScope(p *preparedExecution) string {
 func (r *Runtime) executionFacts(name string, args map[string]any, state executionObservation) permission.Facts {
 	f := permission.Facts{Binding: state.binding, Tool: name, Action: stringArg(args, "action")}
 	switch name {
+	case "insertion_ack":
+		// A receipt cannot change tasks, commands, permissions or user text.
+		f.ReadOnly = true
 	case "agentdock_context", "workspace_context", "read_file", "list_dir", "search_text", "view_image", "mcp_tool_search", "mcp_tool_list", "mcp_tool_inspect", "plugin_load", "session_observe", "browser_snapshot":
 		f.ReadOnly = true
 	case "task_manage":
@@ -420,7 +454,7 @@ func (r *Runtime) executionFacts(name string, args map[string]any, state executi
 		f.ReadOnly = args["dry_run"] == true
 		f.Reason = "文件变更将在指定目标执行；请确认修改内容、删除范围及工作区。"
 	}
-	return f
+	return r.profileFacts(f, args, state)
 }
 func (r *Runtime) executionAdmissionLocked(ctx context.Context, binding activity.Binding, name, action, exclude string) error {
 	if err := r.checkConversationGate(ctx, binding.ConversationID); err != nil {
@@ -507,7 +541,7 @@ func (r *Runtime) executePrepared(ctx context.Context, p *preparedExecution) (re
 	defer func() {
 		// The approval response has already returned. Preserve the eventual
 		// outcome of the fixed approved operation on its original root call.
-		if p.approvalID != "" {
+		if p.approvalID != "" && !p.approvalInline {
 			value := map[string]any{"result": result, "isError": returnErr != nil || resultReportsFailure(result)}
 			if returnErr != nil {
 				value["error"] = returnErr.Error()
@@ -524,8 +558,24 @@ func (r *Runtime) executePrepared(ctx context.Context, p *preparedExecution) (re
 		r.executionMu.Unlock()
 	}()
 	state := p.state
+	completion, reserveErr := r.activity.ReserveAppend(ctx, 1)
+	if reserveErr != nil {
+		return r.finishPrepared(p, Result{"executed": false}, reserveErr, "failed")
+	}
+	p.completion = completion
+	defer completion.Close()
+	defer func() {
+		if recover() != nil {
+			failure := toolError("TOOL_PANIC", "The tool terminated unexpectedly. Inspect its side-effect state before retrying.", "runtime")
+			result, returnErr = r.finishPrepared(p, nil, failure, "unknown")
+		}
+	}()
 	ctx = activity.WithSource(ctx, p.source)
 	ctx = activity.WithBinding(ctx, state.binding)
+	ctx = context.WithValue(ctx, outputPolicyContextKey{}, p.outputPolicy)
+	if p.decision.Settings.Profile.Restricted() {
+		ctx = toolfile.WithRestrictedFileTools(ctx)
+	}
 	if p.mcpTarget != "" {
 		ctx = mcpclient.WithApprovedToolTarget(ctx, p.mcpTarget)
 	}
@@ -570,8 +620,14 @@ func (r *Runtime) executePrepared(ctx context.Context, p *preparedExecution) (re
 		r.recordFileChanges(p.args, result, state)
 	}
 	if err == nil && !resultReportsFailure(result) {
-		r.commitConversationState(ctx, p, result)
-		r.updateConversationName(ctx, state.binding.ConversationID, p.spec.Name, p.args)
+		if p.spec.Name == "agentdock_context" {
+			err = r.finalizeContextBinding(ctx, p, result)
+		} else {
+			r.commitConversationState(ctx, p, result)
+		}
+		if err == nil {
+			r.updateConversationName(ctx, state.binding.ConversationID, p.spec.Name, p.args)
+		}
 	}
 	if p.spec.Name == "session_observe" && (stringArg(p.args, "action") == "list" || stringArg(p.args, "action") == "") {
 		result = r.filterSessionList(ctx, result, p.state.binding)
@@ -636,7 +692,7 @@ func (r *Runtime) finishPrepared(p *preparedExecution, result Result, err error,
 		event.Workdir = p.state.target.ResolvedPath
 		event.Runtime = p.state.target.Runtime
 	}
-	if persistErr := r.appendExecution(event); persistErr != nil {
+	if persistErr := r.appendReservedExecution(p.completion, event); persistErr != nil {
 		if result == nil {
 			result = Result{}
 		}
@@ -665,16 +721,24 @@ func (r *Runtime) decorateExecution(result Result, p *preparedExecution) Result 
 	}
 	for key, value := range bindingArguments(p.state.binding) {
 		if value != "" {
+			// Context reports its selected scope; the immutable root retains the
+			// entry scope in the journal, even when this call changes continuation.
+			if key == "workspace_id" && p.spec.Name == "agentdock_context" && stringArg(result, key) != "" {
+				continue
+			}
 			decorated[key] = value
 		}
 	}
 	if p.state.target != nil {
 		decorated["workspace_target"] = *p.state.target
 	}
+	if p.approvalID != "" {
+		decorated["approval_id"] = p.approvalID
+	}
 	decorated["permission"] = p.decision
 	decorated["agentdock_guidance"] = r.executionGuidance(p.spec.Name, p.state, result, false)
 	decorated["binding_quality"] = p.state.binding.BindingQuality
-	return decorated
+	return r.applyToolOutputPolicy(p, decorated)
 }
 func (r *Runtime) watchApprovalCommand(approvalID, callID, sessionID string) {
 	go func() {

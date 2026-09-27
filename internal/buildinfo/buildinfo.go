@@ -10,11 +10,14 @@ import (
 
 const Version = "1.1.16102"
 const Distribution = "eerraa"
-const UpstreamVersion = "1.1.6"
+const UpstreamVersion = "1.1.7"
 
 // Main-only release ordinal. Version is explicitly assigned, not arithmetically
 // encoded from UpstreamVersion or DownstreamRevision.
 const DownstreamRevision = 102
+
+// Upstream display identity; Distribution separately identifies this fork.
+const ProductName = "AgentDock Workbench"
 
 var (
 	Commit    string
@@ -26,6 +29,7 @@ type Info struct {
 	UpstreamVersion        string `json:"upstream_version"`
 	DownstreamRevision     int    `json:"downstream_revision"`
 	SourceCommit           string `json:"source_commit"`
+	ProductName            string `json:"product_name"`
 	ExecutionPolicyVersion int    `json:"execution_policy_version"`
 	Version                string `json:"version"`
 	Commit                 string `json:"commit"`
@@ -37,6 +41,7 @@ type Info struct {
 func Current() Info {
 	info := Info{
 		Distribution: Distribution, UpstreamVersion: UpstreamVersion, DownstreamRevision: DownstreamRevision,
+		ProductName:            ProductName,
 		ExecutionPolicyVersion: executioncompat.PolicyVersion,
 		Version:                strings.TrimSpace(Version),
 		Commit:                 strings.TrimSpace(Commit),

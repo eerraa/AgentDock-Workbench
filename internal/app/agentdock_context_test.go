@@ -313,6 +313,42 @@ func TestCapabilitySkillItemExposesOnlyLightweightIndexFields(t *testing.T) {
 	}
 }
 
+func TestSkillCapabilityIndexKeepsFullValidatedDescriptions(t *testing.T) {
+	cfg := config.Config{AgentDockDefaultDir: t.TempDir(), AgentDockHome: filepath.Join(t.TempDir(), ".agentdock")}
+	if err := cfg.Normalize(); err != nil {
+		t.Fatal(err)
+	}
+	rt, err := NewRuntime(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = rt.Close() })
+	descriptions := map[string]string{
+		"english-long":    strings.Repeat("routing boundary; ", 16) + "final boundary",
+		"korean-long":     strings.Repeat("한국어 사용 조건; ", 32) + "다른 작업에서는 사용하지 않음",
+		"max-description": strings.Repeat("x", 1024),
+	}
+	for name, description := range descriptions {
+		installDocumentSkillForTest(t, rt, name, "1.0.0", description)
+	}
+	// Both local and Bridge projections use the existing shared snapshot owner.
+	for _, includeHeavy := range []bool{false, true, false} {
+		items, err := rt.skillCapabilityIndex(includeHeavy)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := make(map[string]string, len(items))
+		for _, item := range items {
+			got[item.Name] = item.Description
+		}
+		for name, want := range descriptions {
+			if got[name] != want {
+				t.Fatalf("%s description length=%d, want full length=%d", name, len(got[name]), len(want))
+			}
+		}
+	}
+}
+
 func installDocumentSkillForTest(t *testing.T, rt *Runtime, name, version, description string) string {
 	t.Helper()
 	stateDir, err := config.SkillStateDir(rt.cfg)

@@ -173,7 +173,7 @@ public partial class ExecutionWindow
     private void SettingsMenu_Click(object sender, RoutedEventArgs e)
     {
         var menu = Menu(Anchor(sender, ConversationHeader));
-        ActionMenu(menu, UiText.Get("ExecutionDisplayRetentionNotifications"), () => { if (ExecutionDialogs.Preferences(this, _preferences)) { FontSize = _preferences.FontSize; SavePreferences(); } return Task.CompletedTask; });
+        ActionMenu(menu, UiText.Get("ExecutionDisplayRetentionNotifications"), OpenDisplayPreferencesAsync);
         ActionMenu(menu, UiText.Get("ExecutionHistoryManagerTitle"), () => OpenDataManagerAsync(false));
         ActionMenu(menu, UiText.Get("ExecutionSaveCurrentFilter"), () => { var name = ExecutionDialogs.Prompt(this, UiText.Get("ExecutionSaveFilter"), UiText.Get("ExecutionFilterName"), ""); if (!string.IsNullOrWhiteSpace(name)) { _preferences.SavedFilters[name] = [_conversationView, SearchBox.Text, CallSearchBox.Text, ComboValue(CallStatusCombo)]; SavePreferences(); } return Task.CompletedTask; });
         foreach (var pair in _preferences.SavedFilters.ToArray())
@@ -181,16 +181,18 @@ public partial class ExecutionWindow
         ActionMenu(menu, UiText.Get("ExecutionUsageGuide"), () => { ShowInfo(UiText.Get("ExecutionUsageGuide"), UiText.Get("ExecutionGuideText")); return Task.CompletedTask; });
         OpenMenu(menu);
     }
-    private string[] SelectedCallIds() => CallsList.SelectedItems.Cast<ExecutionCallRow>().Select(row => row.Id).Distinct().ToArray();
+    private string[] SelectedCallIds() => CallsList.SelectedItems.Cast<ExecutionCallRow>().Where(row => !row.IsInsertion).Select(row => row.Id).Distinct().ToArray();
     private void Calls_RightClick(object sender, MouseButtonEventArgs e)
     {
         if (Ancestor<ListBoxItem>(e.OriginalSource as DependencyObject) is not { DataContext: ExecutionCallRow row } item) return;
         if (!item.IsSelected) CallsList.SelectedItem = row;
+        if (row.IsInsertion) { ShowInsertionMenu(item,row); e.Handled=true; return; }
         ShowCallMenu(item, SelectedCallIds()); e.Handled = true;
     }
     private void CallMenu_Click(object sender, RoutedEventArgs e) => ShowCallMenu(Anchor(sender, CallsList), SelectedCallIds());
     private void ShowCallMenu(FrameworkElement anchor, string[] ids)
     {
+        if (ids.Length == 0 && CallsList.SelectedItem is ExecutionCallRow { IsInsertion:true } message) { ShowInsertionMenu(anchor,message); return; }
         var fixedIds = ids.ToArray(); var menu = Menu(anchor);
         ActionMenu(menu, UiText.Get("ExecutionExportCurrentFilter"), () => ExportScopeAsync(CallScopeQuery(), UiText.Get("ExecutionExecutionRecords")));
         ActionMenu(menu, UiText.Get("ExecutionExportSelectedRecords"), () => ExportCallIdsAsync(fixedIds), fixedIds.Length > 0);

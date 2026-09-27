@@ -23,6 +23,8 @@ import (
 const MaxPayloadBytes = 16 << 20
 const MaxPayloadStorageBytes = 256 << 20
 const PayloadPreviewBytes = 2048
+const payloadPublicationGrace = 5 * time.Minute
+const payloadPublicationSafety = time.Minute
 
 // Payload is part of the canonical call projection. Its immutable local blob is
 // addressed only through an authorized call, never via an arbitrary file path.
@@ -39,11 +41,14 @@ type Payload struct {
 }
 
 type PayloadPage struct {
-	Payload    *Payload `json:"payload"`
-	Text       string   `json:"text"`
-	Offset     int64    `json:"offset"`
-	NextOffset int64    `json:"next_offset"`
-	HasMore    bool     `json:"has_more"`
+	Payload       *Payload `json:"payload"`
+	Text          string   `json:"text"`
+	Offset        int64    `json:"offset"`
+	NextOffset    int64    `json:"next_offset"`
+	HasMore       bool     `json:"has_more"`
+	Unit          string   `json:"unit,omitempty"`
+	LimitChars    int      `json:"limit_chars,omitempty"`
+	ReturnedChars int      `json:"returned_chars"`
 }
 
 func (payload *Payload) clone(preview bool) *Payload {
@@ -130,10 +135,13 @@ func (s *Store) CapturePayload(ctx context.Context, value any, state string, red
 			return failure("活动输出引用不是普通文件。")
 		}
 		// A reused blob may have outlived its original journal event. Renew its
-		// publication grace period before another Store can collect it.
+		// publication grace only when less than the safety interval remains; hot
+		// repeated calls otherwise avoid an unnecessary metadata write.
 		now := time.Now()
-		if err := os.Chtimes(target, now, now); err != nil {
-			return failure("活动输出引用的保留时间无法更新。")
+		if info.ModTime().Before(now.Add(-(payloadPublicationGrace - payloadPublicationSafety))) {
+			if err := os.Chtimes(target, now, now); err != nil {
+				return failure("活动输出引用的保留时间无法更新。")
+			}
 		}
 		result.Ref = ref
 		return result
@@ -177,6 +185,7 @@ func rejectPayloadLink(path string) error {
 	if err != nil {
 		return err
 	}
+	absolute = securepath.CanonicalSystemAncestors(absolute)
 	// Windows 8.3 aliases resolve to different strings without crossing a link.
 	// Check actual directory entries instead of rejecting spelling changes.
 	for parent := filepath.Dir(absolute); ; parent = filepath.Dir(parent) {
@@ -195,6 +204,20 @@ func rejectPayloadLink(path string) error {
 }
 
 func (s *Store) ReadCallPayload(ctx context.Context, callID, kind string, offset int64, limit int) (PayloadPage, error) {
+	if limit <= 0 {
+		limit = 32768
+	}
+	return s.readCallPayload(ctx, callID, kind, offset, max(4, min(limit, 262144)), 0)
+}
+
+func (s *Store) ReadCallPayloadCharacters(ctx context.Context, callID, kind string, offset int64, limitChars int) (PayloadPage, error) {
+	if limitChars < 1 || limitChars > 100000 {
+		return PayloadPage{}, errors.New("limit_chars must be in 1..100000")
+	}
+	return s.readCallPayload(ctx, callID, kind, offset, 4*limitChars, limitChars)
+}
+
+func (s *Store) readCallPayload(ctx context.Context, callID, kind string, offset int64, limit, limitChars int) (PayloadPage, error) {
 	call, err := s.Call(ctx, callID)
 	if err != nil {
 		return PayloadPage{}, err
@@ -205,6 +228,8 @@ func (s *Store) ReadCallPayload(ctx context.Context, callID, kind string, offset
 		payload = call.Request
 	case "response":
 		payload = call.Response
+	case "source":
+		payload = call.OutputSource
 	default:
 		return PayloadPage{}, fmt.Errorf("invalid payload kind")
 	}
@@ -212,11 +237,17 @@ func (s *Store) ReadCallPayload(ctx context.Context, callID, kind string, offset
 		return PayloadPage{Payload: &Payload{State: "unknown", Reason: "旧记录未保存" + map[string]string{"request": "调用参数", "response": "输出"}[kind]}}, nil
 	}
 	page := PayloadPage{Payload: payload.clone(true), Offset: offset, NextOffset: offset}
+	if limitChars > 0 {
+		page.Unit, page.LimitChars = "unicode_scalar", limitChars
+	}
 	if payload.Ref == "" {
 		if offset != 0 {
 			return page, errors.New("invalid offset for an unavailable payload")
 		}
 		page.Text = payload.Preview
+		if limitChars > 0 {
+			page.Text, page.ReturnedChars, _ = textutil.ScalarPrefix(page.Text, limitChars)
+		}
 		return page, nil
 	}
 	if len(payload.Ref) != 64 {
@@ -227,15 +258,6 @@ func (s *Store) ReadCallPayload(ctx context.Context, callID, kind string, offset
 	}
 	if offset < 0 || offset > payload.Bytes {
 		return page, errors.New("invalid payload offset")
-	}
-	if limit <= 0 {
-		limit = 32768
-	}
-	if limit < 4 {
-		limit = 4
-	}
-	if limit > 262144 {
-		limit = 262144
 	}
 	if err := ctx.Err(); err != nil {
 		return page, err
@@ -273,13 +295,27 @@ func (s *Store) ReadCallPayload(ctx context.Context, callID, kind string, offset
 	if n > 0 && !utf8.RuneStart(buffer[0]) {
 		return page, errors.New("offset does not point to a UTF-8 boundary")
 	}
-	for len(buffer) > 0 && !utf8.Valid(buffer) {
-		buffer = buffer[:len(buffer)-1]
+	end, count := 0, 0
+	for end < len(buffer) && (limitChars == 0 || count < limitChars) {
+		if !utf8.FullRune(buffer[end:]) {
+			if offset+int64(n) == payload.Bytes {
+				return page, errors.New("payload ends in invalid UTF-8")
+			}
+			break
+		}
+		value, size := utf8.DecodeRune(buffer[end:])
+		if value == utf8.RuneError && size == 1 {
+			return page, errors.New("payload contains invalid UTF-8")
+		}
+		end += size
+		count++
 	}
+	buffer = buffer[:end]
 	if n > 0 && len(buffer) == 0 {
 		return page, errors.New("offset does not point to a UTF-8 boundary")
 	}
 	page.Text = string(buffer)
+	page.ReturnedChars = count
 	page.NextOffset = offset + int64(len(buffer))
 	page.HasMore = page.NextOffset < payload.Bytes
 	return page, ctx.Err()
@@ -377,7 +413,7 @@ func (s *Store) prunePayloadsLocked(ctx context.Context, root string) (int64, er
 	}
 	retained := map[string]bool{}
 	for _, call := range projection.calls {
-		for _, payload := range []*Payload{call.Request, call.Response} {
+		for _, payload := range []*Payload{call.Request, call.Response, call.OutputSource} {
 			if payload != nil {
 				retained[payload.Ref] = true
 			}
@@ -406,7 +442,7 @@ func (s *Store) prunePayloadsLocked(ctx context.Context, root string) (int64, er
 		ref := strings.TrimSuffix(entry.Name(), ".json")
 		// Capture and event publication are separate durable steps. A new blob
 		// must survive that interval even when another process runs collection.
-		if !retained[ref] && info.ModTime().Before(time.Now().Add(-5*time.Minute)) {
+		if !retained[ref] && info.ModTime().Before(time.Now().Add(-payloadPublicationGrace)) {
 			if err := os.Remove(filepath.Join(root, entry.Name())); err != nil {
 				return 0, err
 			}

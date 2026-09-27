@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/uvwt/agentdock/internal/auth"
+	"github.com/uvwt/agentdock/internal/buildinfo"
 )
 
 func TestAuthorizePageLocalesPreserveEscapingAndConsent(t *testing.T) {
@@ -173,5 +174,17 @@ func TestBrowserLocaleInventoryAndKoreanStatusPage(t *testing.T) {
 				t.Errorf("invalid rendered browser error %s/%s", code, language)
 			}
 		}
+	}
+}
+
+func TestAuthorizeLocalesUseTheCurrentProductIdentity(t *testing.T) {
+	for _, text := range []authorizePageText{authorizePageEnglish, authorizePageChinese, authorizePageKorean} {
+		t.Run(text.Lang, func(t *testing.T) {
+			for field, value := range map[string]string{"title": text.Title, "heading": text.Heading, "password_label": text.PasswordLabel, "warning": text.WarningText} {
+				if strings.Count(value, buildinfo.ProductName) != 1 {
+					t.Fatalf("%s does not use the exact product identity: %q", field, value)
+				}
+			}
+		})
 	}
 }

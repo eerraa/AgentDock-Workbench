@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Text.Json;
 
@@ -62,6 +61,13 @@ public sealed class ExecutionObject : INotifyPropertyChanged
     public DateTimeOffset? SortActivityAt { get; set; }
     public bool IsGroupFooter { get; set; }
     public bool HasMore { get; set; }
+    private bool _isPaging;
+    public bool IsPaging
+    {
+        get => _isPaging;
+        set { if (_isPaging == value) return; _isPaging = value; PropertyChanged?.Invoke(this, new(nameof(CanLoadMore))); }
+    }
+    public bool CanLoadMore => IsGroupFooter && HasMore && !IsPaging;
     public bool AutoLoadMore { get; set; }
     public bool InsertionEligible { get; set; }
 	public bool InFlight { get; set; }
@@ -74,7 +80,7 @@ public sealed class ExecutionObject : INotifyPropertyChanged
         PendingCount = item.PendingCount; RunningCount = item.RunningCount; Snapshot = item.Snapshot;
 		InFlight = item.InFlight;
         LastToolCallAt = item.LastToolCallAt; LastActivityAt = item.LastActivityAt; SortActivityAt = item.SortActivityAt;
-        IsGroupFooter = item.IsGroupFooter; HasMore = item.HasMore; AutoLoadMore = item.AutoLoadMore;
+        IsGroupFooter = item.IsGroupFooter; HasMore = item.HasMore; IsPaging = item.IsPaging; AutoLoadMore = item.AutoLoadMore;
         PropertyChanged?.Invoke(this, new(null));
     }
     public bool RecentlyActive
@@ -125,23 +131,24 @@ public sealed class ExecutionObject : INotifyPropertyChanged
     }
 }
 
-public sealed class ExecutionCallRow : INotifyPropertyChanged
+public sealed partial class ExecutionCallRow : INotifyPropertyChanged
 {
 	public ExecutionPayloadView RequestPayload { get; } = new("request");
 	public ExecutionPayloadView ResponsePayload { get; } = new("response");
 	public string RequestText => RequestPayload.Text;
+	public string ResponsePayloadKind => _value.Field("output_source").Text("ref").Length > 0 ? "source" : "response";
+	private static JsonElement ResponseDescriptor(JsonElement value) => value.Field("output_source").Text("ref").Length > 0 ? value.Field("output_source") : value.Field("response");
     private JsonElement _value;
     private string _output = "";
     private bool _expanded;
     private string _sourceTitle = "";
     private string _sourceState = "unavailable";
     public event PropertyChangedEventHandler? PropertyChanged;
-    public ObservableCollection<ExecutionCallRow> Children { get; } = [];
-    public string Id => _value.Text("call_id");
+    public string Id => IsInsertion ? _value.Text("insertion_id") : _value.Text("call_id");
     public long CreatedSeq => _value.Number("created_seq");
     public long UpdatedSeq => _value.Number("updated_seq");
     public string Status => _value.Text("status");
-    public string State => ExecutionJson.State(Status);
+    public string State => IsInsertion ? InsertionPresentation.State(_value) : ExecutionJson.State(Status);
     public string StatusGlyph => Status switch { "succeeded" => "✓", "failed" => "×", "partial" or "unknown" => "!", "pending_approval" => "?", "cancelled" => "–", _ => "…" };
     public string Tool => _value.Text("tool_name");
     public string ApprovalId => _value.Text("approval_id");
@@ -152,22 +159,28 @@ public sealed class ExecutionCallRow : INotifyPropertyChanged
     public string Parameters => _value.Text("parameter_summary");
     public bool ReadOnlyLegacy => _value.Flag("read_only_legacy");
     public string Summary => OwnedText.Render(_value.Field("summary_text"), _value.Text("summary"), Tool, _value.Text("activity_label_source"), Status);
-	public string Title
-	{
-		get
-		{
-            var original = _value.Text("activity_label", _value.Text("display_title", _value.Text("title", Tool)));
-            var label = OwnedText.Render(_value.Field("title_text"), original, Tool, _value.Text("activity_label_source"), Status).Replace('\r',' ').Replace('\n',' ');
-            if (_value.Text("activity_label_source") == "tool" && Tool == "file_edit" && label == "EDIT_FILE") label = Tool;
-			return Tool.Length == 0 || label == Tool ? label : label.Length == 0 ? Tool : Tool + " · " + label;
-		}
-	}
+    public string OriginalLabel => _value.Text("activity_label", _value.Text("display_title", _value.Text("title", Tool)));
+    public string Title
+    {
+        get
+        {
+            if (IsInsertion) return UiText.Get("InsertionUserSupplement");
+            var label = OwnedText.Render(_value.Field("title_text"), OriginalLabel, Tool, _value.Text("activity_label_source"), Status);
+            var hasOriginalLabel = _value.Field("activity_label").ValueKind == JsonValueKind.String ||
+                _value.Field("display_title").ValueKind == JsonValueKind.String || _value.Field("title").ValueKind == JsonValueKind.String;
+            // A missing label is not user content. Let the upstream formatter
+            // supply its default, but retain every explicitly supplied original.
+            return ExecutionTitleFormatter.Format(Tool, label, _value.Text("action"),
+                hasOriginalLabel && _value.Text("activity_label_source") != "tool" || label != OriginalLabel);
+        }
+    }
+    public string TitleTooltip => Title + (OriginalLabel.Length > 0 && OriginalLabel != Title ? UiText.Get("ExecutionOriginalLabelPrefix") + OriginalLabel : "");
     public DateTimeOffset? RequestReceivedAt => _value.Date("request_received_at");
     public DateTimeOffset? LastActivityAt => _value.Date("last_activity_at");
     public long? RpcElapsedMs => _value.OptionalNumber("rpc_elapsed_ms");
     public long? TotalElapsedMs => RpcElapsedMs is >= 0 ? RpcElapsedMs : _value.OptionalNumber("elapsed_ms") is >= 0 ? _value.OptionalNumber("elapsed_ms") : _value.OptionalNumber("operation_elapsed_ms") is >= 0 ? _value.OptionalNumber("operation_elapsed_ms") : null;
     public string DurationSource => RpcElapsedMs is >= 0 ? "rpc" : _value.OptionalNumber("elapsed_ms") is >= 0 ? "legacy" : _value.OptionalNumber("operation_elapsed_ms") is >= 0 ? "operation" : "unknown";
-    public string Duration => FormatDuration(TotalElapsedMs);
+    public string Duration => IsInsertion ? "" : FormatDuration(TotalElapsedMs);
     public string TotalTimingDetails => DurationSource switch
     {
         "rpc" => UiText.Get("ExecutionRpcDurationPrefix") + Duration,
@@ -231,9 +244,9 @@ public sealed class ExecutionCallRow : INotifyPropertyChanged
     };
     public string SourceTitle { get => _sourceTitle; set => SetSource(value, "resolved"); }
     public void SetSource(string title, string state) { _sourceTitle = title; _sourceState = state; Notify(); }
-    public bool CanRetry => !ReadOnlyLegacy && Status is "failed" or "cancelled";
-    public bool CanStop => !ReadOnlyLegacy && Status is "created" or "running" or "pending_approval";
-    public bool NeedsApproval => Status == "pending_approval";
+    public bool CanRetry => !IsInsertion && !ReadOnlyLegacy && Status is "failed" or "cancelled";
+    public bool CanStop => !IsInsertion && !ReadOnlyLegacy && Status is "created" or "running" or "pending_approval";
+    public bool NeedsApproval => !IsInsertion && Status == "pending_approval";
     public bool NeedsVerification => Status == "unknown";
 	public bool HasChanges => HasEditStatistics || _value.Array("file_changes").Length > 0;
     public string Changes => string.Join("\n", _value.Array("file_changes").Select(change => change.Text("path") + (change.Flag("stats_known") ? $"  +{change.Number("insertions")} −{change.Number("deletions")}" : "")));
@@ -249,7 +262,7 @@ public sealed class ExecutionCallRow : INotifyPropertyChanged
 	{
 		_value = value.Clone();
 		RequestPayload.PropertyChanged += (_, _) => Notify(); ResponsePayload.PropertyChanged += (_, _) => Notify();
-		RequestPayload.Describe(value.Field("request"), value.Text("parent_call_id")); ResponsePayload.Describe(value.Field("response"), value.Text("parent_call_id"));
+		RequestPayload.Describe(value.Field("request"), value.Text("parent_call_id")); ResponsePayload.Describe(ResponseDescriptor(value), value.Text("parent_call_id"));
 	}
     public bool VisibleIn(string view)
     {
@@ -268,7 +281,7 @@ public sealed class ExecutionCallRow : INotifyPropertyChanged
 		if (value.Number("updated_seq") < UpdatedSeq) return;
 		if (value.Number("updated_seq") > UpdatedSeq) DetailLoaded = false;
 		_value = value.Clone();
-		RequestPayload.Describe(value.Field("request"), value.Text("parent_call_id")); ResponsePayload.Describe(value.Field("response"), value.Text("parent_call_id"));
+		RequestPayload.Describe(value.Field("request"), value.Text("parent_call_id")); ResponsePayload.Describe(ResponseDescriptor(value), value.Text("parent_call_id"));
 		Notify();
 	}
     public void ApplyDetail(JsonElement value)

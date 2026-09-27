@@ -24,7 +24,7 @@ func TestWindowsControlPanelUsesNativeTunnelCommands(t *testing.T) {
 		`RunTunnelActionAsync("start",`,
 		`RunTunnelStartupAsync()`,
 		`RunNativeAgentDockAsync("tunnel"`,
-		`allowElevation: false`,
+		`CreateRedirectedProcessStartInfo(binaryPath)`,
 		`"configure"`,
 		`"--token-file"`,
 		`RunNativeAgentDockAsync("config"`,
@@ -34,6 +34,18 @@ func TestWindowsControlPanelUsesNativeTunnelCommands(t *testing.T) {
 		if !strings.Contains(app, want) && !strings.Contains(runtimeService, want) {
 			t.Fatalf("Windows control panel missing native Tunnel behavior %q", want)
 		}
+	}
+	nativeStart := strings.Index(runtimeService, "private async Task RunNativeAgentDockAsync(")
+	if nativeStart < 0 {
+		t.Fatal("native command owner missing")
+	}
+	nativeEnd := strings.Index(runtimeService[nativeStart:], "private static async Task RunElevatedProcessAsync(")
+	if nativeEnd < 0 {
+		t.Fatal("native command boundary missing")
+	}
+	ordinary := runtimeService[nativeStart : nativeStart+nativeEnd]
+	if strings.Contains(ordinary, "RunElevatedProcessAsync") || strings.Contains(ordinary, "runas") || !strings.Contains(ordinary, "RunProcessAsync(startInfo, cancellationToken)") {
+		t.Fatal("ordinary tunnel/config actions must not elevate implicitly")
 	}
 	for _, forbidden := range []string{
 		`"--nexus-token-file"`,
@@ -97,13 +109,20 @@ func TestWindowsControlPanelReadsVersionFromCoreBuildInfo(t *testing.T) {
 	}
 
 	app := string(appData)
-	window := string(windowData)
+	liveData, err := os.ReadFile(filepath.Join("..", "..", "desktop", "windows", "control-panel", "MainWindow.LiveStatus.cs"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	window := string(windowData) + "\n" + string(liveData)
+	if !strings.Contains(string(windowData), "RenderRuntimeStatus(") || !strings.Contains(string(liveData), "VersionText.Text =") {
+		t.Fatal("live runtime version is not connected to the main window")
+	}
 	runtimeService := string(runtimeData)
 	for _, want := range []string{
 		`ReadHealthAsync(localOrigin, cancellationToken)`,
 		`ReadCoreVersionAsync(binaryPath, cancellationToken)`,
-		`startInfo.ArgumentList.Add("version")`,
-		`startInfo.ArgumentList.Add("--json")`,
+		`_coreHealth.ReadAsync(origin, cancellationToken)`,
+		`_coreVersions.ReadAsync(binaryPath, Path.Combine(RuntimeRoot, "active-version.json"), cancellationToken)`,
 	} {
 		if !strings.Contains(runtimeService, want) {
 			t.Fatalf("Windows control panel must read the version from the core binary BuildInfo: %q", want)
@@ -134,15 +153,29 @@ func TestWindowsControlPanelCanSwitchCorePrivilegeMode(t *testing.T) {
 			"await RefreshAsync()",
 		},
 		filepath.Join("..", "..", "desktop", "windows", "control-panel", "Services", "RuntimeService.cs"): {
+			`"--launcher-path", trayBinary`,
+			"WritePrivilegeModeAsync",
+			"SetStandardCoreStartup",
+			"WaitForNativeExitAsync(process, cancellationToken)",
+		},
+		filepath.Join("..", "..", "desktop", "windows", "control-panel", "Services", "RuntimeService.Privilege.cs"): {
 			"SetPrivilegeModeAsync",
 			"prepare-elevated",
 			"prepare-standard",
 			"RunTaskAdminTransitionAsync(\"restore\"",
-			`"--launcher-path", trayBinary`,
 			"WritePrivilegeModeAsync",
 			"SetStandardCoreStartup",
 			"snapshot.CoreStartupEnabled",
-			"snapshot.CoreRunning",
+			"snapshot.CoreRunning ?? throw",
+			"PrivilegeTransition.RunAsync",
+			"VerifyPrivilegeStateAsync",
+			"NativeProcessStateUnknownException",
+		},
+		filepath.Join("..", "..", "desktop", "windows", "control-panel", "Services", "PrivilegeTransition.cs"): {
+			"actions.VerifyRestored(recovery.Token)",
+			"new CancellationTokenSource(TimeSpan.FromMinutes(3))",
+			"if (clean)",
+			"native_state_unknown",
 		},
 	}
 
@@ -274,7 +307,8 @@ func TestDesktopTrayMenusUseNativeDismissalAndOmitCopyActions(t *testing.T) {
 		"RefreshTraySnapshotAsync",
 		"!_trayMenu.Visible",
 		"Runtime.GetSnapshotAsync()",
-		"snapshot.CoreRunning",
+		"snapshot?.CoreRunning == true",
+		"RuntimeDisplayStatus.From(snapshot)",
 		"https://uvwt.github.io/agentdock-docs/",
 	} {
 		if !strings.Contains(windowsApp, want) {

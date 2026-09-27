@@ -73,3 +73,39 @@ func TestSetupReceiptSharingPartialNonceAndOriginalOutcome(t *testing.T) {
 		}
 	}
 }
+
+func TestSetupReceiptRequiresExpectedIdentityAndCompleteOutcome(t *testing.T) {
+	const nonce = "AgentDock Setup Native exact-case"
+	for _, test := range []struct {
+		name, expected, body string
+		ready, invalid       bool
+		exit                 int
+	}{
+		{"success", nonce, `{"task_name":"AgentDock Setup Native exact-case","pid":42,"exit_code":0}`, true, false, 0},
+		{"child-failure", nonce, `{"task_name":"AgentDock Setup Native exact-case","pid":42,"exit_code":7,"error":"원문 failure"}`, true, false, 7},
+		{"signed-exit", nonce, `{"task_name":"AgentDock Setup Native exact-case","exit_code":-1}`, true, false, -1},
+		{"wrong-task", nonce, `{"task_name":"other-task","exit_code":0}`, false, false, 0},
+		{"case-changed", nonce, `{"task_name":"AgentDock Setup Native EXACT-case","exit_code":0}`, false, false, 0},
+		{"no-expected-identity", "", `{"task_name":"","exit_code":0}`, false, false, 0},
+		{"missing-exit", nonce, `{"task_name":"AgentDock Setup Native exact-case"}`, false, true, 0},
+		{"null-exit", nonce, `{"task_name":"AgentDock Setup Native exact-case","exit_code":null}`, false, true, 0},
+		{"trailing-object", nonce, `{"task_name":"AgentDock Setup Native exact-case","exit_code":0} {}`, false, true, 0},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "result.json")
+			if err := os.WriteFile(path, []byte(test.body), 0600); err != nil {
+				t.Fatal(err)
+			}
+			result, ready, err := readSetupReceipt(path, test.expected)
+			if ready != test.ready || (err != nil) != test.invalid {
+				t.Fatalf("ready=%v error=%v", ready, err)
+			}
+			if ready && (result.TaskName != test.expected || result.ExitCode != test.exit) {
+				t.Fatalf("original outcome changed: %+v", result)
+			}
+			if test.name == "child-failure" && result.Error != "원문 failure" {
+				t.Fatal("child error text changed")
+			}
+		})
+	}
+}

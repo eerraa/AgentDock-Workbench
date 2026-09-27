@@ -20,6 +20,11 @@ var secretPatterns = []*regexp.Regexp{
 // Redactor never stores environment maps. Known values are provided only in memory.
 type Redactor struct{ values []string }
 
+// WithSecrets extends an immutable redactor for adapter-owned receipt tokens.
+func (r Redactor) WithSecrets(values ...string) Redactor {
+	return NewRedactor(append(append([]string{}, r.values...), values...)...)
+}
+
 func NewRedactor(values ...string) Redactor {
 	unique := map[string]bool{}
 	for _, value := range values {
@@ -50,14 +55,20 @@ func (r Redactor) Event(e Event) Event {
 	e.CallMeasurements = e.CallMeasurements.clone()
 	e.Request = e.Request.clone(true)
 	e.Response = e.Response.clone(true)
-	for _, payload := range []*Payload{e.Request, e.Response} {
+	e.OutputSource = e.OutputSource.clone(true)
+	for _, payload := range []*Payload{e.Request, e.Response, e.OutputSource} {
 		if payload != nil {
 			payload.Preview = r.Text(payload.Preview, PayloadPreviewBytes)
 			payload.Reason = r.Text(payload.Reason, 512)
 		}
 	}
 	if e.FileEdit != nil {
-		detail := e.FileEdit.clone(true)
+		bounded := *e.FileEdit
+		if len(bounded.AffectedFiles) > MaxRecordedAffectedFiles {
+			bounded.AffectedFiles = bounded.AffectedFiles[:MaxRecordedAffectedFiles]
+			bounded.FilesTruncated = true
+		}
+		detail := bounded.clone(true)
 		detail.Action = r.Text(detail.Action, 32)
 		detail.Path, detail.NewPath = r.Text(detail.Path, 512), r.Text(detail.NewPath, 512)
 		if len(detail.AffectedFiles) > MaxRecordedAffectedFiles {

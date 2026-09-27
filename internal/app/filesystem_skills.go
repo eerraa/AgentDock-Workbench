@@ -53,7 +53,7 @@ func scanCommonFilesystemSkillsContext(ctx context.Context, root string, watch f
 		return filesystemSkillIndex{}, err
 	}
 
-	return indexFilesystemSkillsContext(ctx, entries, func(entry os.DirEntry) (string, []byte, error) {
+	index, err := indexFilesystemSkillsContext(ctx, entries, func(entry os.DirEntry) (string, []byte, error) {
 		packageDir := filepath.Join(root, entry.Name())
 		info, err := os.Stat(packageDir)
 		if err != nil || !info.IsDir() {
@@ -72,6 +72,14 @@ func scanCommonFilesystemSkillsContext(ctx context.Context, root string, watch f
 		}
 		return documentPath, data, nil
 	})
+	if err != nil {
+		return filesystemSkillIndex{}, err
+	}
+	// Keep the compact shared index bounded; workspace routing retains the full description.
+	for i := range index.Items {
+		index.Items[i].Description = truncateString(index.Items[i].Description, filesystemSkillDescriptionBytes)
+	}
+	return index, nil
 }
 
 // scanWorkspaceFilesystemSkills 在扫描 .agents/skills 期间始终持有 workspace Root。
@@ -161,7 +169,7 @@ func indexFilesystemSkillsContext(ctx context.Context, entries []os.DirEntry, lo
 		}
 		items = append(items, filesystemSkillItem{
 			Name:        metadata.Name,
-			Description: truncateString(strings.TrimSpace(metadata.Description), filesystemSkillDescriptionBytes),
+			Description: strings.TrimSpace(metadata.Description),
 			File:        documentPath,
 		})
 	}

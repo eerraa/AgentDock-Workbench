@@ -69,6 +69,7 @@ type Event struct {
 	SummaryText      *LocalizedText   `json:"summary_text,omitempty"`
 	Request          *Payload         `json:"request,omitempty"`
 	Response         *Payload         `json:"response,omitempty"`
+	OutputSource     *Payload         `json:"output_source,omitempty"`
 	FileEdit         *FileEditDetails `json:"file_edit,omitempty"`
 	OwnerPID         int              `json:"owner_pid,omitempty"`
 	OwnerInstance    string           `json:"owner_instance,omitempty"`

@@ -17,6 +17,8 @@ public partial class ExecutionWindow
     private readonly Dictionary<string, (string ID, string Text)> _insertionSubmissions = new(StringComparer.Ordinal);
     private readonly Dictionary<string, JsonElement[]> _insertionStates = new(StringComparer.Ordinal);
     private readonly HashSet<string> _insertionSending = new(StringComparer.Ordinal);
+	private readonly Dictionary<string,long> _insertionReadVersions = new(StringComparer.Ordinal);
+	private long _insertionReadVersion;
     private FrameworkElement? _bottomPane;
     private bool _restoringDraft, _imeComposing, _readingInsertions;
 
@@ -98,8 +100,9 @@ public partial class ExecutionWindow
         UpdateComposerAvailability();
         try
         {
-            await _client.ExecutionPostAsync("/internal/runtime/conversations/" + Escape(conversation) + "/insertions",
+            var accepted = await _client.ExecutionPostAsync("/internal/runtime/conversations/" + Escape(conversation) + "/insertions",
                 new { submission_id = submission.ID, text = submission.Text }, _lifetime.Token);
+			AcceptInsertionResult(conversation, accepted);
             _insertionSubmissions.Remove(conversation);
             if (_insertionDrafts.GetValueOrDefault(conversation) == text) _insertionDrafts.Remove(conversation);
             if (_selected?.Id == conversation && InsertionTextBox.Text == text) InsertionTextBox.Clear();
@@ -116,12 +119,15 @@ public partial class ExecutionWindow
     }
     private async Task ReadInsertionsAsync(string conversation)
     {
+		if (!_insertionReadVersions.ContainsKey(conversation) && _insertionReadVersions.Count >= MaximumStateCache) _insertionReadVersions.Remove(_insertionReadVersions.Keys.First());
+		var version = ++_insertionReadVersion; _insertionReadVersions[conversation] = version;
         var value = await _client.ExecutionGetAsync("/internal/runtime/conversations/" + Escape(conversation) + "/insertions", _lifetime.Token);
-        if (_closed) return;
+        if (_closed || _insertionReadVersions.GetValueOrDefault(conversation) != version) return;
         if (!_insertionStates.ContainsKey(conversation) && _insertionStates.Count >= MaximumStateCache)
             _insertionStates.Remove(_insertionStates.Keys.First());
         _insertionStates[conversation] = value.Array("insertions");
-        if (_selected?.Id == conversation) RenderInsertionStatus();
+		_activityClock.Synchronize(value.Date("server_now"));
+        if (_selected?.Id == conversation) { RenderInsertionStatus(); await RefreshInsertionTimelineAsync(); }
     }
     private void RenderInsertionStatus()
     {
@@ -140,25 +146,9 @@ public partial class ExecutionWindow
         }
         else
         {
-            InsertionStatus.Text = items.LastOrDefault().Text("status") switch
-            {
-                "reserved" => UiText.Get("ExecutionInsertionReserved"),
-                "attached" => UiText.Get("ExecutionInsertionAttached"),
-                "expired" => UiText.Get("ExecutionInsertionExpired"),
-                "cancelled" => UiText.Get("ExecutionInsertionCancelled"),
-                "delivery_unknown" => UiText.Get("ExecutionInsertionDeliveryUnknown"),
-                _ => ""
-            };
+            InsertionStatus.Text = items.Length == 0 ? "" : InsertionPresentation.State(items[^1]);
         }
-        var latest = items.LastOrDefault();
-        var summary = latest.Text("summary");
-        if (!string.IsNullOrWhiteSpace(summary))
-        {
-            // Summary is display-only. Keep the exact full message accessible
-            // and never replace the queued text or retransmit a preview.
-            InsertionStatus.Text += " · " + summary;
-            InsertionStatus.ToolTip = latest.Text("text");
-        }
+
     }
     private async void WithdrawInsertion_Click(object sender, RoutedEventArgs e)
     {

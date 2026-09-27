@@ -2,12 +2,48 @@ name: Windows Package
 
 on:
   push:
-    tags:
-      - 'v*'
     branches:
       - main
+  workflow_call:
+    inputs:
+      ref:
+        required: true
+        type: string
+      architectures:
+        type: string
+        default: amd64
+      release_build:
+        type: boolean
+        default: false
+      publish:
+        type: boolean
+        default: false
+      tag:
+        type: string
+        default: ''
+      prerelease:
+        type: boolean
+        default: false
+      installation_tests:
+        type: boolean
+        default: false
+    outputs:
+      artifact_name:
+        value: ${{ jobs.build.outputs.artifact_name }}
+      commit:
+        value: ${{ jobs.build.outputs.commit }}
+      version:
+        value: ${{ jobs.build.outputs.version }}
   workflow_dispatch:
     inputs:
+      architectures:
+        description: 'Windows target architectures: amd64 or amd64,arm64'
+        type: string
+        default: amd64
+      release_build:
+        description: 'Prepare release-channel bytes without publishing'
+        type: boolean
+        default: false
       ref:
         description: 'Git ref to build; use main for a candidate or an existing vX.Y.Z tag for publication'
         required: true
@@ -31,7 +67,7 @@ on:
       prerelease:
         description: 'Publish as a prerelease; pushes never publish'
         required: true
-        default: true
+        default: false
         type: boolean
 
 permissions:
@@ -42,9 +78,71 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
+  resolve-source:
     if: github.repository == 'eerraa/agentdock'
-    name: Build verified unsigned Windows x64 package
+    name: Resolve requested ref once
+    runs-on: ubuntu-latest
+    outputs:
+      commit: ${{ steps.identity.outputs.commit }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - id: identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          commit="$(git rev-parse --verify 'HEAD^{commit}')"
+          [[ "$commit" =~ ^[0-9a-f]{40}$ ]]
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
+
+  linux-contracts:
+    needs: resolve-source
+    if: github.repository == 'eerraa/agentdock'
+    name: Linux transaction and concurrency regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      commit: ${{ steps.identity.outputs.commit }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.resolve-source.outputs.commit }}
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Linux backend and WSL helper contracts
+        run: go test -p 2 ./... -count=1 -timeout=8m
+      - name: Race detection on critical concurrency contracts
+        run: go test -race -p 2 ./internal/activity ./internal/permission ./internal/insertion ./internal/fs/... ./internal/snapshot ./internal/acp ./internal/selfupdate ./internal/plugin ./internal/wslfilehelper -count=1 -timeout=8m
+      - name: Record tested source identity
+        id: identity
+        env:
+          EXPECTED_COMMIT: ${{ needs.resolve-source.outputs.commit }}
+        run: |
+          set -euo pipefail
+          commit="$(git rev-parse HEAD)"
+          test "$commit" = "$EXPECTED_COMMIT"
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
+          printf '{"commit":"%s","platform":"linux","backend":"passed","race":"passed","installation":"not_run"}\n' "$commit" > linux-verification.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: linux-validation-${{ github.run_id }}
+          path: linux-verification.json
+          retention-days: 30
+          if-no-files-found: error
+
+  native-acceptance:
+    needs: resolve-source
+    uses: ./.github/workflows/workbench-acceptance.yml
+    with:
+      ref: ${{ needs.resolve-source.outputs.commit }}
+
+  build:
+    needs: [resolve-source, linux-contracts, native-acceptance]
+    if: github.repository == 'eerraa/agentdock'
+    name: Build verified unsigned Windows packages
     runs-on: windows-latest
     timeout-minutes: 45
     defaults:
@@ -54,6 +152,7 @@ jobs:
       CGO_ENABLED: '0'
       DOTNET_CLI_TELEMETRY_OPTOUT: '1'
       DOTNET_NOLOGO: '1'
+      BUILD_ARCHITECTURES: ${{ inputs.architectures || 'amd64' }}
     outputs:
       version: ${{ steps.metadata.outputs.version }}
       commit: ${{ steps.metadata.outputs.commit }}
@@ -66,7 +165,7 @@ jobs:
       - name: Checkout requested source
         uses: actions/checkout@v5
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref }}
+          ref: ${{ needs.resolve-source.outputs.commit }}
           fetch-depth: 0
 
       - name: Setup Go
@@ -89,6 +188,8 @@ jobs:
           MANUAL_PRERELEASE: ${{ inputs.prerelease }}
           MANUAL_TAG: ${{ inputs.tag }}
           RELEASE_AUTHORIZED: ${{ vars.EERRAA_ENABLE_PUBLIC_RELEASE }}
+          EXPECTED_COMMIT: ${{ needs.resolve-source.outputs.commit }}
+          TESTED_COMMIT: ${{ needs.linux-contracts.outputs.commit }}
         run: |
           $ErrorActionPreference = 'Stop'
           $version = (& go run ./tools/release version).Trim()
@@ -98,6 +199,9 @@ jobs:
           $commit = (& git rev-parse HEAD).Trim().ToLowerInvariant()
           if ($LASTEXITCODE -ne 0 -or $commit -notmatch '^[0-9a-f]{40}$') {
             throw 'Could not resolve the source commit.'
+          }
+          if ($commit -ne $env:EXPECTED_COMMIT -or $commit -ne $env:TESTED_COMMIT) {
+            throw 'Source, Linux validation and Windows build commits differ.'
           }
           $changes = @(& git status --porcelain)
           if ($LASTEXITCODE -ne 0 -or $changes.Count -ne 0) {
@@ -109,7 +213,10 @@ jobs:
           $tag = ''
           # Pushes create non-published candidates only. Release credentials are
           # unavailable in this job, and tags alone never authorize publication.
-          if ($env:EVENT_NAME -eq 'push') {
+          if ('${{ inputs.release_build }}' -eq 'true') {
+            # Reusable all-platform preparation never publishes Windows early.
+            $publish = $false
+          } elseif ($env:EVENT_NAME -eq 'push') {
             if ($env:GITHUB_REF -like 'refs/tags/v*') {
               $tag = $env:EVENT_TAG.Trim()
             }
@@ -122,7 +229,7 @@ jobs:
               throw 'Publication still requires explicit installation verification; static-only candidates cannot publish.'
             }
             $prerelease = $env:MANUAL_PRERELEASE -eq 'true'
-            $tag = $env:MANUAL_TAG.Trim()
+            $tag = ([string]$env:MANUAL_TAG).Trim()
             if ($publish -and [string]::IsNullOrWhiteSpace($tag)) {
               throw 'Manual publication requires the tag input.'
             }
@@ -139,7 +246,7 @@ jobs:
             }
           }
 
-          $channel = if ($publish) { 'release' } else { 'candidate-not-released' }
+          $channel = if ($publish -or '${{ inputs.release_build }}' -eq 'true') { 'release' } else { 'candidate-not-released' }
           $artifactName = "agentdock-windows-$version-$env:GITHUB_RUN_ID"
           "version=$version" | Out-File $env:GITHUB_OUTPUT -Encoding ascii -Append
           "commit=$commit" | Out-File $env:GITHUB_OUTPUT -Encoding ascii -Append
@@ -171,7 +278,9 @@ jobs:
       - name: Backend regression
         run: |
           $ErrorActionPreference = 'Stop'
-          go test -p 2 ./... -count=1 -timeout=8m
+          # Isolate packages that build real binaries from Windows process/journal
+          # fixtures. In-test concurrency, deadlines and assertions are unchanged.
+          go test -p 1 ./... -count=1 -timeout=8m
           if ($LASTEXITCODE -ne 0) { throw 'Go tests failed.' }
 
       - name: Static analysis
@@ -192,11 +301,11 @@ jobs:
           $staticOnly = -not ('${{ github.event_name }}' -eq 'workflow_dispatch' -and '${{ inputs.installation_tests }}' -eq 'true')
           & .\scripts\test\test-install-windows.ps1 -StaticOnly:$staticOnly
 
-      - name: Build Windows x64 ZIP and offline Setup
+      - name: Build Windows ZIP and offline Setup for each architecture
         run: |
           $ErrorActionPreference = 'Stop'
           $parameters = @{
-            Architectures = @('amd64')
+            Architectures = @($env:BUILD_ARCHITECTURES -split ',')
             OutputDirectory = (Join-Path $PWD 'dist\windows-package')
           }
           if ('${{ steps.metadata.outputs.channel }}' -eq 'candidate-not-released') {
@@ -208,18 +317,18 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $outputRoot = Join-Path $PWD 'dist\windows-package'
-          $verification = & .\scripts\test\verify-windows-release-assets.ps1 `
-            -ReleaseDirectory (Join-Path $outputRoot 'release') `
-            -BuildReport (Join-Path $outputRoot 'build-report.json') `
-            -ExpectedVersion '${{ steps.metadata.outputs.version }}' `
-            -ExpectedCommit '${{ steps.metadata.outputs.commit }}' `
-            -ExpectedChannel '${{ steps.metadata.outputs.channel }}' `
-            -ExpectedAuthenticode unsigned
-          [IO.File]::WriteAllText(
-            (Join-Path $outputRoot 'verification.json'),
-            (($verification | Out-String).Trim() + "`n"),
-            [Text.UTF8Encoding]::new($false)
-          )
+          $architectures = @($env:BUILD_ARCHITECTURES -split ',')
+          $verification = foreach ($architecture in $architectures) {
+            $result = & .\scripts\test\verify-windows-release-assets.ps1 `
+              -ReleaseDirectory (Join-Path $outputRoot 'release') `
+              -BuildReport (Join-Path $outputRoot 'build-report.json') `
+              -ExpectedVersion '${{ steps.metadata.outputs.version }}' `
+              -ExpectedCommit '${{ steps.metadata.outputs.commit }}' `
+              -ExpectedChannel '${{ steps.metadata.outputs.channel }}' `
+              -ExpectedAuthenticode unsigned -Architecture $architecture -Architectures $architectures
+            ($result | Out-String) | ConvertFrom-Json
+          }
+          ConvertTo-Json -InputObject @($verification) -Depth 8 | Set-Content -Encoding utf8 (Join-Path $outputRoot 'verification.json')
           git diff --exit-code
           if ($LASTEXITCODE -ne 0) { throw 'Build modified tracked source.' }
 
@@ -236,7 +345,18 @@ jobs:
       - name: Record verification scope
         run: |
           $installed = '${{ github.event_name }}' -eq 'workflow_dispatch' -and '${{ inputs.installation_tests }}' -eq 'true'
-          $scope = @{ automated_regression = 'passed'; metadata_checksums = 'passed'; installation_tests = $(if ($installed) { 'passed' } else { 'not_run_user_requested' }); manual_desktop_tests = 'not_run'; commit = '${{ steps.metadata.outputs.commit }}' }
+          $scope = @{
+            version = '${{ steps.metadata.outputs.version }}'
+            automated_regression = 'passed'
+            metadata_checksums = 'passed'
+            installation_tests = $(if ($installed) { 'passed' } else { 'not_run_user_requested' })
+            manual_desktop_tests = 'not_run'
+            commit = '${{ steps.metadata.outputs.commit }}'
+            resolved_commit = '${{ needs.resolve-source.outputs.commit }}'
+            linux_tested_commit = '${{ needs.linux-contracts.outputs.commit }}'
+            linux_backend = 'passed'
+            linux_race = 'passed'
+          }
           $scope | ConvertTo-Json | Set-Content -Encoding utf8 .\dist\windows-package\verification-scope.json
 
       - name: Upload verified Windows package
@@ -267,7 +387,7 @@ jobs:
 
   publish:
     if: github.repository == 'eerraa/agentdock' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.publish && vars.EERRAA_ENABLE_PUBLIC_RELEASE == 'true' && needs.build.outputs.publish == 'true'
-    needs: build
+    needs: [resolve-source, build, linux-contracts]
     name: Publish verified Windows x64 Release
     runs-on: windows-latest
     timeout-minutes: 20
@@ -298,13 +418,22 @@ jobs:
       - name: Verify downloaded package again
         run: |
           $ErrorActionPreference = 'Stop'
+          $report = Get-Content '.\dist\windows-package\build-report.json' -Raw | ConvertFrom-Json
+          $architectures = @($report.platforms | ForEach-Object { ($_ -split '/')[1] })
+          foreach ($architecture in $architectures) {
           & .\scripts\test\verify-windows-release-assets.ps1 `
             -ReleaseDirectory .\dist\windows-package\release `
             -BuildReport .\dist\windows-package\build-report.json `
             -ExpectedVersion '${{ needs.build.outputs.version }}' `
             -ExpectedCommit '${{ needs.build.outputs.commit }}' `
             -ExpectedChannel release `
-            -ExpectedAuthenticode unsigned | Out-Null
+            -ExpectedAuthenticode unsigned -Architecture $architecture -Architectures $architectures | Out-Null
+          }
+          $scope = Get-Content '.\dist\windows-package\verification-scope.json' -Raw | ConvertFrom-Json
+          $commit = '${{ needs.resolve-source.outputs.commit }}'
+          if ($scope.commit -ne $commit -or $scope.resolved_commit -ne $commit -or $scope.linux_tested_commit -ne $commit -or '${{ needs.build.outputs.commit }}' -ne $commit -or '${{ needs.linux-contracts.outputs.commit }}' -ne $commit) {
+            throw 'Refusing publication: resolved, tested, built and packaged source identities differ.'
+          }
 
       - name: Create or update GitHub Release after verification
         env:
@@ -323,6 +452,11 @@ jobs:
           if ($LASTEXITCODE -ne 0 -or $tagCommit -ne $env:RELEASE_COMMIT) {
             throw "Tag $tag no longer points to the verified commit."
           }
+          $remoteTag = @(& git ls-remote --tags origin "refs/tags/$tag" "refs/tags/$tag^{}")
+          if ($LASTEXITCODE -ne 0 -or $remoteTag.Count -eq 0) { throw 'Could not verify the current remote release tag.' }
+          $peeled = @($remoteTag | Where-Object { $_ -match '\^\{\}$' })
+          $remoteCommit = (($peeled + $remoteTag)[0] -split '\s+')[0].ToLowerInvariant()
+          if ($remoteCommit -ne $env:RELEASE_COMMIT) { throw 'Remote release tag moved after source resolution.' }
 
           $exactNotes = Join-Path $PWD "docs\releases\$tag.md"
           if (Test-Path -LiteralPath $exactNotes -PathType Leaf) {
@@ -335,7 +469,7 @@ jobs:
             $notes = $matches[0].FullName
           }
 
-          $title = "AgentDock $version for Windows x64"
+          $title = "AgentDock Workbench $version"
           & gh release view $tag --repo $env:GITHUB_REPOSITORY --json url *> $null
           if ($LASTEXITCODE -ne 0) {
             & gh release create $tag `
@@ -348,9 +482,9 @@ jobs:
           }
 
           $assets = @(Get-ChildItem $releaseRoot -File | Sort-Object Name)
-          if ($assets.Count -ne 6) {
-            throw "Expected six Windows release assets, found $($assets.Count)."
-          }
+          $buildReport = Get-Content .\dist\windows-package\build-report.json -Raw | ConvertFrom-Json
+          $expectedCount = 4 * @($buildReport.platforms).Count + 2
+          if ($assets.Count -ne $expectedCount) { throw "Expected $expectedCount Windows assets, found $($assets.Count)." }
           & gh release upload $tag @($assets.FullName) `
             --repo $env:GITHUB_REPOSITORY `
             --clobber

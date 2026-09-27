@@ -45,7 +45,8 @@ func TestWindowsUpgradeUsesValidatedPayloadAndLaunchReceipt(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, required := range []string{
-		"result.PID = command.Process.Pid", "result.TaskName != request.TaskName",
+		"result.PID = command.Process.Pid", `readSetupReceipt(filepath.Join(root, "result.json"), request.TaskName)`,
+		`if result.TaskName != expected || expected == ""`,
 		"writeSetupJSON(filepath.Join(root, \"result.json\"), result)",
 		"deleteSetupTask(request.TaskName", "command.Wait()",
 	} {

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/uvwt/agentdock/internal/buildinfo"
 )
 
 // Reuse the status page's existing browser-language negotiation. No UI text
@@ -15,31 +17,31 @@ type authorizePageText struct {
 }
 
 var authorizePageEnglish = authorizePageText{
-	Lang: "en", Title: "Connect AgentDock", Heading: "Connect to AgentDock",
+	Lang: "en", Title: "Connect " + buildinfo.ProductName, Heading: "Connect to " + buildinfo.ProductName,
 	Intro:        "Confirm the application below, then enter the server password to connect.",
 	RequestLabel: "Application requesting access", ReturnPrefix: "After verification, return to",
-	PasswordLabel: "AgentDock server password", Placeholder: "Enter the server password",
+	PasswordLabel: buildinfo.ProductName + " server password", Placeholder: "Enter the server password",
 	Submit: "Verify and connect", Cancel: "Deny and return",
 	WarningTitle:    "Confirm that you initiated this connection.",
-	WarningText:     "The password is submitted only to this AgentDock service.",
+	WarningText:     "The password is submitted only to this " + buildinfo.ProductName + " service.",
 	InvalidPassword: "The password is incorrect. Try again.", RegisteredApp: "the registered application", UnnamedApp: "Unnamed application",
 }
 var authorizePageChinese = authorizePageText{
-	Lang: "zh-CN", Title: "连接 AgentDock", Heading: "连接到 AgentDock",
+	Lang: "zh-CN", Title: "连接 " + buildinfo.ProductName, Heading: "连接到 " + buildinfo.ProductName,
 	Intro:        "确认下方应用后，输入服务端密码完成连接。",
 	RequestLabel: "请求连接的应用", ReturnPrefix: "验证后返回",
-	PasswordLabel: "AgentDock 服务端密码", Placeholder: "请输入服务端密码",
+	PasswordLabel: buildinfo.ProductName + " 服务端密码", Placeholder: "请输入服务端密码",
 	Submit: "验证并连接", Cancel: "拒绝并返回",
-	WarningTitle: "请确认这是你刚刚发起的连接。", WarningText: "密码只会提交到当前 AgentDock 服务。",
+	WarningTitle: "请确认这是你刚刚发起的连接。", WarningText: "密码只会提交到当前 " + buildinfo.ProductName + " 服务。",
 	InvalidPassword: "密码不正确，请重试。", RegisteredApp: "已注册的应用", UnnamedApp: "未命名应用",
 }
 var authorizePageKorean = authorizePageText{
-	Lang: "ko-KR", Title: "AgentDock 연결", Heading: "AgentDock에 연결",
+	Lang: "ko-KR", Title: buildinfo.ProductName + " 연결", Heading: buildinfo.ProductName + "에 연결",
 	Intro:        "아래 앱을 확인한 뒤 서버 비밀번호를 입력하여 연결하세요.",
 	RequestLabel: "연결을 요청한 앱", ReturnPrefix: "인증 후 돌아갈 주소:",
-	PasswordLabel: "AgentDock 서버 비밀번호", Placeholder: "서버 비밀번호를 입력하세요",
+	PasswordLabel: buildinfo.ProductName + " 서버 비밀번호", Placeholder: "서버 비밀번호를 입력하세요",
 	Submit: "확인 후 연결", Cancel: "거절 후 돌아가기",
-	WarningTitle: "직접 시작한 연결 요청인지 확인하세요.", WarningText: "비밀번호는 현재 AgentDock 서비스에만 전송됩니다.",
+	WarningTitle: "직접 시작한 연결 요청인지 확인하세요.", WarningText: "비밀번호는 현재 " + buildinfo.ProductName + " 서비스에만 전송됩니다.",
 	InvalidPassword: "비밀번호가 올바르지 않습니다. 다시 입력하세요.", RegisteredApp: "등록된 앱", UnnamedApp: "이름 없는 앱",
 }
 

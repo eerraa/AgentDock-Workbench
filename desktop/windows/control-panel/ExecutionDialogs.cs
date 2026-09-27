@@ -69,12 +69,12 @@ internal static class ExecutionDialogs
         var a = detail.Field("approval"); var pending = a.Text("status") == "pending" && detail.Flag("request_available");
         var ui = Create(owner, UiText.Get("ExecutionApprovalTitle"), 840, 730);
         var panel = new DockPanel(); ui.Root.Children.Add(panel);
-        var header = Label(UiText.Format("ExecutionApprovalSummary", a.Text("conversation_id"), a.Text("task_id") == "" ? UiText.Get("ExecutionNone") : a.Text("task_id"), a.Text("tool"), a.Text("rule_id"), a.Text("reason"), a.Text("scope_description"), pending ? UiText.Get("ExecutionNotExecuted") : ExecutionJson.ApprovalState(a.Text("status")))); DockPanel.SetDock(header, Dock.Top); panel.Children.Add(header);
-        var grant = new CheckBox { Content = UiText.Get("ExecutionAllowWorkspaceRule"), IsEnabled = pending && a.Text("workspace_id") != "", Margin = new Thickness(0, 9, 0, 5) };
+        var header = Label(UiText.Format("ExecutionApprovalSummary", a.Text("conversation_id"), a.Text("task_id") == "" ? UiText.Get("ExecutionNone") : a.Text("task_id"), a.Text("tool"), a.Text("rule_id"), a.Text("reason"), a.Text("scope_description"), pending ? UiText.Get("ExecutionNotExecuted") : ExecutionJson.ApprovalState(a.Text("status"))) + UiText.Format("ExecutionApprovalReviewerDetails", a.Text("approval_reviewer", "user"), a.Text("review_reason"))); DockPanel.SetDock(header, Dock.Top); panel.Children.Add(header);
+        var grant = new CheckBox { Content = UiText.Get("ExecutionAllowWorkspaceRule"), IsEnabled = pending && a.Text("workspace_id") != "" && a.Text("approval_reviewer") != "auto_review", Margin = new Thickness(0, 9, 0, 5) };
         var grantPanel = new StackPanel(); grantPanel.Children.Add(grant); var rule = Readonly(detail.Field("rule_preview").Pretty()); rule.Height = 120; grantPanel.Children.Add(rule); DockPanel.SetDock(grantPanel, Dock.Bottom); panel.Children.Add(grantPanel);
         var fixedText = Readonly(detail.Text("fixed_request")); AutomationProperties.SetAutomationId(fixedText, "ApprovalFixedRequest"); panel.Children.Add(fixedText);
         (string, bool)? result = null; var reject = Action(UiText.Get("ExecutionReject"), "ApprovalReject"); var once = Action(UiText.Get("ExecutionAllowOnce"), "ApprovalApproveOnce"); var cancel = Action(UiText.Get("ExecutionBack"));
-        reject.IsEnabled = once.IsEnabled = pending;
+        reject.IsEnabled = pending; once.IsEnabled = pending && a.Text("approval_reviewer") != "auto_review";
         grant.Checked += (_, _) => once.Content = UiText.Get("ExecutionApproveSaveRule"); grant.Unchecked += (_, _) => once.Content = UiText.Get("ExecutionAllowOnce");
         reject.Click += (_, _) => { result = ("reject", false); ui.Window.DialogResult = true; };
         once.Click += (_, _) => { result = ("approve", grant.IsChecked == true); ui.Window.DialogResult = true; };
@@ -93,14 +93,16 @@ internal static class ExecutionDialogs
         panel.Children.Add(Label(UiText.Get("ExecutionScope"))); var scope = new ComboBox { ItemsSource = scopes, DisplayMemberPath = "Title", SelectedIndex = 0, MinHeight = 34 }; panel.Children.Add(scope);
         panel.Children.Add(Label(UiText.Get("ExecutionExecutionMode"))); var mode = new ComboBox { ItemsSource = new[] { new ExecutionChoice("readonly", UiText.Get("ExecutionReadOnlyDescription")), new ExecutionChoice("rules", UiText.Get("ExecutionRulesDescription")), new ExecutionChoice("full", UiText.Get("ExecutionFullDescription")) }, DisplayMemberPath = "Title", MinHeight = 34 }; panel.Children.Add(mode);
         AutomationProperties.SetAutomationId(scope, "PermissionScope"); AutomationProperties.SetAutomationId(mode, "PermissionMode");
+        var profileSettings = new PermissionSettingsEditor(policy); panel.Children.Add(profileSettings.View);
         void SelectMode()
         {
             var selected = ((scope.SelectedItem as ExecutionChoice)?.Id ?? "global:").Split(':', 2);
             var name = policy.Text("global_mode");
             if (selected[0] == "conversation")
-                foreach (var existing in policy.Array("scopes")) if (existing.Text("kind") == "workspace" && existing.Text("id") == detail.Text("workspace_id")) name = existing.Text("mode");
-            foreach (var existing in policy.Array("scopes")) if (existing.Text("kind") == selected[0] && existing.Text("id") == selected[1]) name = existing.Text("mode");
+                foreach (var existing in policy.Array("scopes")) if (existing.Text("kind") == "workspace" && existing.Text("id") == detail.Text("workspace_id") && existing.Text("mode").Length > 0) name = existing.Text("mode");
+            foreach (var existing in policy.Array("scopes")) if (existing.Text("kind") == selected[0] && existing.Text("id") == selected[1] && existing.Text("mode").Length > 0) name = existing.Text("mode");
             mode.SelectedItem = mode.Items.Cast<ExecutionChoice>().FirstOrDefault(item => item.Id == name) ?? mode.Items[1];
+            profileSettings.SelectScope(selected[0], selected[1]);
         }
         SelectMode(); scope.SelectionChanged += (_, _) => SelectMode();
         var enableRuleEdit = new CheckBox { Content = UiText.Get("ExecutionEditDangerousRules"), Margin = new Thickness(0, 14, 0, 5) }; panel.Children.Add(enableRuleEdit);
@@ -125,23 +127,48 @@ internal static class ExecutionDialogs
                     if (parsed.RootElement.ValueKind != JsonValueKind.Array) throw new JsonException(UiText.Get("ExecutionRulesArrayRequired"));
                     change["rules"] = parsed.RootElement.Clone();
                 }
+                profileSettings.AddChange(change);
                 result = change; ui.Window.DialogResult = true;
             }
             catch (JsonException ex) { MessageBox.Show(ui.Window, ex.Message, UiText.Get("ExecutionInvalidRules"), MessageBoxButton.OK, MessageBoxImage.Error); }
         };
         ui.Actions.Children.Add(cancel); ui.Actions.Children.Add(save); ui.Window.ShowDialog(); return result;
     }
-    internal static bool Preferences(Window owner, ExecutionPreferences preferences)
+    internal static bool Preferences(Window owner, ExecutionPreferences preferences, McpUiPreference display, Func<ToolOutputSettings, Task> saveOutput)
     {
-        var ui = Create(owner, UiText.Get("ExecutionDisplayRetentionTitle"), 520, 390); var panel = new StackPanel(); ui.Root.Children.Add(panel);
-        panel.Children.Add(Label(UiText.Get("ExecutionRetentionExplanation")));
+        var ui = Create(owner, "显示与回收站保留", 560, 620); var panel = new StackPanel(); ui.Root.Children.Add(new ScrollViewer { Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
+        var outputEnabled = new CheckBox { Content = "截断工具输出", IsChecked = display.ToolOutput.Enabled, Margin = new Thickness(0, 6, 0, 4) };
+        AutomationProperties.SetAutomationId(outputEnabled, "ToolOutputEnabled"); panel.Children.Add(outputEnabled);
+        panel.Children.Add(Label("输出上限（字符，1,000–100,000）"));
+        var outputChars = new ComboBox { IsEditable = true, ItemsSource = new[] { 1000, 5000, 10000, 20000, 50000, 100000 }, Text = display.ToolOutput.MaxChars.ToString(System.Globalization.CultureInfo.InvariantCulture), MinHeight = 34 };
+        AutomationProperties.SetAutomationId(outputChars, "ToolOutputMaxChars"); panel.Children.Add(outputChars);
+        panel.Children.Add(Label("作用于当前设备后续普通文本工具返回及活动中心分页。规则、结构化控制信息和用户插入保持完整；关闭后原有资源上限仍有效。"));
+        outputChars.ToolTip = "按 Unicode 标量计数：普通汉字、英文及单码点 emoji 各为一字符；组合字符按码点计数，CRLF 计两字符。位置和续读仍使用 UTF-8 字节偏移。";
+        if (display.Warning.Length > 0) panel.Children.Add(Label(display.Warning));
+        panel.Children.Add(Label("新移入回收站对象的保留天数（1–3650）。已有对象继续使用其原定到期日期。工作区和源码不在回收站清理范围。"));
         var days = new TextBox { Text = preferences.RetentionDays.ToString(), MinHeight = 34, Padding = new Thickness(6) }; panel.Children.Add(days);
-        panel.Children.Add(Label(UiText.Get("ExecutionFontSize"))); var font = new ComboBox { ItemsSource = new[] { 12d, 13d, 14d, 16d, 18d, 20d }, SelectedItem = preferences.FontSize, MinHeight = 34 }; panel.Children.Add(font);
-        var notify = new CheckBox { Content = UiText.Get("ExecutionNotifyApprovals"), IsChecked = preferences.Notifications, Margin = new Thickness(0, 16, 0, 0) }; panel.Children.Add(notify);
-        var saved = false; var save = Action(UiText.Get("ExecutionSave")); save.Click += (_, _) =>
+        panel.Children.Add(Label("界面字号（12–20）")); var font = new ComboBox { ItemsSource = new[] { 12d, 13d, 14d, 16d, 18d, 20d }, SelectedItem = preferences.FontSize, MinHeight = 34 }; panel.Children.Add(font);
+        var notify = new CheckBox { Content = "提示新增待审批请求", IsChecked = preferences.Notifications, Margin = new Thickness(0, 16, 0, 0) }; panel.Children.Add(notify);
+        var error = Label(""); error.SetResourceReference(TextBlock.ForegroundProperty, "DangerBrush"); panel.Children.Add(error);
+        var saved = false; var saving = false; var save = Action("保存", "ExecutionPreferencesSave");
+        ui.Window.Closing += (_, args) => { if (saving) args.Cancel = true; };
+        save.Click += async (_, _) =>
         {
-            if (!int.TryParse(days.Text, out var count) || count is < 1 or > 3650) { MessageBox.Show(ui.Window, UiText.Get("ExecutionEnterRetentionDays"), UiText.Get("ExecutionInvalidRetention")); return; }
-            preferences.RetentionDays = count; preferences.FontSize = font.SelectedItem is double size ? size : 14; preferences.Notifications = notify.IsChecked == true; saved = true; ui.Window.DialogResult = true;
+            if (saving) return;
+            if (!int.TryParse(days.Text, out var count) || count is < 1 or > 3650) { error.Text = "请输入 1–3650 天。"; return; }
+            if (!ToolOutputSettings.TryParse(outputChars.Text, outputEnabled.IsChecked == true, out var output)) { error.Text = "请输入 1,000–100,000 的整数。"; return; }
+            var selectedFont = font.SelectedItem is double size ? size : 14; var selectedNotify = notify.IsChecked == true;
+            saving = true; save.IsEnabled = false; panel.IsEnabled = false; error.Text = "";
+            try
+            {
+                await saveOutput(output);
+                preferences.RetentionDays = count; preferences.FontSize = selectedFont; preferences.Notifications = selectedNotify;
+                saved = true;
+            }
+            catch (Exception exception) when (exception is System.Net.Http.HttpRequestException or System.IO.IOException or JsonException or InvalidOperationException or OperationCanceledException)
+            { error.Text = exception.Message; }
+            finally { saving = false; save.IsEnabled = true; panel.IsEnabled = true; }
+            if (saved) ui.Window.DialogResult = true;
         };
         ui.Actions.Children.Add(save); ui.Window.ShowDialog(); return saved;
     }
