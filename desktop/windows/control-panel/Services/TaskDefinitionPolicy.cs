@@ -8,7 +8,7 @@ namespace AgentDock.ControlPanel;
 // changing them. This does not participate in normal runtime task control.
 internal static class TaskDefinitionPolicy
 {
-    internal static void Validate(string xml, string taskName, string root, string sid, Func<string,string> resolveSid, bool allowStandardTask = false, bool allowLegacyCore = false)
+    internal static void Validate(string xml, string taskName, string root, string sid, Func<string,string> resolveSid, bool allowStandardTask = false, bool allowLegacyAction = false)
     {
         if (!IsValidTaskName(taskName) || !Path.IsPathFullyQualified(root) || string.IsNullOrWhiteSpace(sid))
             throw new InvalidOperationException("task_owner_mismatch: task name, runtime root or user is not valid.");
@@ -31,16 +31,23 @@ internal static class TaskDefinitionPolicy
         var executable = action.Element(ns+"Command")?.Value ?? "";
         var arguments = action.Element(ns+"Arguments")?.Value ?? "";
         var directory = action.Element(ns+"WorkingDirectory")?.Value ?? "";
-        if (!Path.IsPathFullyQualified(executable) || directory.Length > 0 && !Same(directory,root))
+        if (directory.Length > 0 && !Same(directory,root))
             throw new InvalidOperationException("task_owner_mismatch: executable or working directory is not owned.");
         var canonicalRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar);
         var native = Same(executable,Path.Combine(root,"bin","agentdock-tray.exe")) &&
             string.Equals(arguments,$"--run-core-task --runtime-root \"{canonicalRoot}\"",StringComparison.OrdinalIgnoreCase);
         // Legacy executable actions are accepted only by the administrative
         // existing-task/recovery boundary, never as a new task definition.
-        var legacy = allowLegacyCore && Same(executable,Path.Combine(root,"bin","agentdock.exe")) &&
+        var legacy = allowLegacyAction && Same(executable,Path.Combine(root,"bin","agentdock.exe")) &&
             string.Equals(arguments,$"service launch-core --runtime-root \"{canonicalRoot}\"",StringComparison.OrdinalIgnoreCase);
-        if (!native && !legacy) throw new InvalidOperationException("task_owner_mismatch: action is not an exact known stable AgentDock entry.");
+        // Historical Windows Setup used this exact PowerShell -File action.
+        // Recognize it only while inspecting an existing task or recovery XML;
+        // new definitions still require the stable native tray launcher.
+        var legacyPowerShell = allowLegacyAction &&
+            (string.Equals(executable, "powershell.exe", StringComparison.OrdinalIgnoreCase) ||
+             Same(executable, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "WindowsPowerShell", "v1.0", "powershell.exe"))) &&
+            string.Equals(arguments, $"-NoLogo -NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File \"{Path.Combine(canonicalRoot, "start-agentdock.ps1")}\"", StringComparison.OrdinalIgnoreCase);
+        if (!native && !legacy && !legacyPowerShell) throw new InvalidOperationException("task_owner_mismatch: action is not an exact known stable AgentDock entry.");
     }
     internal static void ValidateLauncher(string launcher, string root)
     {

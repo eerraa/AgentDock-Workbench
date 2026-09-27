@@ -471,7 +471,7 @@ internal static class TaskAdminService
         if (!bound && !state.Exists)
             throw new InvalidOperationException("task_backup_invalid: an absent-task backup must identify its original runtime and user.");
         if (state.Exists)
-            TaskDefinitionPolicy.Validate(xml, request.TaskName, request.RuntimeRoot, request.UserSid, ResolveUserSid, allowStandardTask: true, allowLegacyCore: true);
+            TaskDefinitionPolicy.Validate(xml, request.TaskName, request.RuntimeRoot, request.UserSid, ResolveUserSid, allowStandardTask: true, allowLegacyAction: true);
     }
 
     private static string ReadTaskUserId(string xml)
@@ -493,7 +493,7 @@ internal static class TaskAdminService
     {
         dynamic? task = FindTask(root, request.TaskName);
         if (task is not null)
-            TaskDefinitionPolicy.Validate((string)task.Xml, request.TaskName, request.RuntimeRoot, request.UserSid, ResolveUserSid, allowStandardTask: true, allowLegacyCore: true);
+            TaskDefinitionPolicy.Validate((string)task.Xml, request.TaskName, request.RuntimeRoot, request.UserSid, ResolveUserSid, allowStandardTask: true, allowLegacyAction: true);
     }
 
     private static void RemoveTask(dynamic root, string taskName)

@@ -349,7 +349,7 @@ jobs:
             -SetupPath .\dist\windows-package\release\AgentDockSetup-amd64.exe `
             -LegacyCorePath .\dist\windows-package\payload-amd64\agentdock.exe `
             -LegacyTrayPath .\dist\windows-package\payload-amd64\agentdock-tray.exe `
-            -AllowLegacyTaskMutation
+            -AllowLegacyTaskMutation -EvidenceDirectory (Join-Path $PWD 'dist/windows-package/setup-evidence')
 
       - name: Verify historical 1.1.16102 upgrade repair and rollback
         id: upgrade
@@ -421,7 +421,23 @@ jobs:
             dist/windows-package/upgrade-validation.json
             dist/windows-package/backend-validation.jsonl
             dist/windows-package/korean-validation.txt
+            dist/windows-package/setup-evidence/*
           if-no-files-found: error
+          retention-days: 30
+
+      - name: Preserve failed candidate evidence without release approval
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: unverified-windows-failure-${{ github.run_id }}
+          path: |
+            dist/windows-package/release/*
+            dist/windows-package/build-report.json
+            dist/windows-package/verification.json
+            dist/windows-package/backend-validation.jsonl
+            dist/windows-package/upgrade-validation.json
+            dist/windows-package/setup-evidence/*
+          if-no-files-found: warn
           retention-days: 30
 
       - name: Write build summary

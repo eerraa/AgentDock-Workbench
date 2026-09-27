@@ -62,7 +62,7 @@ rg는 기존 generation·검색·installer·selfupdate 소유자를 사용한다
 
 ### 2.5 TaskAdmin — 목적별 축소·검증
 
-현재 root·SID·task name·정의·실행파일·인자 및 복구자료 대상 검증을 유지했다. 복원 입력 검증은 기존 Task의 정지·삭제보다 먼저 실행한다. 새 Task 정의는 현행 stable tray action만 허용하고, 구형 stable Core action은 기존 task/명시적 복구 입력에서만 allowLegacyCore로 허용한다. 이 제품이 실행하지 않는 `--task-core-host` action은 제외했다.
+현재 root·SID·task name·정의·실행파일·인자 및 복구자료 대상 검증을 유지했다. 복원 입력 검증은 기존 Task의 정지·삭제보다 먼저 실행한다. 새 Task 정의는 현행 stable tray action만 허용하고, 구형 stable Core action과 정확한 기존 PowerShell -File launcher는 기존 task/명시적 복구 입력에서만 allowLegacyAction으로 허용한다. 이 제품이 실행하지 않는 `--task-core-host` action은 제외했다.
 
 보존된 1.1.16102의 실제 build-report와 Setup/ZIP/install.ps1 3개 hash가 일치함을 확인했다. 그 정확한 source `4d719ce75ac748cb24e8ad4b7d92ff7c56e24225`는 root/task/SID가 결합된 schema 1 JSON과 Unicode task XML을 기록했다. 따라서 schema 1을 무조건 삭제하지 않고 읽기 전용 호환 adapter로 한정했다. 새 기록은 원본의 schema 2를 사용한다. 원본의 schema 0 absent-task 읽기 호환은 유지하되 소유권 없는 기록은 변조 작업을 승인하지 못한다.
 
@@ -136,6 +136,20 @@ publication policy를 포함한 scripts/test 108 PASS / 0 SKIP / 0 FAIL 및 브�
 새 미배포 버전은 1.1.17100이다. GUI informational version에 source SHA를 넣고 Core 외 shim/arbiter도 같은 SHA인지 검증하도록 했다. 최종 패키지·실제 CI 결과는 아직 이 절의 로컬 회귀 수치에 포함하지 않는다.
 
 두 번째 재개의 한국어 3-way 후보는 제품 밖 korean-port에 준비했으나 충돌 부분 읽기 요청이 동일한 명시적 보안 문구로 실행 전에 차단됐다. resume2-localization-conflict-block.json에 기록했으며 우회 재조회·제품 적용하지 않았다. 따라서 전체 한국어 관문은 계속 미완료다.
+
+## 4.2 실제 후보 CI와 구형 Task repair 보완
+
+후보 source 381b932의 tree f1c8f66a를 그대로 유지하는 이력 보존 merge 4c4eed6e50363b14bdc09b4fb33a898f3d34d3aa를 만들고 사용자 원격의 작업 브랜치에만 push했다. 기존 local main cea147b9와 remote main113f709a는 변경하지 않았다. 기존 main과 1.1.16102 source가 조상으로 보존되지만 그 옛 제품 tree를 다시 이식하지 않았다.
+
+실제 GitHub 실행36337080381은 정확한4c SHA에 대해 amd64, installation_tests=true, publish=false로 실행했다. Linux backend/race 및 Windows native 검증이 통과했다. artifact를 실제 내려받아 같은 SHA를 확인했다. native Go221 PASS/36 SKIP/0 FAIL, COM/NTFS22시나리오272assertions/0실패, WPF60개100/125/150/200% offscreen표본27538assertions가 기록됐다. 물리 키보드·모니터 검증 및 한국어 전체 검증은 아니다.
+
+같은4c SHA의 로컬 전체Go는2157 PASS/85 SKIP/0 FAIL, vet/build는exit0, 핵심12패키지race+실제rg는912 PASS/48 SKIP/0 FAIL이다. 실제GUI빌드의ProductVersion은1.1.17100+전체4cSHA이며NotSigned이다. 운영UI/Setup은 실행하지 않았다.
+
+이 CI는 Windows ZIP/오프라인Setup 빌드와 실제패키지metadata/checksum 검증까지 통과했지만 **Setup repair에서 실패**했다. 처음 설치·반복 설치가 완료된 뒤, 원본 E2E가 만드는 기존 PowerShell 예약작업의 소유권 검사에서 거부됐다. 역사적1.1.16102 upgrade/rollback은 이 실패 때문에 아직 도달하지 않았다. 이 실패를 통과로 바꾸거나 테스트를 제거하지 않는다. 첫 실행에는 실패시패키지보존단계가 없어 최종Setup/ZIP artifact를 회수하지 못했으며, CI로그와별도native/Linux artifact만 보존했다.
+
+동일한 XML/인자로 로컬 순수정책 반례를 재현했다. 기존 root/SID/단일action/InteractiveToken 검사를 유지하면서 정확한 powershell.exe 또는 시스템WindowsPowerShell 경로와 기존 start-agentdock.ps1 -File 인자만 기존task/복구 경계에서 식별하도록 보완했다. 신규task는 여전히stable native tray만 사용한다. 임의상대실행파일·다른root·다른SID·추가명령·Command/EncodedCommand·다중action은 거부하며 PowerShell을 새로 시작하는제품경로는 추가하지 않았다. 수정후구형action32assertions와기존소유권40/복구99assertions가 통과했다. 실제Setup재검사는 후속CI에서 별도로 확인해야 한다.
+
+후속실패원인을보존하도록 원래E2E에 known4개설치로그의최대2000줄씩선택적보존을연결했고, 실패후에도fixture정리를계속한다. workflow의실패산출물은unverified-windows-failure로명시하여정식게시관문과구분한다. 재검증이성공하기전설치완료·지원upgrade완료로보고하지않는다.
 
 ## 5. 미완료 및 명시적 차단
 

@@ -33,15 +33,15 @@ internal static class TaskOwnerRegression
    try { TaskDefinitionPolicy.Validate(omittedLevel,"AgentDock",root,sid,value=>value); throw new Exception("omitted level became elevated"); }
    catch (InvalidOperationException) { assertions++; }
    foreach (var allowLegacy in new[] { false, true }) {
-     try { TaskDefinitionPolicy.Validate(xml.Replace("--run-core-task", "--task-core-host"), "AgentDock", root, sid, value => value, allowLegacyCore: allowLegacy); throw new Exception("unsupported historical host action accepted"); }
+     try { TaskDefinitionPolicy.Validate(xml.Replace("--run-core-task", "--task-core-host"), "AgentDock", root, sid, value => value, allowLegacyAction: allowLegacy); throw new Exception("unsupported historical host action accepted"); }
      catch (InvalidOperationException) { assertions++; }
    }
    var legacyCore = xml.Replace(command,Path.Combine(root,"bin","agentdock.exe")).Replace("--run-core-task", "service launch-core");
    try { TaskDefinitionPolicy.Validate(legacyCore,"AgentDock",root,sid,value=>value); throw new Exception("legacy action accepted as a new definition"); }
    catch (InvalidOperationException) { assertions++; }
-   TaskDefinitionPolicy.Validate(legacyCore,"AgentDock",root,sid,value=>value,allowLegacyCore:true); assertions++;
+   TaskDefinitionPolicy.Validate(legacyCore,"AgentDock",root,sid,value=>value,allowLegacyAction:true); assertions++;
    foreach (var invalid in new[] { legacyCore.Replace(sid,"S-1-5-18"),legacyCore.Replace("</Arguments>"," --extra</Arguments>"),legacyCore.Replace("InteractiveToken","Password") }) {
-     try { TaskDefinitionPolicy.Validate(invalid,"AgentDock",root,sid,value=>value,allowLegacyCore:true); throw new Exception("legacy recovery weakened ownership"); }
+     try { TaskDefinitionPolicy.Validate(invalid,"AgentDock",root,sid,value=>value,allowLegacyAction:true); throw new Exception("legacy recovery weakened ownership"); }
      catch (InvalidOperationException) { assertions++; }
    }
    TaskDefinitionPolicy.ValidateLauncher(command, root); assertions++;
@@ -49,6 +49,7 @@ internal static class TaskOwnerRegression
      try { TaskDefinitionPolicy.ValidateLauncher(launcher, root); throw new Exception("unowned launcher accepted"); }
      catch (InvalidOperationException) { assertions++; }
    }
+   TaskLegacyPowerShellPolicy.Run();
    Console.WriteLine($"Task definition ownership: {assertions} assertions passed; no task, elevation, service or UI operation executed.");
  }
 }
