@@ -422,6 +422,7 @@ jobs:
             dist/windows-package/backend-validation.jsonl
             dist/windows-package/korean-validation.txt
             dist/windows-package/setup-evidence/*
+            dist/windows-package/upgrade-evidence/*
           if-no-files-found: error
           retention-days: 30
 
@@ -437,6 +438,7 @@ jobs:
             dist/windows-package/backend-validation.jsonl
             dist/windows-package/upgrade-validation.json
             dist/windows-package/setup-evidence/*
+            dist/windows-package/upgrade-evidence/*
           if-no-files-found: warn
           retention-days: 30
 

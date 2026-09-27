@@ -189,6 +189,30 @@ Windows Go 수치는 실제 다운로드한 `backend-validation.jsonl`에서 집
 
 이는 GitHub Actions 후보 artifact의 실제 재다운로드 검증이다. **정식 GitHub Release에서 재다운로드한 결과가 아니며 설치 권장/게시 승인이 아니다.** 위치는 외부 evidence의 `ci-36338434227-candidate/release`다. 실행 결과·실패 로그·Setup 4개 로그·원본 native/Linux 증거를 함께 보존했다. `upgrade-validation.json`의 passed=false를 변경하지 않았다.
 
+## 4.4 세 번째 재개 — 업그레이드 실패 증거와 시험 오판 방지
+
+이번 계속 요청은 실제 HEAD `5bfa5e7d45dc307426ac6beaba9f02a0d2115d50`와 CI 36338434227을 대조한 뒤 진행했다. 4.3절의 Setup 성공과 역사적 baseline 실패는 기존 실제 결과이며, 이번에 새로 통과한 upgrade 결과가 아니다. 새 제품 버전이나 바이너리를 만들지 않았다.
+
+한글화 외부 후보의 충돌을 읽어 현재 출력 제한·승인·삽입 메시지 로직을 보존할 이식 범위를 검토했으나, 외부 `resume3-resolve-korean.py` 작성 요청이 명시적으로 실행 전에 차단됐다. 해당 파일은 생성되지 않았고 한국어 제품 코드를 적용하지 않았다. 같은 작업을 인자 분해나 다른 도구로 재전송하지 않았다. 원문과 실제 파일 부재는 `resume3-localization-write-block.json`에 보존했다.
+
+독립적인 검토에서 기존 upgrade 시험은 실행 단계와 입력 bytes의 SHA를 보고서에 남기지 않았고, 기대한 실패의 비정상 종료만 확인하여 의도된 trial 오류 지점에 실제 도달했는지를 입증하지 않았다. 이 시험 경계만 보완했다. `scripts/test/test-windows-upgrade-isolated.ps1`은 이제 phase·실제 프로세스 종료 코드·스크립트/ZIP SHA와 실행 전후 입력 불변을 기록한다. rollback 주입 시험은 정확한 오류 표식에도 도달해야 한다. 기존 baseline 설치/health, target upgrade, committed pointer, 자격 증명·사용자 데이터 보존과 rolled_back 검사는 그대로 남는다.
+
+증거 보존은 알려진 네 단계의 log/ini, 최대 8개 파일만 대상으로 한다. 파일 1MiB와 본문 524,288 문자 상한을 넘는 입력은 생략 이유를 기록한다. 크기 상한을 넘는 파일은 해시를 위해서도 전체 읽지 않고 source_sha256을 null로 둔다. BOM을 판별하여 UTF-16/UTF-8 원문을 읽고 생성된 fixture의 Bearer/OAuth/Tunnel 자격 증명과 Authorization 값을 제거한다. 실제 원본/제거 후 bytes의 hash를 구분하며 원본을 바꾸거나 이전 export를 덮어쓰지 않는다. 정상·실패 CI artifact 경로 모두 `upgrade-evidence/*`를 보존하도록 기존 workflow에 연결했다. 진단 export 실패를 성공으로 숨기지 않는다.
+
+새 `upgrade_evidence_windows_test.go`는 Windows PowerShell 5.1에서 실제 script의 네 함수만 AST로 추출해 검증한다. 설치 프로세스는 inert 함수로 대체하며 원본 script의 최상위 설치·레지스트리·서비스 동작을 실행하지 않는다. 정상 프로세스 반환을 설치 건강 상태로 오인하지 않기, 엉뚱한 지점의 실패 거부, 주입 지점 도달, 예상 외 성공 거부, 입력 변조 거부 및 민감정보 제거·크기 제한·원문 보존을 43 assertions로 확인했다. 실행 결과는 mock 5개이며 실제 Setup 5회가 아니다.
+
+| 이번 변경 검증 | 실제 결과 |
+|---|---|
+| Windows script suite | `resume3-scripts-verified`: 110 PASS / 0 SKIP / 0 FAIL |
+| PowerShell 5.1 실제 함수 회귀 | 위 suite에 포함: 43 assertions, 5개 inert 결과 |
+| `go vet ./scripts/test` | `resume3-vet-verified`: exit 0 |
+| PowerShell 구문 / gofmt / diff whitespace | 통과 |
+| 새 CI·새 바이너리·실제 역사적 upgrade | 이번 보완 후 미실행; 4.3절의 실패를 변경하지 않음 |
+
+첫 함수 시험의 Get-FileHash 미해결은 PS7 부모의 모듈 경로를 PS5.1 자식이 상속한 시험 환경 오류였다. 자식 PSModulePath를 해당 Windows PowerShell 내장 Modules로만 지정하여 해결했으며 시스템 모듈·PATH·권한을 변경하지 않았다. 첫 실패 기록 `resume3-upgrade-evidence-01`도 보존한다.
+
+직전 종료 기록 `RESUME2_FINAL_STATE.json`이 작성자를 unknown으로 기록한 workflow/upgrade script/새 Go test 세 파일은 이번 계속 요청에서 작성한 파일들이다. 그 당시 관측 기록을 소급 수정하지 않고 이번 검증·커밋으로 귀속을 명시한다. 다른 worktree의 변경이나 열린 PR은 수정하지 않는다. 남은 한글화와 실제 역사적 upgrade/rollback을 마치기 전 main/tag/정식 Release를 갱신하지 않는다.
+
 ## 5. 미완료 및 명시적 차단
 
 직전 재개에서 두 개의 읽기 요청이 실행 전에 차단됐다. 원문은 다음과 같다.
