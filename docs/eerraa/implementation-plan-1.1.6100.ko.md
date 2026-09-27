@@ -2,7 +2,7 @@
 
 정본: `docs/eerraa/implementation-plan-1.1.6100.ko.md`  
 실행일: 2026-09-27 KST  
-상태: **통합 소스·Windows 필수 로컬 검증 완료 / 로컬 main 정상 병합 대기**. 최초 27개 충돌을 모두 해결했다. 마지막 Windows 5파일의 실제 해결본, 전체 Go suite, Windows desktop 및 다국어·실제 격리 task/복구 검증을 확보했다. 아래 결과와 보류 범위를 확인하고 정상 commit/merge로만 main에 반영한다. 새 패키징·운영 설치·원격 게시는 이 완료 범위에 포함하지 않는다.
+상태: **실험 분리 및 선택한 upstream 소스 통합·필수 로컬 검증·로컬 main 정상 반영 완료**. 최초 27개 충돌을 모두 해결했다. 전체 Go suite와 Windows desktop·다국어·실제 격리 task/복구 검증을 거쳐 normal merge commit을 만들고, 변경되지 않은 clean main에 fast-forward했다. 새 패키징·운영 설치·원격 게시 및 아래 명시한 추가 upstream 변경은 완료 범위와 구분한다.
 
 ## 1. 현재 기준과 권한
 
@@ -122,8 +122,10 @@ Task Scheduler가 기본 LeastPrivilege의 RunLevel을 생략하는 실제 직�
 
 | 검사 | 실제 결과 |
 |---|---|
-| 최종 `go test -json -p 1 -count=1 -timeout=180s ./...` | **PASS / exit 0**. 57개 시험 패키지, test/subtest 2,217 PASS, 기존 조건 SKIP 81. 시험 없는 패키지는 별도 집계 |
+| 최종 `go test -json -p 1 -count=1 -timeout=180s ./...` | **PASS / exit 0**. 57개 시험 패키지, test/subtest 2,217 PASS, 기존 조건 SKIP 81. 시험 없는 패키지 7개는 별도 집계 |
 | 최종 `go vet ./...` / `go build ./...` | 각각 **PASS / exit 0** |
+| main checkout `scripts/test` / `go build ./...` | 병합된 실제 main 경로에서도 **92 PASS / build PASS**; integration과 제품 tree 동일 확인 |
+| 변경 Go formatting / 전체 staged diff | **182개 Go 파일 gofmt PASS / git diff --cached --check PASS** |
 | scripts/test 전체 | **92 PASS, 0 FAIL, 0 SKIP**. 이전 6개 실패 해소; 제거된 내부 helper assertion은 실제 owner 및 행동 검사로 이관 |
 | Windows desktop/native/layout/policy Release win-x64 compile | **PASS**, 최종 compiler 경고/오류 0 |
 | 다국어 pure-policy | **7,156 assertions PASS**. en/zh-CN/ko-KR key·format slot parity, receipt/provenance/Unicode·CRLF·공백 원문 확인 |
@@ -147,8 +149,17 @@ Task Scheduler가 기본 LeastPrivilege의 RunLevel을 생략하는 실제 직�
 
 ## 6. 소스 반영과 배포 경계
 
-통합 source의 필수 로컬 compile/회귀·권한/원문/데이터 복원 관문을 통과했다. 마지막 단계는 현재 main과 working tree를 확인한 뒤 고정 LOCAL_BASE 이력을 보존하는 정상 merge다. main에 다른 변경이 있으면 강제로 덮지 않는다. 원시 테스트/임시 build·반례·screenshots는 외부 archive에만 두고, main에는 제품과 필요한 회귀·라이선스·upstream 문서·이 정본만 둔다.
+통합 source의 필수 로컬 compile/회귀·권한/원문/데이터 복원 관문을 통과했다. main은 병합 직전에도 최초 LOCAL_BASE 그대로 clean이었다. 공유 이력 reset/rebase/force 또는 ours merge 없이 정상 반영했다.
 
-반영 상태: **로컬 commit/정상 main merge 대기**. 실제 commit과 최종 main 검증은 병합 후 이 절과 외부 final-state 기록에 추가한다.
+- 제품 통합 merge commit: `4af02758995634861d3a9e0d93bd60e85cff1098`.
+- merge 부모: `23b19952ff4196bc866aa3d87006fb8a27c3df1e`, `b367eaab95202873fb213b8713440bf7822878c4`.
+- 검증한 제품 통합 tree: `12fcce09efab6efbd332625b5761e5df11cbe758`.
+- 최초 main 반영: 2026-09-27 14:02 KST, `git merge --ff-only`로 위 commit을 그대로 수용.
+- 이 완료 기록은 integration branch의 문서 전용 후속 commit으로 남기고 main에 정상 fast-forward한다. 제품 source/test blob은 위 검증 commit과 같다. 최종 main SHA와 Git 복원/파일 해시 결과는 외부 `completion-132145/final-state.json`에 기록한다.
+- main/integration은 clean 상태로 종료한다. product tree에 실험 파일·raw 로그·임시 설치파일을 추가하지 않았다. 기존 product PR/worktree와 정상 설치/rollback 자료를 보존한다.
+
+원시 테스트/실패·재검증·build·screenshots와 정확한 source manifest는 외부 archive에 있다. 이번 native fixture의 원래 임시 root 두 개는 종료 점검에서 이미 존재하지 않았고, 해당 root를 참조하는 task/writer는 0이었다. 보존된 JSON/XML 복구/변조 기록은 외부 native-recovery 결과에 남아 있다. 원본 삭제를 이번 점검에서 수행했다고 기록하지 않는다. 생산 oai_fixture/공유 journal와 완료되지 않은 과거 실험 task는 §3의 보존 상태 그대로다.
+
+반영 상태: **로컬 소스 통합·검증·main 반영 완료**. 이 상태는 운영 설치나 모든 후속 upstream 수정의 수용 완료를 뜻하지 않는다.
 
 새 배포 버전은 미정이다. 기존 1.1.16102는 마지막 배포 식별이며 새 소스의 설치파일을 같은 이름으로 만들지 않았다. 로컬 소스 통합, 설치파일 패키징, 실제 설치/rollback, 원격 게시는 서로 다른 상태다. 다음 배포 단계에서는 새 버전과 정확한 source commit을 먼저 명시하고, 보류된 후속 Windows 변경/운영 migration 및 필요한 플랫폼/race 환경 검증 범위를 확정한다. 사용자 승인 없이 Setup·Core 재시작·push·PR·dispatch·tag·Release를 수행하지 않는다.
