@@ -9,11 +9,13 @@ import (
 	"fmt"
 	"github.com/uvwt/agentdock/internal/desktopruntime"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/uvwt/agentdock/internal/startupdiag"
 	"github.com/uvwt/agentdock/internal/updateengine"
 )
 
@@ -21,6 +23,7 @@ import (
 // 由稳定 GUI shim 直接拥有 generation Core，让 Task Scheduler 只绑定稳定进程边界；
 // 安装、修复、更新和回滚期间都不会长期占用可替换的 versioned WPF 可执行文件。
 func runTaskCoreHost(args []string) (int, error) {
+	hostStartedAt := time.Now()
 	flags := flag.NewFlagSet("task-core-host", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 	runtimeRootFlag := flags.String("runtime-root", "", "AgentDock runtime root")
@@ -51,10 +54,12 @@ func runTaskCoreHost(args []string) (int, error) {
 	if !sameWindowsPath(runtimeRoot, stableRoot) {
 		return 1, fmt.Errorf("task core host runtime root %s does not match stable entry root %s", runtimeRoot, stableRoot)
 	}
+	_ = startupdiag.Append(runtimeRoot, "task_core_host", "entry", hostStartedAt)
 
 	if _, _, err := desktopruntime.ValidateManagedRuntimeTask(context.Background(), runtimeRoot); err != nil {
 		return 1, err
 	}
+	resolveStartedAt := time.Now()
 	store, err := updateengine.NewStore(runtimeRoot)
 	if err != nil {
 		return 1, err
@@ -74,6 +79,13 @@ func runTaskCoreHost(args []string) (int, error) {
 		}
 		return 1, fmt.Errorf("resolve active AgentDock Core %s: %w", coreBinary, err)
 	}
+	_ = startupdiag.Append(
+		runtimeRoot,
+		"task_core_host",
+		"target_resolve",
+		resolveStartedAt,
+		slog.String("active_version", active.ActiveVersion),
+	)
 
 	compatibilityCtx, compatibilityCancel := context.WithTimeout(context.Background(), 6*time.Second)
 	compatibilityErr := desktopruntime.CheckExecutionCompatibility(compatibilityCtx, runtimeRoot, coreBinary)

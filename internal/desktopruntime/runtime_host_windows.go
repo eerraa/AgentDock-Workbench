@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -16,6 +17,7 @@ import (
 	"time"
 
 	processctl "github.com/uvwt/agentdock/internal/process"
+	"github.com/uvwt/agentdock/internal/startupdiag"
 	"golang.org/x/sys/windows"
 )
 
@@ -113,10 +115,14 @@ func RunTaskRuntime(parent context.Context, root, coreBinary, generation string)
 		}
 	}()
 	startCore := func() error {
+		spawnStartedAt := time.Now()
 		child, err := job.Start(coreBinary, []string{"service", "launch-core", "--runtime-root", root}, root, env, null, null, null)
 		if err != nil {
+			_ = startupdiag.Append(root, "task_core_host", "core_spawn", spawnStartedAt, slog.String("result", "error"))
 			return err
 		}
+		_ = startupdiag.Append(root, "task_core_host", "core_spawn", spawnStartedAt,
+			slog.String("result", "ok"), slog.Int("core_pid", int(child.PID)), slog.String("active_version", generation))
 		core = child
 		owner.Core = hostProcessIdentity(core)
 		if err := writeRuntimeHostState(root, owner); err != nil {

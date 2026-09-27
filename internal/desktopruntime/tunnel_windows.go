@@ -16,6 +16,8 @@ import (
 	"time"
 
 	"golang.org/x/sys/windows"
+
+	processcontrol "github.com/uvwt/agentdock/internal/process"
 )
 
 const (
@@ -23,7 +25,7 @@ const (
 	// Quick Tunnel supervisor 会在 provisioning 失败后自动重试。启动命令的总预算必须覆盖
 	// 至少两次 provisioning、第一次退避，以及拿到公网地址后 Core 最坏一次完整重启，再留 10s 调度余量。
 	// ready 文件仍然最后写入，不能为了缩短等待而提前暴露尚未被 Core 采用的公网地址。
-	quickTunnelStartTimeout = 2*quickTunnelProvisionAttemptTimeout + tunnelRetryInitialDelay + windowsCoreStartTimeout + 10*time.Second
+	quickTunnelStartTimeout = 2*quickTunnelProvisionAttemptTimeout + tunnelRetryInitialDelay + WindowsCoreStartTimeout + 10*time.Second
 	namedTunnelStartTimeout = 45 * time.Second
 )
 
@@ -360,7 +362,7 @@ func startCloudflareTunnel(ctx context.Context, runtime tunnelRuntime) error {
 	if err != nil {
 		return err
 	}
-	supervisorPID, err := activeTunnelSupervisorPID(runtime.root, ActiveCoreBinary(runtime.root, runtime.manifest))
+	supervisorPID, err := activeTunnelSupervisorPIDForRuntime(runtime.root, runtime.manifest)
 	if err != nil {
 		return err
 	}
@@ -467,6 +469,7 @@ func launchCloudflared(runtime tunnelRuntime) error {
 		HideWindow:    true,
 		CreationFlags: windows.CREATE_NEW_PROCESS_GROUP | windows.DETACHED_PROCESS,
 	}
+	processcontrol.Configure(command)
 	if err := command.Start(); err != nil {
 		return fmt.Errorf("启动 cloudflared 监督进程失败: %w", err)
 	}
@@ -498,7 +501,7 @@ func cloudflaredCommand(ctx context.Context, runtime tunnelRuntime) (*exec.Cmd, 
 	command := exec.CommandContext(ctx, runtime.manifest.CloudflaredBinary, arguments...)
 	command.Env = environment
 	command.Dir = runtime.root
-	command.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: windows.CREATE_NO_WINDOW}
+	processcontrol.Configure(command)
 	return command, nil
 }
 

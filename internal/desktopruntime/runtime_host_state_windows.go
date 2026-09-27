@@ -237,7 +237,7 @@ func readRuntimeCoreHealth(ctx context.Context, endpoint string) (runtimeCoreHea
 	return health, nil
 }
 func waitCapturedCoreHealth(ctx context.Context, manifest Manifest, core *processctl.JobChild, generation, originHash string) error {
-	ctx, cancel := context.WithTimeout(ctx, 45*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, WindowsCoreStartTimeout)
 	defer cancel()
 	for {
 		alive, err := core.Alive()

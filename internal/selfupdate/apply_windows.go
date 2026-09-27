@@ -20,6 +20,7 @@ import (
 
 	"github.com/uvwt/agentdock/internal/bundledrg"
 	"github.com/uvwt/agentdock/internal/desktopruntime"
+	processcontrol "github.com/uvwt/agentdock/internal/process"
 )
 
 const windowsServiceName = "agentdock"
@@ -135,6 +136,7 @@ func applyPlatformUpdate(ctx context.Context, request applyRequest) (applyResult
 
 	command := exec.Command(helperPath, "__update-finalize", planPath)
 	command.SysProcAttr = &syscall.SysProcAttr{CreationFlags: windows.CREATE_NEW_PROCESS_GROUP}
+	processcontrol.Configure(command)
 	if outputFile, ok := request.Output.(*os.File); ok {
 		command.Stdout = outputFile
 		command.Stderr = outputFile
@@ -265,7 +267,7 @@ func finalizeWindowsUpdate(ctx context.Context, plan windowsUpdatePlan) error {
 			}
 		}
 		if len(rollbackErrors) == 0 && plan.RestartMode != "none" {
-			if err := waitForVersion(ctx, plan.HealthURLs, plan.CurrentVersion, 30*time.Second); err != nil {
+			if err := waitForVersion(ctx, plan.HealthURLs, plan.CurrentVersion, desktopruntime.WindowsCoreStartTimeout); err != nil {
 				rollbackErrors = append(rollbackErrors, "旧核心健康检查失败: "+err.Error())
 			}
 		}
@@ -299,7 +301,7 @@ func finalizeWindowsUpdate(ctx context.Context, plan windowsUpdatePlan) error {
 		if err := restartWindowsMode(ctx, plan); err != nil {
 			return rollback(fmt.Errorf("重新启动 Windows AgentDock 失败: %w", err))
 		}
-		if err := waitForVersion(ctx, plan.HealthURLs, plan.TargetVersion, 30*time.Second); err != nil {
+		if err := waitForVersion(ctx, plan.HealthURLs, plan.TargetVersion, desktopruntime.WindowsCoreStartTimeout); err != nil {
 			return rollback(fmt.Errorf("Windows 新版本健康检查失败: %w", err))
 		}
 		fmt.Println("健康检查通过")
@@ -358,14 +360,16 @@ func launcherManagesTarget(ctx context.Context, launcherPath, targetPath string)
 	if err != nil || !strings.Contains(strings.ToLower(string(data)), strings.ToLower(filepath.Clean(targetPath))) {
 		return false
 	}
-	output, err := exec.CommandContext(
+	command := exec.CommandContext(
 		ctx,
 		"reg.exe",
 		"query",
 		`HKCU\Software\Microsoft\Windows\CurrentVersion\Run`,
 		"/v",
 		"AgentDock",
-	).CombinedOutput()
+	)
+	processcontrol.Configure(command)
+	output, err := command.CombinedOutput()
 	if err != nil {
 		return false
 	}
@@ -380,14 +384,16 @@ func nativeStartupManagesTarget(ctx context.Context, manifest desktopruntime.Man
 	if valueName == "" {
 		valueName = "AgentDock"
 	}
-	output, err := exec.CommandContext(
+	command := exec.CommandContext(
 		ctx,
 		"reg.exe",
 		"query",
 		`HKCU\Software\Microsoft\Windows\CurrentVersion\Run`,
 		"/v",
 		valueName,
-	).CombinedOutput()
+	)
+	processcontrol.Configure(command)
+	output, err := command.CombinedOutput()
 	if err != nil {
 		return false
 	}
@@ -403,7 +409,9 @@ func scheduledTaskManagesTarget(ctx context.Context, taskName, launcherPath stri
 	if strings.TrimSpace(taskName) == "" || strings.TrimSpace(launcherPath) == "" {
 		return false
 	}
-	output, err := exec.CommandContext(ctx, "schtasks.exe", "/Query", "/TN", `\`+taskName, "/XML").CombinedOutput()
+	command := exec.CommandContext(ctx, "schtasks.exe", "/Query", "/TN", `\`+taskName, "/XML")
+	processcontrol.Configure(command)
+	output, err := command.CombinedOutput()
 	if err != nil {
 		return false
 	}
@@ -413,7 +421,9 @@ func scheduledTaskManagesTarget(ctx context.Context, taskName, launcherPath stri
 }
 
 func serviceManagesTarget(ctx context.Context, targetPath string) bool {
-	output, err := exec.CommandContext(ctx, "sc.exe", "qc", windowsServiceName).CombinedOutput()
+	command := exec.CommandContext(ctx, "sc.exe", "qc", windowsServiceName)
+	processcontrol.Configure(command)
+	output, err := command.CombinedOutput()
 	if err != nil {
 		return false
 	}
@@ -451,6 +461,7 @@ func restartWindowsMode(ctx context.Context, plan windowsUpdatePlan) error {
 		}
 		command := exec.Command("powershell.exe", "-NoLogo", "-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden", "-ExecutionPolicy", "Bypass", "-File", plan.LauncherPath)
 		command.SysProcAttr = &syscall.SysProcAttr{CreationFlags: windows.CREATE_NEW_PROCESS_GROUP | windows.DETACHED_PROCESS}
+		processcontrol.Configure(command)
 		if err := command.Start(); err != nil {
 			return fmt.Errorf("启动 Windows AgentDock launcher 失败: %w", err)
 		}
@@ -481,7 +492,9 @@ func waitForWindowsProcessExit(pid int, timeout time.Duration) error {
 func waitWindowsServiceState(ctx context.Context, serviceName, wanted string, timeout time.Duration) error {
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
-		output, err := exec.CommandContext(ctx, "sc.exe", "query", serviceName).CombinedOutput()
+		command := exec.CommandContext(ctx, "sc.exe", "query", serviceName)
+		processcontrol.Configure(command)
+		output, err := command.CombinedOutput()
 		if err == nil && strings.Contains(strings.ToUpper(string(output)), "STATE") && strings.Contains(strings.ToUpper(string(output)), wanted) {
 			return nil
 		}
@@ -491,7 +504,9 @@ func waitWindowsServiceState(ctx context.Context, serviceName, wanted string, ti
 }
 
 func runWindowsCommand(ctx context.Context, name string, args ...string) error {
-	output, err := exec.CommandContext(ctx, name, args...).CombinedOutput()
+	command := exec.CommandContext(ctx, name, args...)
+	processcontrol.Configure(command)
+	output, err := command.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("%s %s 失败: %w: %s", name, strings.Join(args, " "), err, strings.TrimSpace(string(output)))
 	}
@@ -587,15 +602,27 @@ func moveFileReplace(sourcePath, targetPath string) error {
 }
 
 func scheduleWindowsCleanup(directory string) {
+	// helper 自身仍可能占用目录中的 exe，Windows 不一定能立刻删掉根目录。
+	// 先同步 RemoveAll 尽可能释放大 payload；即使后续 PowerShell 无法启动，
+	// 也不会因为清理进程本身失败而继续留下整份 Release。
+	_ = os.RemoveAll(directory)
+	if _, err := os.Stat(directory); errors.Is(err, os.ErrNotExist) {
+		return
+	}
+
 	command := exec.Command(
 		"powershell.exe",
 		"-NoLogo",
 		"-NoProfile",
 		"-NonInteractive",
 		"-WindowStyle", "Hidden",
-		"-Command", "Start-Sleep -Seconds 2; Remove-Item -LiteralPath $env:AGENTDOCK_UPDATE_CLEANUP_DIR -Recurse -Force -ErrorAction SilentlyContinue",
+		"-Command",
+		"$path=$env:AGENTDOCK_UPDATE_CLEANUP_DIR; for ($attempt=0; $attempt -lt 12; $attempt++) { Start-Sleep -Milliseconds 500; Remove-Item -LiteralPath $path -Recurse -Force -ErrorAction SilentlyContinue; if (-not (Test-Path -LiteralPath $path)) { exit 0 } }",
 	)
 	command.Env = append(os.Environ(), "AGENTDOCK_UPDATE_CLEANUP_DIR="+directory)
 	command.SysProcAttr = &syscall.SysProcAttr{CreationFlags: windows.CREATE_NEW_PROCESS_GROUP | windows.DETACHED_PROCESS}
-	_ = command.Start()
+	processcontrol.Configure(command)
+	if err := command.Start(); err == nil {
+		_ = command.Process.Release()
+	}
 }

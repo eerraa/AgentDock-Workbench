@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -20,6 +21,7 @@ import (
 
 	"github.com/uvwt/agentdock/internal/desktopruntime"
 	"github.com/uvwt/agentdock/internal/installer"
+	processcontrol "github.com/uvwt/agentdock/internal/process"
 	"github.com/uvwt/agentdock/internal/updateengine"
 )
 
@@ -255,6 +257,21 @@ func runWindowsLegacyLayoutMigration(
 		HideWindow:    true,
 		CreationFlags: windows.CREATE_NEW_PROCESS_GROUP | windows.DETACHED_PROCESS,
 	}
+	processcontrol.Configure(command)
+	logDir := filepath.Join(opts.DesktopTargetPath, "logs")
+	if err := os.MkdirAll(logDir, 0o700); err != nil {
+		return fmt.Errorf("创建 Windows legacy migration 日志目录失败: %w", err)
+	}
+	logFile, err := os.OpenFile(filepath.Join(logDir, "legacy-migration.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+	if err != nil {
+		return fmt.Errorf("打开 Windows legacy migration 日志失败: %w", err)
+	}
+	defer logFile.Close()
+	if _, err := fmt.Fprintf(logFile, "%s start legacy migration helper version=%s\n", time.Now().UTC().Format(time.RFC3339), currentVersion); err != nil {
+		return fmt.Errorf("写入 Windows legacy migration 日志失败: %w", err)
+	}
+	command.Stdout = logFile
+	command.Stderr = logFile
 	if err := command.Start(); err != nil {
 		return fmt.Errorf("启动 Windows legacy migration helper 失败: %w", err)
 	}
@@ -291,39 +308,161 @@ func handleWindowsLegacyMigrationCommand(ctx context.Context, args []string) (bo
 	if len(args) != 2 {
 		return true, errors.New("Windows legacy migration helper 参数无效")
 	}
-	data, err := os.ReadFile(args[1])
+	helperPath, err := os.Executable()
 	if err != nil {
-		return true, fmt.Errorf("读取 Windows legacy migration plan 失败: %w", err)
+		return true, fmt.Errorf("解析 Windows legacy migration helper 路径失败: %w", err)
+	}
+	return true, runWindowsLegacyMigrationHelper(ctx, helperPath, args[1])
+}
+
+func runWindowsLegacyMigrationHelper(ctx context.Context, helperPath, planPath string) error {
+	// 只有正在本轮 migration Temp 目录里运行的固定 helper 才能取得清理所有权。
+	// 这样 plan 尚未成功解析时也可以安全回收，而不能仅凭用户可构造的目录名删目录。
+	cleanupRoot, cleanupOwned := windowsLegacyMigrationCleanupRootForHelper(helperPath, planPath)
+	if !cleanupOwned {
+		return errors.New("Windows legacy migration helper 与 plan 不属于同一临时目录")
+	}
+	defer func() {
+		if cleanupOwned {
+			tryCleanupWindowsLegacyMigration(cleanupRoot)
+		}
+	}()
+
+	data, err := os.ReadFile(planPath)
+	if err != nil {
+		return fmt.Errorf("读取 Windows legacy migration plan 失败: %w", err)
 	}
 	var plan windowsLegacyMigrationPlan
 	if err := json.Unmarshal(data, &plan); err != nil {
-		return true, fmt.Errorf("解析 Windows legacy migration plan 失败: %w", err)
+		return fmt.Errorf("解析 Windows legacy migration plan 失败: %w", err)
 	}
-	return true, finalizeWindowsLegacyMigration(ctx, plan)
+	if !sameWindowsPath(cleanupRoot, plan.CleanupRoot) {
+		return errors.New("Windows legacy migration plan 不属于当前临时目录")
+	}
+	if err := validateWindowsLegacyMigrationCleanupRoot(plan.CleanupRoot); err != nil {
+		return err
+	}
+
+	// plan 的 cleanup root 已单独验证；从这里开始由 finalize 接管目录生命周期。
+	cleanupOwned = false
+	return finalizeWindowsLegacyMigration(ctx, plan)
+}
+
+// A parse failure is not permission to remove another helper's live files or
+// a previous incomplete rollback. This is a nonwaiting cleanup probe only.
+func tryCleanupWindowsLegacyMigration(root string) {
+	if validateWindowsLegacyMigrationCleanupRoot(root) != nil {
+		return
+	}
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	name, err := windows.UTF16PtrFromString(windowsLegacyMigrationMutexName)
+	if err != nil {
+		return
+	}
+	mutex, err := windows.CreateMutex(nil, false, name)
+	if mutex == 0 {
+		return
+	}
+	defer windows.CloseHandle(mutex)
+	if err != nil && !errors.Is(err, windows.ERROR_ALREADY_EXISTS) {
+		return
+	}
+	state, err := windows.WaitForSingleObject(mutex, 0)
+	if err != nil || (state != windows.WAIT_OBJECT_0 && state != windows.WAIT_ABANDONED) {
+		return
+	}
+	defer windows.ReleaseMutex(mutex)
+	if exists, err := windowsLegacyMigrationHasRecovery(root); err != nil || exists {
+		return
+	}
+	scheduleWindowsCleanup(root)
+}
+
+func windowsLegacyMigrationHasRecovery(root string) (bool, error) {
+	_, err := os.Lstat(filepath.Join(root, "stable-backup"))
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	return err == nil, err
+}
+
+// The caller stays on the same OS thread until it releases this owned mutex.
+func waitWindowsLegacyMigrationMutex(ctx context.Context, mutex windows.Handle) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	defer cancel()
+	for {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		state, err := windows.WaitForSingleObject(mutex, 100)
+		if err != nil {
+			return err
+		}
+		switch state {
+		case windows.WAIT_OBJECT_0, windows.WAIT_ABANDONED:
+			return nil
+		case uint32(windows.WAIT_TIMEOUT):
+		default:
+			return fmt.Errorf("unknown migration mutex state: %d", state)
+		}
+	}
 }
 
 func finalizeWindowsLegacyMigration(ctx context.Context, plan windowsLegacyMigrationPlan) error {
-	if err := validateWindowsLegacyMigrationPlan(plan); err != nil {
+	if err := ctx.Err(); err != nil {
 		return err
 	}
+	if err := validateWindowsLegacyMigrationCleanupRoot(plan.CleanupRoot); err != nil {
+		return err
+	}
+	// Windows mutex ownership is thread-affine, not goroutine-affine.
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	preserveCleanupRoot := false
+	var mutex windows.Handle
+	mutexOwned := false
+	defer func() {
+		// Never clean before acquisition. Release only after synchronous cleanup.
+		if mutexOwned && !preserveCleanupRoot {
+			scheduleWindowsCleanup(plan.CleanupRoot)
+		}
+		if mutexOwned {
+			_ = windows.ReleaseMutex(mutex)
+		}
+		if mutex != 0 {
+			_ = windows.CloseHandle(mutex)
+		}
+	}()
 	mutexName, err := windows.UTF16PtrFromString(windowsLegacyMigrationMutexName)
 	if err != nil {
 		return err
 	}
-	mutex, err := windows.CreateMutex(nil, true, mutexName)
-	if err == windows.ERROR_ALREADY_EXISTS {
-		if mutex != 0 {
-			_ = windows.CloseHandle(mutex)
+	mutex, err = windows.CreateMutex(nil, true, mutexName)
+	alreadyExists := errors.Is(err, windows.ERROR_ALREADY_EXISTS)
+	if mutex == 0 {
+		return fmt.Errorf("migration mutex unavailable; retained %s: %v", plan.CleanupRoot, err)
+	}
+	if err != nil && !alreadyExists {
+		return fmt.Errorf("create migration mutex: %w", err)
+	}
+	if alreadyExists {
+		if err := waitWindowsLegacyMigrationMutex(ctx, mutex); err != nil {
+			return fmt.Errorf("wait for migration owner; retained %s: %w", plan.CleanupRoot, err)
 		}
+	}
+	mutexOwned = true
+	// A new or duplicate helper must not overwrite/delete the only rollback copy.
+	if exists, err := windowsLegacyMigrationHasRecovery(plan.CleanupRoot); err != nil || exists {
+		preserveCleanupRoot = true
+		return fmt.Errorf("prior migration recovery requires verification; retained %s: %v", plan.CleanupRoot, err)
+	}
+	if alreadyExists {
 		return nil
 	}
-	if err != nil {
-		return fmt.Errorf("创建 Windows legacy migration 互斥锁失败: %w", err)
+	if err := validateWindowsLegacyMigrationPlan(plan); err != nil {
+		return err
 	}
-	defer func() {
-		_ = windows.ReleaseMutex(mutex)
-		_ = windows.CloseHandle(mutex)
-	}()
 
 	if err := waitForWindowsProcessExit(plan.ParentPID, 30*time.Second); err != nil {
 		return err
@@ -397,9 +536,10 @@ func finalizeWindowsLegacyMigration(ctx context.Context, plan windowsLegacyMigra
 			}
 		}
 		if len(failures) > 0 {
+			// 只有恢复不完整时保留 stable-backup，供人工或后续修复使用。
+			preserveCleanupRoot = true
 			return fmt.Errorf("%v；Windows legacy migration 恢复不完整: %s；保留恢复目录 %s", cause, strings.Join(failures, "；"), plan.CleanupRoot)
 		}
-		scheduleWindowsCleanup(plan.CleanupRoot)
 		return fmt.Errorf("%v；已恢复 legacy 稳定入口，source generation 保留供下次重试", cause)
 	}
 
@@ -411,11 +551,13 @@ func finalizeWindowsLegacyMigration(ctx context.Context, plan windowsLegacyMigra
 		_ = runWindowsCommand(ctx, "sc.exe", "stop", windowsServiceName)
 		_ = waitWindowsServiceState(ctx, windowsServiceName, "STOPPED", 20*time.Second)
 	}
-	if err := desktopruntime.StopBinaryProcesses(ctx, plan.CorePath, 15*time.Second); err != nil {
-		return restore(fmt.Errorf("停止 legacy Core 失败: %w", err))
-	}
+	// legacy Tray 会周期性调用 stable Core 读取状态。必须先终止 Tray，再等待 Core
+	// 收敛，否则 Tray 在迁移窗口里新拉起的 agentdock.exe 会让 stable entry 无法替换。
 	if err := desktopruntime.StopBinaryProcesses(ctx, plan.TrayPath, 15*time.Second); err != nil {
 		return restore(fmt.Errorf("停止 legacy Tray 失败: %w", err))
+	}
+	if err := desktopruntime.StopBinaryProcesses(ctx, plan.CorePath, 15*time.Second); err != nil {
+		return restore(fmt.Errorf("停止 legacy Core 失败: %w", err))
 	}
 
 	if err := replaceWindowsMigrationEntry(filepath.Join(plan.PayloadDir, "agentdock-shim.exe"), plan.CorePath); err != nil {
@@ -438,7 +580,6 @@ func finalizeWindowsLegacyMigration(ctx context.Context, plan windowsLegacyMigra
 	compatManager := filepath.Join(plan.RuntimeRoot, "installer", "manage-windows.ps1")
 	_ = os.Remove(compatManager)
 	_ = os.Remove(filepath.Dir(compatManager))
-	scheduleWindowsCleanup(plan.CleanupRoot)
 	return nil
 }
 
@@ -490,6 +631,37 @@ func windowsProcessNameRunning(name string) (bool, error) {
 	}
 }
 
+func windowsLegacyMigrationCleanupRootForHelper(helperPath, planPath string) (string, bool) {
+	if !strings.EqualFold(filepath.Base(helperPath), "agentdock-legacy-migration-helper.exe") ||
+		!strings.EqualFold(filepath.Base(planPath), "migration-plan.json") {
+		return "", false
+	}
+	helperRoot := filepath.Clean(filepath.Dir(helperPath))
+	planRoot := filepath.Clean(filepath.Dir(planPath))
+	if !sameWindowsPath(helperRoot, planRoot) {
+		return "", false
+	}
+	if err := validateWindowsLegacyMigrationCleanupRoot(helperRoot); err != nil {
+		return "", false
+	}
+	return helperRoot, true
+}
+
+func validateWindowsLegacyMigrationCleanupRoot(root string) error {
+	root = filepath.Clean(strings.TrimSpace(root))
+	tempRoot := filepath.Clean(os.TempDir())
+	relative, err := filepath.Rel(tempRoot, root)
+	if err != nil ||
+		relative == "." ||
+		relative == ".." ||
+		filepath.IsAbs(relative) ||
+		strings.HasPrefix(relative, ".."+string(os.PathSeparator)) ||
+		!strings.HasPrefix(filepath.Base(root), "agentdock-legacy-migration-") {
+		return errors.New("Windows legacy migration cleanup root 必须位于系统 Temp")
+	}
+	return nil
+}
+
 func validateWindowsLegacyMigrationPlan(plan windowsLegacyMigrationPlan) error {
 	if plan.ParentPID <= 0 ||
 		strings.TrimSpace(plan.RuntimeRoot) == "" ||
@@ -501,6 +673,9 @@ func validateWindowsLegacyMigrationPlan(plan windowsLegacyMigrationPlan) error {
 	}
 	if err := updateengine.ValidateVersion(plan.Version); err != nil {
 		return fmt.Errorf("Windows legacy migration version 无效: %w", err)
+	}
+	if err := validateWindowsLegacyMigrationCleanupRoot(plan.CleanupRoot); err != nil {
+		return err
 	}
 	layout, err := updateengine.NewWindowsLayout(plan.RuntimeRoot)
 	if err != nil {
@@ -541,11 +716,12 @@ func restartLegacyRuntimeAfterMigration(
 		if healthy := waitForVersion(ctx, []string{manifest.HealthURL()}, plan.Version, 2*time.Second); healthy != nil {
 			command := exec.CommandContext(ctx, corePath, "service", "start", "--runtime-root", plan.RuntimeRoot)
 			command.Dir = plan.RuntimeRoot
+			processcontrol.Configure(command)
 			if output, err := command.CombinedOutput(); err != nil {
 				return fmt.Errorf("重新启动 Windows Core 失败: %w: %s", err, strings.TrimSpace(string(output)))
 			}
 		}
-		if err := waitForVersion(ctx, []string{manifest.HealthURL()}, plan.Version, 45*time.Second); err != nil {
+		if err := waitForVersion(ctx, []string{manifest.HealthURL()}, plan.Version, desktopruntime.WindowsCoreStartTimeout); err != nil {
 			return fmt.Errorf("Windows migration 健康检查失败: %w", err)
 		}
 	}
@@ -561,6 +737,7 @@ func restartLegacyRuntimeAfterMigration(
 				HideWindow:    true,
 				CreationFlags: windows.CREATE_NEW_PROCESS_GROUP | windows.DETACHED_PROCESS,
 			}
+			processcontrol.Configure(command)
 			if err := command.Start(); err != nil {
 				return fmt.Errorf("重新启动 Windows Tray 失败: %w", err)
 			}
@@ -574,6 +751,7 @@ func restartLegacyRuntimeAfterMigration(
 			HideWindow:    true,
 			CreationFlags: windows.CREATE_NEW_PROCESS_GROUP | windows.DETACHED_PROCESS,
 		}
+		processcontrol.Configure(command)
 		if err := command.Start(); err != nil {
 			return fmt.Errorf("恢复 Windows Tunnel 失败: %w", err)
 		}

@@ -13,7 +13,7 @@ import (
 	"strings"
 	"unicode/utf16"
 
-	processctl "github.com/uvwt/agentdock/internal/process"
+	processcontrol "github.com/uvwt/agentdock/internal/process"
 	"golang.org/x/sys/windows/registry"
 )
 
@@ -115,7 +115,7 @@ func decodeScheduledTaskXML(output []byte) ([]byte, error) {
 
 func runScheduledTaskCommand(ctx context.Context, args ...string) error {
 	command := exec.CommandContext(ctx, "schtasks.exe", args...)
-	processctl.Configure(command)
+	processcontrol.Configure(command)
 	output, err := command.CombinedOutput()
 	if err != nil {
 		message := strings.TrimSpace(string(output))

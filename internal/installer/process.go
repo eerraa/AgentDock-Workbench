@@ -3,7 +3,6 @@ package installer
 import (
 	"context"
 	"os/exec"
-	"runtime"
 
 	processctl "github.com/uvwt/agentdock/internal/process"
 )
@@ -12,8 +11,6 @@ import (
 // policy, including status probes and rollback commands.
 func installerCommand(ctx context.Context, name string, args ...string) *exec.Cmd {
 	cmd := exec.CommandContext(ctx, name, args...)
-	if runtime.GOOS == "windows" {
-		processctl.Configure(cmd)
-	}
+	processctl.ConfigureBackground(cmd)
 	return cmd
 }

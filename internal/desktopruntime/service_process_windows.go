@@ -16,6 +16,11 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+const (
+	binaryStopPollInterval = 50 * time.Millisecond
+	binaryStopQuietPeriod  = 500 * time.Millisecond
+)
+
 // BinaryProcessRunning 只按完整可执行文件路径判断进程是否正在运行。
 func BinaryProcessRunning(binaryPath string) (bool, error) {
 	processes, err := processIDsAtPath(binaryPath)
@@ -35,17 +40,48 @@ func StopBinaryProcesses(ctx context.Context, binaryPath string, timeout time.Du
 }
 
 func stopBinaryProcessesExcept(ctx context.Context, binaryPath string, excluded map[uint32]struct{}, timeout time.Duration) error {
-	if err := terminateProcessesAtPathExcept(binaryPath, excluded); err != nil {
-		return err
+	deadline := time.Now().Add(timeout)
+	var quietSince time.Time
+	sawProcess := false
+	for {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		processes, err := processIDsAtPathExcept(binaryPath, excluded)
+		if err != nil {
+			return err
+		}
+		if len(processes) > 0 {
+			// 不能只终止第一次快照。Tray、Task Scheduler 等外部宿主可能在等待窗口
+			// 内再次拉起同一路径进程；每轮重新扫描并终止，直到路径稳定为空。
+			sawProcess = true
+			quietSince = time.Time{}
+			if err := terminateProcessIDs(binaryPath, processes); err != nil {
+				return err
+			}
+		} else if !sawProcess {
+			return nil
+		} else if quietSince.IsZero() {
+			quietSince = time.Now()
+		} else if time.Since(quietSince) >= binaryStopQuietPeriod {
+			return nil
+		}
+		remaining := time.Until(deadline)
+		if remaining <= 0 {
+			return fmt.Errorf("进程未在 %s 内退出: %s", timeout, binaryPath)
+		}
+		wait := binaryStopPollInterval
+		if remaining < wait {
+			wait = remaining
+		}
+		timer := time.NewTimer(wait)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return ctx.Err()
+		case <-timer.C:
+		}
 	}
-	stopped, err := waitBinaryStoppedExcept(ctx, binaryPath, excluded, timeout)
-	if err != nil {
-		return err
-	}
-	if !stopped {
-		return fmt.Errorf("进程未在 %s 内退出: %s", timeout, binaryPath)
-	}
-	return nil
 }
 
 // WaitBinaryStopped waits until no process with the exact binary path remains.
@@ -85,17 +121,46 @@ func terminateProcessesAtPathExcept(binaryPath string, excluded map[uint32]struc
 	if err != nil {
 		return err
 	}
+	return terminateProcessIDs(binaryPath, processIDs)
+}
+
+func terminateProcessIDs(binaryPath string, processIDs []uint32) error {
+	target, err := filepath.Abs(binaryPath)
+	if err != nil {
+		return err
+	}
 	var failures []string
 	for _, processID := range processIDs {
-		process, openErr := windows.OpenProcess(windows.PROCESS_TERMINATE|windows.SYNCHRONIZE, false, processID)
+		process, openErr := windows.OpenProcess(windows.PROCESS_TERMINATE|windows.SYNCHRONIZE|windows.PROCESS_QUERY_LIMITED_INFORMATION, false, processID)
+		if errors.Is(openErr, windows.ERROR_INVALID_PARAMETER) {
+			continue
+		}
 		if openErr != nil {
 			failures = append(failures, fmt.Sprintf("PID %d: %v", processID, openErr))
 			continue
 		}
-		if terminateErr := windows.TerminateProcess(process, 0); terminateErr != nil {
-			failures = append(failures, fmt.Sprintf("PID %d: %v", processID, terminateErr))
+		// The enumeration handle has already closed. A recycled PID is not
+		// ownership: recheck the image on the exact handle we will terminate.
+		actual, queryErr := queryProcessHandlePath(process)
+		if queryErr != nil {
+			state, waitErr := windows.WaitForSingleObject(process, 0)
+			if waitErr != nil || state != windows.WAIT_OBJECT_0 {
+				failures = append(failures, fmt.Sprintf("PID %d identity: %v", processID, queryErr))
+			}
+			_ = windows.CloseHandle(process)
+			continue
 		}
-		_, _ = windows.WaitForSingleObject(process, 5000)
+		if !samePath(actual, target) {
+			_ = windows.CloseHandle(process)
+			continue
+		}
+		terminateErr := windows.TerminateProcess(process, 0)
+		state, waitErr := windows.WaitForSingleObject(process, 5000)
+		// A concurrent normal exit is success only when this captured handle
+		// proves it. Do not discard a failed wait or report an unknown exit.
+		if waitErr != nil || state != windows.WAIT_OBJECT_0 {
+			failures = append(failures, fmt.Sprintf("PID %d did not exit: terminate=%v wait=%v state=%d", processID, terminateErr, waitErr, state))
+		}
 		_ = windows.CloseHandle(process)
 	}
 	if len(failures) > 0 {
@@ -213,6 +278,10 @@ func queryProcessPath(processID uint32) (string, error) {
 		return "", err
 	}
 	defer windows.CloseHandle(process)
+	return queryProcessHandlePath(process)
+}
+
+func queryProcessHandlePath(process windows.Handle) (string, error) {
 	buffer := make([]uint16, 32768)
 	size := uint32(len(buffer))
 	if err := windows.QueryFullProcessImageName(process, 0, &buffer[0], &size); err != nil {

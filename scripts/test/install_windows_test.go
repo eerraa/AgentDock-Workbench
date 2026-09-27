@@ -149,7 +149,7 @@ func TestInstallWindowsUsesChecksumsDPAPIAndCurrentUserStartup(t *testing.T) {
 		"'--payload-dir', $extractDir",
 		"$stableFilesMayBeReplaced = $true",
 		"http://127.0.0.1:$HealthPort/healthz",
-		"[DateTime]::UtcNow.AddSeconds(120)",
+		"[DateTime]::UtcNow.AddSeconds($coreHealthTimeoutSeconds)",
 	} {
 		if !strings.Contains(script, want) {
 			t.Fatalf("install.ps1 missing %q", want)
@@ -1252,9 +1252,9 @@ func TestWindowsSetupRuntimeBrokerTimeoutExceedsCoreStartTimeout(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read launch-windows-process.ps1: %v", err)
 	}
-	coreData, err := os.ReadFile(filepath.Join("..", "..", "internal", "desktopruntime", "service_windows.go"))
+	coreData, err := os.ReadFile(filepath.Join("..", "..", "internal", "desktopruntime", "health_timeout.go"))
 	if err != nil {
-		t.Fatalf("read service_windows.go: %v", err)
+		t.Fatalf("read health_timeout.go: %v", err)
 	}
 
 	parseSeconds := func(content, prefix string) int {
@@ -1279,9 +1279,21 @@ func TestWindowsSetupRuntimeBrokerTimeoutExceedsCoreStartTimeout(t *testing.T) {
 	}
 
 	brokerSeconds := parseSeconds(string(brokerData), "[int] $TimeoutSeconds =")
-	coreSeconds := parseSeconds(string(coreData), "const windowsCoreStartTimeout =")
-	if brokerSeconds <= coreSeconds {
-		t.Fatalf("Setup runtime broker timeout=%ds must exceed Windows Core start timeout=%ds", brokerSeconds, coreSeconds)
+	coreSeconds := parseSeconds(string(coreData), "const WindowsCoreStartTimeout =")
+	installData, err := os.ReadFile(filepath.Join("..", "..", "scripts", "install", "install.ps1"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	setupSeconds := parseSeconds(string(installData), "[int] $coreHealthTimeoutSeconds =")
+	if setupSeconds != coreSeconds || coreSeconds != 60 {
+		t.Fatalf("Setup/Core budgets differ: setup=%ds core=%ds", setupSeconds, coreSeconds)
+	}
+	if !strings.Contains(string(installData), "AddSeconds($coreHealthTimeoutSeconds)") {
+		t.Fatal("Setup must use the shared health budget")
+	}
+	const minimumHeadroomSeconds = 15
+	if brokerSeconds-coreSeconds < minimumHeadroomSeconds {
+		t.Fatalf("Setup broker timeout=%ds must leave at least %ds beyond Core timeout=%ds", brokerSeconds, minimumHeadroomSeconds, coreSeconds)
 	}
 }
 
