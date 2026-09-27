@@ -2,7 +2,7 @@
 
 정본: `docs/eerraa/implementation-plan-1.1.6100.ko.md`  
 실행일: 2026-09-27 KST  
-상태: **실험 분리 및 선택한 upstream 소스 통합·필수 로컬 검증·로컬 main 정상 반영 완료**. 최초 27개 충돌을 모두 해결했다. 전체 Go suite와 Windows desktop·다국어·실제 격리 task/복구 검증을 거쳐 normal merge commit을 만들고, 변경되지 않은 clean main에 fast-forward했다. 새 패키징·운영 설치·원격 게시 및 아래 명시한 추가 upstream 변경은 완료 범위와 구분한다.
+상태: **보류했던 Windows 후속 변경 4건과 race 환경 문제까지 해결하여 소스·검증·로컬 main 반영 완료**. 최종 제품 소스는 `585a3bfed54a611be446665391f0dedea3b2b6f0`이다. §5–6은 최초 통합의 역사 기록이며, §7이 이번 후속 작업의 최신 완료 결과다. 패키징·생산 환경 변경·원격 게시는 기존 별도 승인 경계로 구분한다.
 
 ## 1. 현재 기준과 권한
 
@@ -88,9 +88,9 @@ Plugin 복사 상한 20,000은 upstream처럼 디렉터리를 포함한 항목 �
 | Plugin/Skill 수명·상태/저장/계약 (`c3db3f15`, `120527c7`, `e121e69b`, `b36b40c2`, `436d0b0c`) | 주 추종의 기존 완결 관리/수명 구현을 채택하고 실제 Plugin/Skill/app 회귀로 확인. 별도 저장 모델/중복 runtime은 도입하지 않음. 안전한 snapshot 함수 집합만 위처럼 채택 |
 | 새 chat/workspace 카드, 이미지 context, Remote MCP OAuth | 필수 제품 요구의 누락으로 확인되지 않은 추가 기능이므로 이번 안정화에 도입·활성화하지 않음 |
 | SignPath/저자 Release 파이프라인, 자체 버전 bump | eerraa의 수동 승인 배포 pipeline과 식별을 대체하지 않음. 기존 SHA·hash·tag 검증과 명시적 게시 승인을 유지 |
-| Windows 후속 cold-start/migration/cleanup (`5b354d94`, `37e7e4b6`, `e026a712`, `8625d8c6`) | 추가 변경 수용은 보류. 공개 patch는 확인했으나 현재 파일 조합의 추가 조회가 차단되어 해당 의존성 전체의 검증을 완료했다고 하지 않음. 고정 WB의 이번 통합/검증 범위를 유지하며 불완전한 부분 이식은 하지 않음 |
+| Windows 후속 cold-start/migration/cleanup (`5b354f4d`, `37e7e4b6`, `e026a712`, `8625d8c6`) | **후속 작업에서 네 건 모두 통합·검증 완료**. 정확한 SHA·실제 owner adaptation과 검증 결과는 §7에 기록. 더 이상 보류 항목이 아님 |
 
-보류된 변경은 이미 포함되었다거나 불필요성이 모두 입증되었다고 기록하지 않는다. 특히 추가 migration 변경의 수용은 별도 후속 검토 대상이며, 이번 소스 통합 성공을 전체 uvwt HEAD의 수용 또는 운영 migration 성공으로 확대하지 않는다.
+이전 보고에서 보류한 네 Windows 변경은 §7의 후속 작업에서 모두 반영·검증했다. 이는 전체 uvwt HEAD의 무차별 수용이나 실제 운영 migration 성공과는 구분한다. 선택하지 않은 신규 카드·OAuth·저자 배포 기능은 이 안정화의 미완료 항목으로 간주하지 않는다.
 
 ### 4.3. 남기는 제품 차이
 
@@ -115,7 +115,7 @@ Task Scheduler가 기본 LeastPrivilege의 RunLevel을 생략하는 실제 직�
 
 **실행파일만 되돌리는 것은 데이터 rollback이 아니다.** schema 2를 생성한 뒤 이전 1.1.16102 helper가 그 자료를 읽는다고 가정하지 않는다. 전환 완료 또는 현재 버전 helper의 검증된 복구를 먼저 마치고, 현재 schema 2/transition 기록과 원 schema 1을 별도로 보존한 후 실행파일을 되돌려야 한다. 이번에는 운영 전환/Setup을 실행하지 않아 생산 복구 자료를 새 schema로 변환하지 않았다. 일반 installer journal/schema 변경도 선택한 WB 단위로 수용하며 실제 운영 downgrade는 별도 배포 검증 범위다.
 
-## 5. 실제 검증 결과
+## 5. 최초 통합의 검증 기록 — 14:10 KST, 최신 결과는 §7
 
 외부 원시 근거: `D:\Engineering\archives\agentdock\2026-09-27\completion-132145`.
 숫자는 test/subtest 이벤트 또는 명시한 assertion 수다. 부분/반복 실행을 더해서 시험 수를 부풀리지 않는다.
@@ -147,7 +147,7 @@ Task Scheduler가 기본 LeastPrivilege의 RunLevel을 생략하는 실제 직�
 
 과거 검증은 `partial-validation`, `continuation-validation`, `upstream-fixes-validation`, `mcp-convergence-121938`, `compatibility-convergence-122052`, `plugin-snapshot-convergence-122456`, `windows-completion-gate-131137`에 그대로 있다. 최신 PASS는 이전 FAIL의 기록을 소급 변경하지 않는다. 새로운 240단계 campaign은 없다.
 
-## 6. 소스 반영과 배포 경계
+## 6. 최초 소스 반영 이력과 배포 경계
 
 통합 source의 필수 로컬 compile/회귀·권한/원문/데이터 복원 관문을 통과했다. main은 병합 직전에도 최초 LOCAL_BASE 그대로 clean이었다. 공유 이력 reset/rebase/force 또는 ours merge 없이 정상 반영했다.
 
@@ -160,6 +160,63 @@ Task Scheduler가 기본 LeastPrivilege의 RunLevel을 생략하는 실제 직�
 
 원시 테스트/실패·재검증·build·screenshots와 정확한 source manifest는 외부 archive에 있다. 이번 native fixture의 원래 임시 root 두 개는 종료 점검에서 이미 존재하지 않았고, 해당 root를 참조하는 task/writer는 0이었다. 보존된 JSON/XML 복구/변조 기록은 외부 native-recovery 결과에 남아 있다. 원본 삭제를 이번 점검에서 수행했다고 기록하지 않는다. 생산 oai_fixture/공유 journal와 완료되지 않은 과거 실험 task는 §3의 보존 상태 그대로다.
 
-반영 상태: **로컬 소스 통합·검증·main 반영 완료**. 이 상태는 운영 설치나 모든 후속 upstream 수정의 수용 완료를 뜻하지 않는다.
+최초 반영은 위 이력으로 보존한다. 당시 남아 있던 Windows 네 변경과 race 검증은 §7에서 해결하고 로컬 main에 반영했다. 운영 설치와 원격 게시를 수행한 것은 아니다.
 
-새 배포 버전은 미정이다. 기존 1.1.16102는 마지막 배포 식별이며 새 소스의 설치파일을 같은 이름으로 만들지 않았다. 로컬 소스 통합, 설치파일 패키징, 실제 설치/rollback, 원격 게시는 서로 다른 상태다. 다음 배포 단계에서는 새 버전과 정확한 source commit을 먼저 명시하고, 보류된 후속 Windows 변경/운영 migration 및 필요한 플랫폼/race 환경 검증 범위를 확정한다. 사용자 승인 없이 Setup·Core 재시작·push·PR·dispatch·tag·Release를 수행하지 않는다.
+새 배포 버전은 미정이다. 기존 1.1.16102는 마지막 배포 식별이며 새 소스의 설치파일을 같은 이름으로 만들지 않았다. 로컬 소스 통합, 설치파일 패키징, 실제 설치/rollback, 원격 게시는 서로 다른 상태다. 후속 Windows 소스와 로컬 race 검증은 이제 완료했다. 새 배포판은 별도로 승인된 버전과 정확한 source commit에 결합해야 한다. 실제 운영 설치·rollback 및 다른 플랫폼 실기기 확인은 로컬 소스 검증과 구분한다. 사용자 승인 없이 Setup·Core 재시작·push·PR·dispatch·tag·Release를 수행하지 않는다.
+
+## 7. Windows 후속 안정화 최종 완료 — 2026-09-27 KST
+
+후속 시작 기준은 clean main `71ced4a8ba590aa12a90f8ccb5ffa1519dc78150`이다. 보류된 네 변경 및 필요한 회귀를 완결하여 제품 commit `585a3bfed54a611be446665391f0dedea3b2b6f0`을 만들었다. 검증 tree는 `cc2501d92ce11729f5b5a4d6e0849605a2bc65b2`다. 15:29 KST에 clean main을 이 commit으로 정상 fast-forward했고, 실제 main 경로에서 Go build와 scripts/test를 다시 통과했다. 이 정본의 후속 commit은 문서만 변경하며 제품과 test blob은 검증본 그대로다.
+
+원시 근거: `D:\Engineering\archives\agentdock\2026-09-27inish-windows-145106`. 과거 `completion-132145`의 실패와 성공을 덮지 않았다. 최종 main SHA·tree·독립 bundle 복원·evidence hash는 새 근거 디렉터리의 `final-state.json`에 기록한다.
+
+### 7.1. 보류 변경의 실제 종결
+
+| 원본 uvwt/agentdock commit | 채택 및 필요한 조정 |
+|---|---|
+| `e026a712db1670d6a1dc1d3684dc5ebd9fe23604` | migration 임시 자료 정리. 기존 복구 자료 보존, 동일 OS thread의 mutex 소유, 취소 가능한 대기, 소유권 획득 전 정리 금지를 실제 반례로 보완 |
+| `5b354f4dbd4c1ce504831f591389028885798b3c` | cold-start 단계 진단, no-console 실행, private ACL의 불필요한 재쓰기 방지. 기존 COM·creation-time Job·installerCommand owner를 유지 |
+| `8625d8c6edfab9baa5ed3924031b775efb3c01ed` | Windows Core 건강 확인 예산 60초 통일, background shim 전달, Installer Engine 준비 확인. 기존 native captured-Core 대기에도 같은 예산과 진단을 연결 |
+| `37e7e4b685edaeca21324d1523a9af321c5748e2` | 종료 중 재생성되는 프로세스 재조회, Tray→Core 종료 순서, migration 로그. 종료 직전 동일 handle에서 실행파일 경로를 재확인해 PID 재사용 경계를 보완 |
+
+원본 patch와 SHA-256, 적용 이유는 `upstream-provenance.json` 및 원 commit별 patch 파일에 있다. 기존 policy recovery gate, 즉시 version mismatch 거절 및 150초 GUI Setup broker를 유지했다. 사라진 내부 함수명을 요구하던 source assertion은 실제 COM query와 공통 no-console 실행 동작을 검증하도록 연결했다. 제품 검사나 권한을 약화하지 않았고 새 runtime을 만들지 않았다.
+
+새 disposable 반례에서 원래 upstream 조합의 복구 자료 삭제, 다른 활성 helper 자료 삭제, mutex 대기 취소 무시를 재현했다. `migration-cleanup-before.*`에는 세 시험 및 세 하위 사례의 수정 전 FAIL이 있다. 현재는 native mutex를 보유한 동일 OS thread에서만 정리하며, 기존 stable-backup은 보존하고 취소를 유한 시간 내 반환한다. 새 시험은 실제 Windows mutex와 임시 파일로 실행했고 최종 일반 및 race suite에서 모두 통과했다.
+
+프로세스 종료는 upstream의 50ms 재조회와 500ms 안정 구간을 유지한다. PID 열거 결과만 믿지 않고 종료할 handle에서 실행파일 경로를 재확인하며, 다른 실행파일은 종료하지 않는다. 같은 handle로 실제 종료를 확인하지 못하면 성공으로 처리하지 않는다. 잘못된 경로 후보의 생존, 실제 대상 종료, 이미 종료된 후보 처리를 native 회귀로 확인했다.
+
+### 7.2. race 환경 문제 해소
+
+기존 PATH에는 i686 GCC 8.1.0이 있었다. 공식 release의 x64 GCC 15.2.0 portable archive를 크기 103,193,634 bytes와 SHA-256 `029bd02b5bce7c10fd9476165b3fe178239fe1838ad62516b5c3e0921bb283cf`로 검증하고 `D:\Engineering\cache\mingw-15.2.0-ucrt-x64`에 준비했다. 출처는 `niXman/mingw-builds-binaries`, tag `15.2.0-rt_v13-rev1`이다.
+
+CC·CGO_ENABLED·PATH는 검증 자식 프로세스에만 지정했다. 시스템 PATH나 다른 펌웨어 compiler, 생산 Core는 바꾸지 않았다. 실제 전체 `go test -race ./...`가 실행되고 통과하여 이전 `0xc0000139` 로더 실패를 해소했다. 과거 실패 기록을 소급 PASS로 바꾸지는 않았다.
+
+### 7.3. 최종 검증
+
+아래 전체/부분 실행 수치를 합산하지 않는다. 일반/race 검증 중 기록한 source manifest와 실제 파일 hash가 불변임을 확인했다.
+
+| 관문 | 실제 결과 |
+|---|---|
+| 전체 Go `-p 1 -count=1 -timeout=180s ./...` | **PASS**: 59개 시험 패키지, 2,272 test/subtest PASS, 조건부 test/subtest SKIP 77, 시험 없는 패키지 6 |
+| 전체 race `-race -p 1 -count=1 -timeout=600s ./...` | **PASS**: 동일 59개 패키지·2,272 PASS·77 조건 SKIP·시험 없는 패키지 6, race 경고 0. 계측 실행의 외부 harness 예산만 600초이며 제품 timeout/시험 assertion은 그대로 |
+| `go vet ./...` / `go build ./...` | 각각 **PASS** |
+| 실제 main checkout | **build PASS, scripts/test 92 PASS** |
+| Windows desktop/native/layout/policy Release win-x64 build | 모두 **PASS**, 경고·오류 0 |
+| 다국어 pure-policy / Task 소유권 / backup·보안 descriptor | **7,156 / 29 / 78 assertions PASS** |
+| 실제 격리 native COM·NTFS privilege 복구 | **21 scenarios, 239 assertions PASS, 실패 0**. 기존 추가 backup 계약 16개도 포함한 이번 executable 결과 |
+| 실제 offscreen WPF | **29,032 assertions, 63 rendered samples PASS** |
+| health / summary / native status / display / Tailscale 및 실제 연결 | **95 / 34 / 39 / 27 / 31 / 11 assertions PASS** |
+| 실제 pinned rg 통합 | **4개 패키지 392 test/subtest PASS, 기존 플랫폼/helper 조건 SKIP 37** |
+| 실제 rg 인자·exit 회귀의 추가 race | **26 test/subtest PASS, SKIP 0** |
+| 캐시 전용 rg package 검사 | **8 PASS, SKIP 0**. AgentDock 설치파일 생성이나 Setup 실행 아님 |
+| formatting / Git / installer parse-only | **Go 45개 파일 gofmt PASS, 전체 diff check PASS, unmerged 0, PowerShell 5.1 및 7.6 parse PASS** |
+
+첫 component 실행은 fixture 경로를 지정했지만 기존 LookPath 시험용 자식 PATH에 rg가 없어 두 시험이 실패했다. 결과는 `components-final`에 보존했다. 같은 검증 fixture를 자식 PATH에만 추가하고 source/assertion 불변으로 `components-final-02`의 전체 component suite와 해당 회귀 race를 통과했다. skip·실패를 삭제해 성공으로 바꾸지 않았다.
+
+사전 분류에 의해 실행되지 않은 일부 도구 요청과 workspace 선택 전 binding 검증 오류는 compiler/test 실패와 구분해 보존한다. 이번 소스 변경이 OpenAI의 사전 분류 문제 자체를 해결했다는 주장은 하지 않는다. 최종 제품 관문의 보류 사유로 남기지도 않는다.
+
+### 7.4. 종료 범위
+
+앞서 보류했던 Windows 네 변경, race 실행 환경, 최종 소스·회귀·정본·정상 로컬 main 반영에는 남겨 둔 개발 작업이 없다. 실험 보관·선택 정리는 §3의 기존 검증 결과와 명시적 보존 범위를 유지했다. 이번 빌드·원시 로그·복구 자료·cache는 제품 checkout 밖에 두었다. 다른 PR/worktree, 운영 자료, 공유 journal 및 미완료 과거 실험 task의 상태는 변경하지 않았다.
+
+이 완료는 Windows x64 로컬 소스 검증 범위다. 새 배포 버전은 미지정이며 Setup·생산 Core 변경/재시작·운영 migration·원격 push/PR/dispatch/tag/Release는 실행하지 않았다. 이는 미해결 소스 결함이나 다음 조사 항목이 아니라 기존에 분리하여 금지한 배포·운영 승인 경계다. 다른 플랫폼 실기기, 물리 키보드/DPI, 운영 downgrade 성공은 주장하지 않는다.
