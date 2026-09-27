@@ -2,7 +2,7 @@
 
 기록일: 2026-09-28 KST
 작업: `tsk_c83ac7427fcaa1db`
-상태: **부분 구현 검증 완료 / 전체 제품 및 Windows Release 미완료**
+상태: **Windows 후보 패키지·Setup 설치/제거·실제 다운로드 검증 완료 / 전체 한국어·지원 upgrade 미완료 / 정식 Release 미게시**
 
 이 문서는 현재 AGENTS.md가 가리키는 단일 실행 정본이다. 파일명의 1.1.6100은 과거 경로이며 현재 배포 버전이 아니다. 과거 main의 통합 기록은 기존 Git 이력과 외부 archive에 보존되어 있다. 아래 결과는 이번 원본 기반 후보에 실제 수행한 검사만 나타내며 과거 통합본의 PASS를 합산하지 않는다.
 
@@ -16,7 +16,7 @@
 | fork parent | `A-m-o-r-F-a-t-i/AgentDock-Workbench` |
 | 현재 제품 작업 | 정본 Git에 연결된 `D:\Engineering\worktrees\agentdock-wb-release` |
 | 작업 브랜치 | `work/minimal-wb-release-20260928` |
-| 직전 전체 검증 소스 | `b1d8589dce326763bf6f8447163b8ba21e60f53e`; 후속 변경의 검증은 4.1절에 별도 기록 |
+| 최신 실제 후보 빌드 소스 | `58b6f1496872c37150be925d76458552965f2058`; CI 36338434227, 상세 결과는 4.3절 |
 | 기존 local main | `cea147b9a3dbeb6f370c2c5231ca7a50604d7bdd` — 제품 후보로 교체·병합하지 않음 |
 | 기존 remote main | `113f709a841ea64f238c528b561ab5f502d95239` — push하지 않음 |
 | 현재 후보 소스 버전 | **1.1.17100, 미배포**; 원본 기준 1.1.7과 구분하며 태그는 생성하지 않음 |
@@ -36,7 +36,7 @@ rg는 기존 generation·검색·installer·selfupdate 소유자를 사용한다
 
 이전 `33f2aed3c86db00439761e85b6380dd99a33ef40`에서 공급 스크립트와 실제 ZIP 검증을 기존 Windows 빌드·Setup 입력·배포물 검증에 연결했다. 이번에는 두 스크립트의 governance 등록 누락을 보완했다. manifest 읽기 중 취소가 ErrIntegrity로 바뀌는 결정적 반례를 재현하고 취소 원인을 그대로 반환하는 3줄 수정과 회귀를 추가했다. 무결성 검사나 fallback 정책을 약화하지 않았다.
 
-실제 rg 구성요소를 사용한 검색·전달 회귀와 cache-only ZIP 검증은 통과했다. **새 제품 Setup/Release ZIP은 아직 만들지 않았으므로 최종 배포물까지 완료라고 하지 않는다.**
+실제 rg 구성요소를 사용한 검색·전달 회귀와 cache-only ZIP 검증은 통과했다. **이후 CI에서 후보 Setup과 ZIP을 빌드하고 실제로 내려받아 rg·라이선스·manifest를 재검증했다(4.3절). 전체 한국어 및 지원 upgrade가 미완료이므로 정식 배포물은 아니다.**
 
 한국어는 후보의 기존 324개 리소스 및 문화권 처리 자산을 보존했다. 이번 재개에서 전체 UI·언어 선택·제품 브라우저/MCP Apps까지 한글화하지 않았다. 사용자 입력·로그·외부 MCP 결과를 번역하거나 Activity 모델을 바꾸는 작업은 하지 않았다. 관련 필수 소스 조회가 실행 전에 차단되어 미검토 대상을 임의로 교체하지 않았다.
 
@@ -85,14 +85,16 @@ Setup receipt 재시도, Named/Quick/Tailscale 표시 묶음, 생성 시점 Job 
 | `3d262e80975e26b53d242cb855b3394e645bc9b1` | Core 역할/root/동일 handle 확인 |
 | `2bee6fdcef5ec44d2190a0dd70c4051cda4681c2` | 구형 복구 입력 한정과 schema별 재개 순서 |
 | `b1d8589dce326763bf6f8447163b8ba21e60f53e` | rg manifest 취소, MCP 형태 회귀, TaskAdmin 정적 계약 및 스크립트 inventory |
-
 | `bda69caaf04ad861f73c29449bbf440837a29d93` | 사용자 fork 업데이트·배포 주소, Task rollback runtime root와 모든 버전 formal source 검사 |
+| `381b932e5729c2b03d3a87ffe1131cc2b059810e` | 1.1.17100 후보 및 원격/서명/필수 시험/불변 게시 검증 경로 |
+| `4c4eed6e50363b14bdc09b4fb33a898f3d34d3aa` | 제품 tree를 바꾸지 않는 기존 main 이력 보존 merge |
+| `58b6f1496872c37150be925d76458552965f2058` | 실제 Setup repair 실패의 구형 PowerShell action 호환과 실패 증거 보존 |
 
 직전 b1d8589 제품 소스의 WB_BASE 대비 차이는 43개 파일, 3,785줄 추가·53줄 삭제다. 여기에는 이전 후보의 한국어·rg 및 시험 코드가 포함된다. 이 숫자를 이번에 새로 완성한 기능 수로 해석하지 않는다. 이번 재개의 소스 커밋 4개만 외부 resume-source-patches에 format-patch 및 SHA-256으로 추가 보존했다.
 
 ## 4. 실제 검증과 실패 보존
 
-아래 수치는 서로 더하지 않는다. 전체 Go, 부분 회귀, native assertion, 시나리오 및 패키지는 다른 집계다.
+이 절의 표는 직전 b1d8589 재개의 검증 기록이다. 후속 최신 후보/CI 결과는 4.3절에 별도로 기록한다. 수치를 서로 더하지 않는다. 전체 Go, 부분 회귀, native assertion, 시나리오 및 패키지는 다른 집계다.
 
 | 검사 | 관측 결과와 근거 |
 |---|---|
@@ -102,7 +104,7 @@ Setup receipt 재시도, Named/Quick/Tailscale 표시 묶음, 생성 시점 Job 
 | Core 수정 후 전체 관련 패키지 | 200 PASS / 2 SKIP / 0 FAIL. `core-role-fixed-01` |
 | 구형 복구 조기 재개 반례 | schema 1의 Run 호출을 기록하는 test double에서 FAIL; 실제 Task 시작 없음. `native-legacy-baseline` |
 | manifest 취소 반례 | 1 FAIL; 수정 후 bundle 관련 suite 통과. `rg-cancel-baseline-01`, `rg-script-fixed-01` |
-| 전체 Go 현재 소스 | `go test -json -p 1 -count=1 -timeout=180s ./...`: 2,135 PASS / 85 SKIP / 0 FAIL, 시험 패키지 56 PASS, 시험 없는 패키지 8. `resume-full-go-02` |
+| 직전 b1d8589 전체 Go | `go test -json -p 1 -count=1 -timeout=180s ./...`: 2,135 PASS / 85 SKIP / 0 FAIL, 시험 패키지 56 PASS, 시험 없는 패키지 8. `resume-full-go-02` |
 | go vet / go build | 각각 exit 0. `resume-vet-final`, `resume-build-final` |
 | 핵심 race + 실제 rg | 명시한 12 packages, `-race -tags=bundled_rg_integration -p 1 -count=1 -timeout=600s`: 912 PASS / 48 SKIP / 0 FAIL. `resume-critical-race-final` |
 | rg 일반 연결 | 실제 번들로 4 packages 361 PASS / 42 SKIP / 0 FAIL. `rg-connected-resume-01`; 이후 manifest 수정은 최신 tagged race에도 포함 |
@@ -151,6 +153,42 @@ publication policy를 포함한 scripts/test 108 PASS / 0 SKIP / 0 FAIL 및 브�
 
 후속실패원인을보존하도록 원래E2E에 known4개설치로그의최대2000줄씩선택적보존을연결했고, 실패후에도fixture정리를계속한다. workflow의실패산출물은unverified-windows-failure로명시하여정식게시관문과구분한다. 재검증이성공하기전설치완료·지원upgrade완료로보고하지않는다.
 
+## 4.3 최신 실제 검증 상태 — source 58b6f149 / CI 36338434227
+
+수정 커밋 `58b6f1496872c37150be925d76458552965f2058`을 사용자 원격 작업 브랜치에 정상 push했다. 같은 SHA의 실제 GitHub runner에서 `publish=false`, `installation_tests=true`, `architectures=amd64`로 다시 실행했다. 이전 실행 36337080381의 실패는 그대로 보존한다.
+
+| 완료 상태 | 실제 결과 |
+|---|---|
+| Linux backend / race | 동일 SHA에서 모두 PASS |
+| Windows 전체 Go | 2,172 PASS / 76 SKIP / 0 FAIL; 시험 패키지 56 PASS, 시험 없는 패키지 8 |
+| 정적 분석 / 순수 정책 | 두 단계 모두 PASS |
+| Windows native COM/NTFS | 22개 시나리오, 272 assertions, 실패 0 |
+| WPF offscreen | 60개 렌더링 표본, 27,538 assertions; 100/125/150/200% 배율 |
+| 실제 ZIP·오프라인 Setup | 빌드 및 패키지 metadata/checksum 검사 PASS |
+| 실제 Setup E2E | 설치·반복 설치·구형 PowerShell 작업 repair·제거 PASS |
+| 역사적 1.1.16102 upgrade/repair/rollback | **FAIL — 과거 버전 baseline 설치 준비에서 실패. 새 버전으로의 upgrade에는 도달하지 않음** |
+| 전체 한국어 | 미완료; 정식 게시를 요구하지 않은 후보 실행이므로 필수 한국어 게시 단계는 SKIP |
+| 전체 workflow | **failure**; 검증 완료 패키지 업로드/정식 게시 단계는 실행되지 않음 |
+
+Windows Go 수치는 실제 다운로드한 `backend-validation.jsonl`에서 집계했다. 로컬 4c4eed6e의 2,157 PASS / 85 SKIP와 다른 환경의 결과이므로 합산하지 않는다. 물리 키보드/모니터 검증은 하지 않았고 offscreen 결과로 대신하지 않는다.
+
+과거 버전 baseline은 원래 1.1.16102 source `4d719ce75ac748cb24e8ad4b7d92ff7c56e24225`를 수정하지 않고 다시 빌드했다. 그 빌드는 성공했지만 빈 경로 설치에서 stable shim이 `active-version.json`을 찾지 못했고, 이후 rollback도 실패했다. 로그의 관측 오류는 `read AgentDock active version ... active-version.json: The system cannot find the file specified`이다. 새 후보로의 upgrade가 실패했다고 바꾸어 기록하지 않는다. 정상적인 구형 설치 fixture를 마련하는 경로와 실제 지원 upgrade/rollback은 아직 검증되지 않았다.
+
+실패 패키지는 별도 artifact `unverified-windows-failure-36338434227`로 보존했다. 이를 호스트의 외부 archive에 실제로 내려받아 기존 패키지 검증기를 다시 실행했고 다음을 확인했다.
+
+- 버전 1.1.17100 / source 58b6f149... / 채널 candidate-not-released / Windows amd64가 일치한다.
+- Core·arbiter·shim의 Go source 정보와 UI informational version의 source SHA가 일치한다. Setup 제품 버전도 일치한다.
+- rg 15.2.0의 manifest, 실행파일 및 라이선스 5개 파일과 원본 크기/SHA 검증을 통과했다. Core Skill 3개는 별도 임시 Home에서 fresh/repeat bootstrap을 통과했다.
+- Setup의 실제 Authenticode 상태는 NotSigned이다. 빌드에서 official cloudflared의 유효 서명을 검사했다. 운영 Setup이나 생산 Core를 시작하지 않았다.
+
+| 후보 파일 | bytes | SHA-256 |
+|---|---:|---|
+| AgentDockSetup-amd64.exe | 110,869,060 | `c251e134a65f912362d27573bcc582237416071f47fd5f4438402101ee61632d` |
+| agentdock_windows_amd64.zip | 96,600,971 | `a8ac85ed8005fe075ba321e048488b03217e5db5a7a4bfbf985ce346151fc3ca` |
+| install.ps1 | 112,799 | `582d05b610b98e66fdbad43bb65c50048c34ac3d33a671603fc8e93ba44c3af4` |
+
+이는 GitHub Actions 후보 artifact의 실제 재다운로드 검증이다. **정식 GitHub Release에서 재다운로드한 결과가 아니며 설치 권장/게시 승인이 아니다.** 위치는 외부 evidence의 `ci-36338434227-candidate/release`다. 실행 결과·실패 로그·Setup 4개 로그·원본 native/Linux 증거를 함께 보존했다. `upgrade-validation.json`의 passed=false를 변경하지 않았다.
+
 ## 5. 미완료 및 명시적 차단
 
 직전 재개에서 두 개의 읽기 요청이 실행 전에 차단됐다. 원문은 다음과 같다.
@@ -161,7 +199,9 @@ Windows 한글화 대상 전체 파일/OAuth template/관련 frontend diff 조�
 
 남은 제품 관문은 전체 한글화 검토·구현과 실제 표시/배포물 검증이다. 두 번째 재개에서 원격 다운로드/업데이트 대상과 Windows workflow를 사용자 fork에 맞게 수정했으나, 실제 CI·설치·게시 완료 여부는 개별 실행 결과로 판정한다. 기존의 all-platform 게시 경로로 Windows 외 배포를 확장하지 않는다.
 
-그다음 새 버전 일관성, 원본 대비 최종 tree 재검토, 기존 main 이력 보존 통합, 실제 격리 runner의 WPF/신규 설치/지원 이전 버전 업데이트·복구, 동일 commit Windows Setup·ZIP, 정상 main/tag push, 정식 Release 및 실제 새 디렉터리 재다운로드 검증이 필요하다. 이미 승인된 게시 권한을 다시 묻는 단계가 아니라 아직 구현·검증되지 않은 완료 조건이다.
+이번 재개에서는 한국어 병합 충돌 조회와, 실제 CI 실패 후 역사적 설치 준비/기존 upgrade harness 조회의 두 요청이 같은 문구로 실행 전에 차단됐다. `resume2-localization-conflict-block.json`과 `resume2-historical-inspection-block.json`에 기록했다. 해당 조회를 우회·분해·재시도하지 않았으며, 한국어 후보와 과거 바이너리를 임의로 적용·수정하지 않았다.
+
+남은 필수 조건은 전체 한국어의 구현/실제 표시/배포물 검증, 동작 가능한 역사적 baseline 준비와 지원 upgrade·실패 rollback 검증, 그 최종 source의 전체 재검증, canonical local/remote main 통합, 동일 SHA 태그·최종 패키지, 정식 Release 게시와 게시 후 실제 재다운로드다. 후보 버전 지정·main 이력 보존 merge·CI/WPF·Setup·후보 bytes 검증은 이미 수행했으므로 미실행이라고 반복하지 않는다. 게시 권한의 재승인이 아니라 실제 남은 구현·검증 조건이다.
 
 현재 후보는 새 버전 1.1.17100으로 지정했으나 Release로 게시하지 않았다. 이 버전은 보존된 1.1.16102보다 크며 Go와 Windows UI 버전을 일치시켰다. Setup/ZIP/metadata/checksum/서명을 최종 소스에 묶기 전 태그를 생성하지 않는다. 필수 표시 및 설치 검사가 빠졌으므로 전체 완료 판정을 내리지 않는다.
 
@@ -169,8 +209,8 @@ Windows 한글화 대상 전체 파일/OAuth template/관련 frontend diff 조�
 
 정본 main과 독립 후보 `agentdock-workbench-product`는 이번 소스 작업의 변경 대상이 아니다. rebuild worktree의 미커밋 13개 항목은 읽기 참조만 하고 수정·삭제하지 않았다. 열린 upstream PR의 제품 채택 여부와 무관하게 기존 11개 head를 보존한다. 아직 통합하지 않은 작업 브랜치와 후보를 삭제하지 않는다.
 
-native fixture root 및 Task는 최종 시험에서 제거되고 잔류 0임을 확인했다. 완료한 Go 시험의 고유 root 잔류 및 추가 종료 점검은 외부 `RESUME_FINAL_STATE.json`과 `resume-fixture-cleanup.json`에 관측값을 기록한다. 원시 실패·PASS·patch·빌드 결과는 제품 checkout 밖에 보존한다. 이는 같은 D: 볼륨의 로컬 기록이지 별도 재해복구 저장소가 아니다.
+직전 로컬 native fixture root 및 Task는 제거와 잔류 0을 확인했다. 이번 실제 CI의 historical baseline 실패 fixture는 로그에서 보존된 것으로 관측됐으며 모든 CI fixture의 정리 성공을 주장하지 않는다. 로컬 Go 시험 root의 소유권·참조 프로세스 확인과 제거 결과는 `resume2-fixture-cleanup.json` 및 추가 종료 기록에 남긴다. 최신 Git/PR/Release 종료 상태는 `RESUME2_FINAL_STATE.json`에 기록한다. 원시 실패·PASS·patch·빌드 결과는 제품 checkout 밖에 보존한다. 이는 같은 D: 볼륨의 로컬 기록이지 별도 재해복구 저장소가 아니다.
 
-운영 Setup·업데이트·제거·복구 및 생산 Core 재시작 명령을 실행하지 않았다. 실제 설치 완료나 지원 upgrade 경로 완료를 native fixture의 성공으로 대체하지 않는다. Windows Release URL·신규 설치파일 다운로드 링크·게시 hash는 아직 존재하지 않으므로 작성하지 않는다.
+운영 Setup·업데이트·제거·복구 및 생산 Core 재시작 명령을 실행하지 않았다. 실제 설치 완료나 지원 upgrade 경로 완료를 native fixture의 성공으로 대체하지 않는다. 정식 Windows Release URL은 아직 없다. 후보 Setup/ZIP와 hash는 4.3절에 실제 상태로 기록했으며 공개 Release 게시와 구분한다.
 
 복구 시 이 문서와 작업 task, 실제 Git/외부 종료 기록을 먼저 대조한다. 검증된 제품 변경을 다시 만들거나 옛 bloated main을 그대로 push하지 않는다. 차단 경계를 우회하지 않고, 아직 남은 한글화와 Windows 배포 완료 조건을 분리해 유지한다.
