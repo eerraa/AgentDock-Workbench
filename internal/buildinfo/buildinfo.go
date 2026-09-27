@@ -8,7 +8,9 @@ import (
 	"github.com/uvwt/agentdock/internal/executioncompat"
 )
 
-const Version = "1.1.7"
+// This unreleased downstream version compares above the supported 1.1.16102
+// distribution. The upstream source baseline remains Workbench 1.1.7.
+const Version = "1.1.17100"
 
 // ProductName is the display identity from 1.1.7 onward; machine IDs remain stable.
 const ProductName = "AgentDock Workbench"

@@ -71,7 +71,7 @@ try {
         & go build -trimpath -ldflags '-s -w -H=windowsgui' -o (Join-Path $payload 'agentdock-tray-shim.exe') ./cmd/agentdock-shim
         Assert-NativeExit 'GUI shim build'
         $rid = if ($architecture -eq 'arm64') { 'win-arm64' } else { 'win-x64' }
-        & dotnet publish ./desktop/windows/control-panel/AgentDock.ControlPanel.csproj -c Release -r $rid --self-contained true -o $panel
+        & dotnet publish ./desktop/windows/control-panel/AgentDock.ControlPanel.csproj -c Release -r $rid --self-contained true -o $panel "-p:InformationalVersion=$version+$commit" "-p:IncludeSourceRevisionInInformationalVersion=false"
         Assert-NativeExit 'WPF publish'
         Copy-Item -LiteralPath (Join-Path $panel 'agentdock-tray.exe') -Destination (Join-Path $payload 'agentdock-tray.exe') -Force
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'assets\agentdock.ico') -Destination (Join-Path $payload 'agentdock.ico') -Force

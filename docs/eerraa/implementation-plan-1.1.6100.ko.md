@@ -16,13 +16,13 @@
 | fork parent | `A-m-o-r-F-a-t-i/AgentDock-Workbench` |
 | 현재 제품 작업 | 정본 Git에 연결된 `D:\Engineering\worktrees\agentdock-wb-release` |
 | 작업 브랜치 | `work/minimal-wb-release-20260928` |
-| 검증한 제품·시험 소스 | `b1d8589dce326763bf6f8447163b8ba21e60f53e` |
+| 직전 전체 검증 소스 | `b1d8589dce326763bf6f8447163b8ba21e60f53e`; 후속 변경의 검증은 4.1절에 별도 기록 |
 | 기존 local main | `cea147b9a3dbeb6f370c2c5231ca7a50604d7bdd` — 제품 후보로 교체·병합하지 않음 |
 | 기존 remote main | `113f709a841ea64f238c528b561ab5f502d95239` — push하지 않음 |
-| 현재 후보 소스 버전 | 1.1.7; 새 배포 버전·태그는 아직 지정·생성하지 않음 |
+| 현재 후보 소스 버전 | **1.1.17100, 미배포**; 원본 기준 1.1.7과 구분하며 태그는 생성하지 않음 |
 | 외부 근거 | `D:\Engineering\archives\agentdock\2026-09-28\minimal-release-c83ac742` |
 
-이 문서와 AGENTS.md의 후속 커밋은 문서만 변경한다. 최종 작업 HEAD와 제품·시험 blob 동일성, 저장소 종료 관측은 외부 `RESUME_FINAL_STATE.json`에 기록한다. 문서 커밋을 새로 빌드한 Release라고 해석하지 않는다.
+직전 문서 커밋 8174fec는 제품 변경 없이 검증 기록을 보존했다. 이후 새 배포 설정·후보 버전 변경이 진행 중이며, HEAD와 CI 결과는 외부 실행 기록으로 구분한다. `RESUME_FINAL_STATE.json`은 직전 재개의 종료 관측이지 후속 변경의 완료 증명이 아니다.
 
 사용자는 이번 요청에서 정상 main 통합·사용자 원격 push·새 버전/태그·CI dispatch·Windows x64 정식 Release 게시 및 실제 재다운로드 검증을 명시적으로 승인했다. 별도 게시 승인을 다시 요구할 사안이 아니다. 그러나 불완전한 제품을 게시하거나 검증 실패를 숨길 권한은 아니다.
 
@@ -86,7 +86,9 @@ Setup receipt 재시도, Named/Quick/Tailscale 표시 묶음, 생성 시점 Job 
 | `2bee6fdcef5ec44d2190a0dd70c4051cda4681c2` | 구형 복구 입력 한정과 schema별 재개 순서 |
 | `b1d8589dce326763bf6f8447163b8ba21e60f53e` | rg manifest 취소, MCP 형태 회귀, TaskAdmin 정적 계약 및 스크립트 inventory |
 
-검증 제품 소스의 WB_BASE 대비 차이는 43개 파일, 3,785줄 추가·53줄 삭제다. 여기에는 이전 후보의 한국어·rg 및 시험 코드가 포함된다. 이 숫자를 이번에 새로 완성한 기능 수로 해석하지 않는다. 이번 재개의 소스 커밋 4개만 외부 resume-source-patches에 format-patch 및 SHA-256으로 추가 보존했다.
+| `bda69caaf04ad861f73c29449bbf440837a29d93` | 사용자 fork 업데이트·배포 주소, Task rollback runtime root와 모든 버전 formal source 검사 |
+
+직전 b1d8589 제품 소스의 WB_BASE 대비 차이는 43개 파일, 3,785줄 추가·53줄 삭제다. 여기에는 이전 후보의 한국어·rg 및 시험 코드가 포함된다. 이 숫자를 이번에 새로 완성한 기능 수로 해석하지 않는다. 이번 재개의 소스 커밋 4개만 외부 resume-source-patches에 format-patch 및 SHA-256으로 추가 보존했다.
 
 ## 4. 실제 검증과 실패 보존
 
@@ -121,19 +123,33 @@ Setup receipt 재시도, Named/Quick/Tailscale 표시 묶음, 생성 시점 Job 
 
 race compiler는 기존 검증 cache의 x64 GCC를 자식 CC/CGO/PATH에만 지정했다. 시스템 PATH나 다른 프로젝트 compiler를 변경하지 않았다. 600초는 race 계측의 외부 시험 예산이며 제품 timeout이나 내부 assertion은 변경하지 않았다.
 
+## 4.1 두 번째 재개 — 배포 경계와 후보 버전
+
+사용자의 계속 요청으로 bda69ca에 배포 주소 및 복구 호출 수정을 커밋했다. 수정 전 fork URL/복구 root/formal source 검사 6개 실패를 기록했고, 수정 후 scripts/test와 selfupdate 2개 패키지 130 PASS / 0 SKIP / 0 FAIL을 확인했다. 실제 installer에서 추출한 복구 호출과 순수 함수는 가짜 Start-Process로 실행해 원래 runtime root/SID/backup 인자와 URL 선택을 검사했다. 운영 설치나 UAC를 실행한 시험이 아니다.
+
+이후 기존 windows-package.yml 및 workbench-acceptance.yml에 사용자 fork/x64, Linux와 Windows 동일 SHA, 실제 native 복구·WPF·Setup·역사적 1.1.16102 업그레이드/rollback 관문을 연결했다. 한국어 전체 검증이 없는 상태로 publish할 수 없으며, 후보 빌드는 그 미완료 상태를 not_run으로 기록한다. 과거 버전 baseline은 변경하지 않은 정확한 역사적 commit을 CI에서 다시 빌드하는 방식이고, 원래 게시 bytes와 동일하다고 주장하지 않는다.
+
+정식 게시 전 모든 필수 시험과 checksummed metadata를 다시 검사한다. 이미 공개된 Release는 변경하지 않고, 기존 draft에서도 일치하는 bytes만 재사용한다. 실패한 조회를 부재로 해석하지 않으며 업로드 중 파일을 덮어쓰지 않는다. draft 및 공개 직후 각각 새 디렉터리에 실제 재다운로드하여 크기·SHA·구성·버전·source commit을 확인하는 경로를 기존 workflow에 구현했다. 현재 이 경로의 GitHub 동작은 시험 더블로만 검사했다.
+
+publication policy를 포함한 scripts/test 108 PASS / 0 SKIP / 0 FAIL 및 브랜드·버전 일치 검사를 통과했다. 정상 신규 게시, 부분 draft 재개와 11개 실패 조건을 실제 workflow 본문에 대해 시험 더블로 실행했다. 시험 더블의 PowerShell scope 및 배열 인자 전달 오류도 실패 로그를 보존하고 수정했다. 필수 시험 누락/다른 SHA/다른 원격/변조 bytes는 승인하지 않는다. 이 기록은 실제 Release 게시 성공을 뜻하지 않는다.
+
+새 미배포 버전은 1.1.17100이다. GUI informational version에 source SHA를 넣고 Core 외 shim/arbiter도 같은 SHA인지 검증하도록 했다. 최종 패키지·실제 CI 결과는 아직 이 절의 로컬 회귀 수치에 포함하지 않는다.
+
+두 번째 재개의 한국어 3-way 후보는 제품 밖 korean-port에 준비했으나 충돌 부분 읽기 요청이 동일한 명시적 보안 문구로 실행 전에 차단됐다. resume2-localization-conflict-block.json에 기록했으며 우회 재조회·제품 적용하지 않았다. 따라서 전체 한국어 관문은 계속 미완료다.
+
 ## 5. 미완료 및 명시적 차단
 
-이번 재개에서 두 개의 읽기 요청이 실행 전에 차단됐다. 원문은 다음과 같다.
+직전 재개에서 두 개의 읽기 요청이 실행 전에 차단됐다. 원문은 다음과 같다.
 
 > 요청의 보안 상태를 결정하지 못해 이 도구 요청은 OpenAI에 의해 차단되었습니다.
 
 Windows 한글화 대상 전체 파일/OAuth template/관련 frontend diff 조회와, 별도의 Core CLI/MCP Apps 시험·한글화 source 등의 조회다. 세부 운영 정책 사유는 응답에 제공되지 않았다. `resume-localization-read-block.json`, `resume-mcp-cli-read-block.json`에 실행되지 않았음을 기록했다. 다른 도구·문자 인코딩·인자 분해로 같은 조회를 재전송하지 않았다. 독립적인 최소 결함·시험·문서 작업만 계속했다. 이 제품 패치가 OpenAI 사전 검사를 고쳤다고 주장하지 않는다.
 
-남은 제품 관문은 전체 한글화 검토·구현과 실제 표시/배포물 검증이다. 현재 원격 다운로드/업데이트 대상과 workflow의 옛 저장소 guard, Windows 단독 게시 관문도 사용자 fork에 맞게 아직 완성하지 않았다. 기존의 all-platform 게시 경로로 Windows 외 배포를 확장하지 않는다.
+남은 제품 관문은 전체 한글화 검토·구현과 실제 표시/배포물 검증이다. 두 번째 재개에서 원격 다운로드/업데이트 대상과 Windows workflow를 사용자 fork에 맞게 수정했으나, 실제 CI·설치·게시 완료 여부는 개별 실행 결과로 판정한다. 기존의 all-platform 게시 경로로 Windows 외 배포를 확장하지 않는다.
 
 그다음 새 버전 일관성, 원본 대비 최종 tree 재검토, 기존 main 이력 보존 통합, 실제 격리 runner의 WPF/신규 설치/지원 이전 버전 업데이트·복구, 동일 commit Windows Setup·ZIP, 정상 main/tag push, 정식 Release 및 실제 새 디렉터리 재다운로드 검증이 필요하다. 이미 승인된 게시 권한을 다시 묻는 단계가 아니라 아직 구현·검증되지 않은 완료 조건이다.
 
-현재 후보의 1.1.7을 새 Release로 게시하지 않았다. 보존된 1.1.16102보다 업데이트 비교상 큰 보수적인 버전이 필요하지만 새 버전은 아직 정하지 않았다. Setup/ZIP/metadata/checksum/서명을 최종 소스에 묶기 전 태그를 생성하지 않는다. 필수 표시 및 설치 검사가 빠졌으므로 전체 완료 판정을 내리지 않는다.
+현재 후보는 새 버전 1.1.17100으로 지정했으나 Release로 게시하지 않았다. 이 버전은 보존된 1.1.16102보다 크며 Go와 Windows UI 버전을 일치시켰다. Setup/ZIP/metadata/checksum/서명을 최종 소스에 묶기 전 태그를 생성하지 않는다. 필수 표시 및 설치 검사가 빠졌으므로 전체 완료 판정을 내리지 않는다.
 
 ## 6. 보존·운영 보호와 다음 복구 지점
 
