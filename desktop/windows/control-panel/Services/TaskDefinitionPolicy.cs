@@ -8,7 +8,7 @@ namespace AgentDock.ControlPanel;
 // changing them. This does not participate in normal runtime task control.
 internal static class TaskDefinitionPolicy
 {
-    internal static void Validate(string xml, string taskName, string root, string sid, Func<string,string> resolveSid, bool allowStandardTask = false)
+    internal static void Validate(string xml, string taskName, string root, string sid, Func<string,string> resolveSid, bool allowStandardTask = false, bool allowLegacyCore = false)
     {
         if (!IsValidTaskName(taskName) || !Path.IsPathFullyQualified(root) || string.IsNullOrWhiteSpace(sid))
             throw new InvalidOperationException("task_owner_mismatch: task name, runtime root or user is not valid.");
@@ -35,9 +35,10 @@ internal static class TaskDefinitionPolicy
             throw new InvalidOperationException("task_owner_mismatch: executable or working directory is not owned.");
         var canonicalRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar);
         var native = Same(executable,Path.Combine(root,"bin","agentdock-tray.exe")) &&
-            (string.Equals(arguments,$"--run-core-task --runtime-root \"{canonicalRoot}\"",StringComparison.OrdinalIgnoreCase) ||
-             string.Equals(arguments,$"--task-core-host --runtime-root \"{canonicalRoot}\"",StringComparison.OrdinalIgnoreCase));
-        var legacy = Same(executable,Path.Combine(root,"bin","agentdock.exe")) &&
+            string.Equals(arguments,$"--run-core-task --runtime-root \"{canonicalRoot}\"",StringComparison.OrdinalIgnoreCase);
+        // Legacy executable actions are accepted only by the administrative
+        // existing-task/recovery boundary, never as a new task definition.
+        var legacy = allowLegacyCore && Same(executable,Path.Combine(root,"bin","agentdock.exe")) &&
             string.Equals(arguments,$"service launch-core --runtime-root \"{canonicalRoot}\"",StringComparison.OrdinalIgnoreCase);
         if (!native && !legacy) throw new InvalidOperationException("task_owner_mismatch: action is not an exact known stable AgentDock entry.");
     }

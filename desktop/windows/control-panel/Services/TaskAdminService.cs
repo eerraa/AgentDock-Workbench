@@ -354,9 +354,10 @@ internal static class TaskAdminService
             ?? throw new InvalidOperationException(UiText.Get("TaskBackupStateReadFailed"));
         if (state.RuntimeRoot is null || state.TaskName is null || state.UserSid is null)
             throw new IOException("task_backup_invalid: null ownership fields are not valid recovery metadata.");
+        // Preserve the upstream read-only schema-0 absence record. It cannot
+        // authorize restoration without ValidateBackupOwnership below.
         if (state.SchemaVersion is not (0 or 1 or 2)) throw new IOException("Unsupported task backup format.");
-        if (state.SchemaVersion == 1 && (state.RuntimeRoot.Length == 0 || state.TaskName.Length == 0 || state.UserSid.Length == 0))
-            throw new IOException("task_backup_invalid: legacy backup omitted its original runtime or user binding.");
+        if (state.SchemaVersion == 1) ValidateLegacyRecoveryState(state);
         if (!state.Exists) return (state, "", "");
         if (state.SchemaVersion == 0 || string.IsNullOrWhiteSpace(state.SecurityDescriptor))
             throw new IOException("旧备份缺少可验证的任务安全信息；请保留恢复材料并使用匹配版本处理。");
@@ -370,6 +371,16 @@ internal static class TaskAdminService
             throw new IOException("计划任务 XML 与备份完整性记录不符。");
         if (!string.IsNullOrWhiteSpace(state.SecurityDescriptor)) _ = new RawSecurityDescriptor(state.SecurityDescriptor);
         return (state, xml, userId);
+    }
+
+    // 1.1.16102 wrote bound schema-1 records. This read-only adapter is confined
+    // to explicitly supplied recovery input; new backups always use schema 2.
+    // It neither upgrades the original bytes nor accepts anonymous absence.
+    private static void ValidateLegacyRecoveryState(TaskBackupState state)
+    {
+        if (!Path.IsPathFullyQualified(state.RuntimeRoot) || !TaskDefinitionPolicy.IsValidTaskName(state.TaskName) ||
+            string.IsNullOrWhiteSpace(state.UserSid))
+            throw new IOException("task_backup_invalid: legacy backup omitted its original runtime or user binding.");
     }
 
     private static void RestoreBackup(dynamic root, TaskAdminRequest request)
@@ -393,7 +404,10 @@ internal static class TaskAdminService
         task.Enabled = state.WasEnabled;
         // Registration received the complete original DACL and explicitly
         // disabled principal-ACE insertion. Do not rewrite it a second time.
-        if (state.WasRunning)
+        // The schema-1 writer's coordinator resumes only after restoring its
+        // source files and manifest. Preserve that order; schema 2 retains the
+        // upstream resume behavior without introducing another runtime owner.
+        if (state.WasRunning && state.SchemaVersion == 2)
         {
             task.Enabled = true;
             task.Run(null);
@@ -457,7 +471,7 @@ internal static class TaskAdminService
         if (!bound && !state.Exists)
             throw new InvalidOperationException("task_backup_invalid: an absent-task backup must identify its original runtime and user.");
         if (state.Exists)
-            TaskDefinitionPolicy.Validate(xml, request.TaskName, request.RuntimeRoot, request.UserSid, ResolveUserSid, allowStandardTask: true);
+            TaskDefinitionPolicy.Validate(xml, request.TaskName, request.RuntimeRoot, request.UserSid, ResolveUserSid, allowStandardTask: true, allowLegacyCore: true);
     }
 
     private static string ReadTaskUserId(string xml)
@@ -479,7 +493,7 @@ internal static class TaskAdminService
     {
         dynamic? task = FindTask(root, request.TaskName);
         if (task is not null)
-            TaskDefinitionPolicy.Validate((string)task.Xml, request.TaskName, request.RuntimeRoot, request.UserSid, ResolveUserSid, allowStandardTask: true);
+            TaskDefinitionPolicy.Validate((string)task.Xml, request.TaskName, request.RuntimeRoot, request.UserSid, ResolveUserSid, allowStandardTask: true, allowLegacyCore: true);
     }
 
     private static void RemoveTask(dynamic root, string taskName)

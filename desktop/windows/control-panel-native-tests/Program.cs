@@ -23,6 +23,7 @@ internal static partial class Program
         TaskSecurityDescriptorTests.Run(Check);
         TaskBackupCompatibilityTests.Run(Check);
         TaskOwnerRegression.Run();
+        TaskLegacyResumePolicy.Run(Check);
         if (args.Length == 1 && args[0] == "--security-contract-only")
         {
             Console.WriteLine($"Task security descriptor contract: {_assertions} assertions; no scheduler or file permissions changed.");
@@ -59,6 +60,8 @@ internal static partial class Program
                 try { RunAbsentTask(service, folder, identity, root, elevated); }
                 catch (Exception error) { Failures.Add($"absent/elevated={elevated}: {error}"); Console.Error.WriteLine(Failures[^1]); }
             }
+            try { RunLegacyBoundRecovery(service, folder, identity, root, output); }
+            catch (Exception error) { Failures.Add($"legacy bound recovery: {error}"); Console.Error.WriteLine(Failures[^1]); }
             try { RunDaclRestoration(service, folder, identity, root); }
             catch (Exception error) { Failures.Add($"native DACL contract: {error}"); Console.Error.WriteLine(Failures[^1]); }
             var report = new

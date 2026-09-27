@@ -75,6 +75,21 @@ internal static class TaskBackupCompatibilityTests
             File.WriteAllText(Path.Combine(backup, "state.json"), JsonSerializer.Serialize(new { SchemaVersion = 0, Exists = false }));
             var unbound = read.Invoke(null, [backup])!; var absent = unbound.GetType().GetField("Item1")!.GetValue(unbound)!;
             Refused(() => validate.Invoke(null, [absent, "", Request("AgentDock", root, sid)]), "An unbound absence record cannot authorize task removal");
+            check(File.Exists(Path.Combine(backup, "state.json")), "Rejected unbound recovery input is preserved");
+            foreach (var field in new[] { "RuntimeRoot", "TaskName", "UserSid" })
+            {
+                var metadata = new System.Text.Json.Nodes.JsonObject
+                {
+                    ["SchemaVersion"] = 1, ["RuntimeRoot"] = root,
+                    ["TaskName"] = "AgentDock", ["UserSid"] = sid, ["Exists"] = false
+                };
+                metadata[field] = "";
+                var path = Path.Combine(backup, "state.json");
+                File.WriteAllText(path, metadata.ToJsonString());
+                var original = File.ReadAllBytes(path);
+                Refused(() => read.Invoke(null, [backup]), "Legacy adapter rejects missing original binding: " + field);
+                check(original.SequenceEqual(File.ReadAllBytes(path)), "Legacy rejection preserves evidence: " + field);
+            }
         }
         finally { Directory.Delete(root, true); }
     }
