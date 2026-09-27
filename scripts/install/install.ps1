@@ -112,14 +112,14 @@ function Get-ReleaseBaseUrl {
     }
 
     if ($RequestedVersion -eq 'latest') {
-        return 'https://github.com/A-m-o-r-F-a-t-i/agentdock/releases/latest/download'
+        return 'https://github.com/eerraa/AgentDock-Workbench/releases/latest/download'
     }
 
     $normalizedVersion = $RequestedVersion
     if (-not $normalizedVersion.StartsWith('v')) {
         $normalizedVersion = "v$normalizedVersion"
     }
-    return "https://github.com/A-m-o-r-F-a-t-i/agentdock/releases/download/$normalizedVersion"
+    return "https://github.com/eerraa/AgentDock-Workbench/releases/download/$normalizedVersion"
 }
 
 function Get-CloudflaredReleaseBaseUrl {
@@ -2274,6 +2274,7 @@ exit `$LASTEXITCODE
                     -BackupDirectory $taskBackupDirectory `
                     -AdminLauncherPath $sourceTrayBinary `
                     -LauncherPath '' `
+                    -RuntimeRoot $runtimeDir `
                     -TaskUser $taskUser
                 if (-not $restoreTaskActionResult.Started) {
                     throw "Administrator approval for AgentDock rollback was not completed: $($restoreTaskActionResult.ErrorMessage)"
