@@ -123,7 +123,7 @@ func TestReleasePayloadCarriesVerifiedBundle(t *testing.T) {
 					writeReleaseEntry(t, writer, bundledrg.RelativeDir+"/"+expected.Path, string(data))
 				}
 			})
-			payload, err := extractWindowsReleasePayload(t.Context(), archive, t.TempDir(), "agentdock.exe", "v1.1.18100")
+			payload, err := extractWindowsReleasePayload(t.Context(), archive, t.TempDir(), "agentdock.exe", "v1.1.8100")
 			if mutation == "tampered" {
 				if !errors.Is(err, bundledrg.ErrIntegrity) {
 					t.Fatalf("tampered bundle accepted: %v", err)

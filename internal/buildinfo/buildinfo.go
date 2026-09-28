@@ -8,9 +8,10 @@ import (
 	"github.com/uvwt/agentdock/internal/executioncompat"
 )
 
-// This downstream version compares above the published 1.1.16102 and 1.1.17100
-// distributions. The upstream source baseline is Workbench 1.1.8.
-const Version = "1.1.18100"
+// Fork version 1.1.<upstream patch>100: this build carries all of upstream
+// Workbench 1.1.8. The fork updates only through Setup, so it need not order
+// above earlier fork builds; published fork versions are never reused.
+const Version = "1.1.8100"
 
 // ProductName is the display identity from 1.1.7 onward; machine IDs remain stable.
 const ProductName = "AgentDock Workbench"
