@@ -178,7 +178,7 @@ public partial class ExecutionWindow
         ActionMenu(menu, UiText.Get("ExecutionSaveCurrentFilter"), () => { var name = ExecutionDialogs.Prompt(this, UiText.Get("ExecutionSaveFilter"), UiText.Get("ExecutionFilterName"), ""); if (!string.IsNullOrWhiteSpace(name)) { _preferences.SavedFilters[name] = [_conversationView, SearchBox.Text, CallSearchBox.Text, ComboValue(CallStatusCombo)]; SavePreferences(); } return Task.CompletedTask; });
         foreach (var pair in _preferences.SavedFilters.ToArray())
             ActionMenu(menu, UiText.Get("ExecutionFilterPrefix") + pair.Key, async () => { var values = pair.Value; if (values.Length != 4) return; _conversationView = values[0]; SearchBox.Text = values[1]; CallSearchBox.Text = values[2]; CallStatusCombo.SelectedItem = CallStatusCombo.Items.Cast<ComboBoxItem>().FirstOrDefault(item => item.Tag?.ToString() == values[3]); await LoadObjectsAsync(); });
-        ActionMenu(menu, UiText.Get("ExecutionUsageGuide"), () => { ShowInfo(UiText.Get("ExecutionUsageGuide"), "左侧按工作区组织对话。任务位于当前对话内，任务选择和分支浏览不会改变正在执行的上下文。\n\n单条执行记录显示状态、动作、耗时和时间；点击记录后在下方查看命令、输出、来源和技术信息。右键或使用菜单可批量管理记录。\n\n终止对话会先写入服务端门禁，再取消待审批和运行调用。关闭本窗口只退出观察，不会停止执行。\n\n旧任务缺少步骤时显示“进度未记录”。未归属调用保留原始调用 ID，可以导出、隔离、归档和移入回收站。永久删除不会删除项目源码。\n\n快捷键：Ctrl+F 搜索对话，F5 刷新，Esc 关闭详情，Shift+F10 打开所选条目菜单。"); return Task.CompletedTask; });
+        ActionMenu(menu, UiText.Get("ExecutionUsageGuide"), () => { ShowInfo(UiText.Get("ExecutionUsageGuide"), UiText.Get("ExecutionWorkspaceGuide")); return Task.CompletedTask; });
         OpenMenu(menu);
     }
     private string[] SelectedCallIds() => CallsList.SelectedItems.Cast<ExecutionCallRow>().Where(row => !row.IsInsertion).Select(row => row.Id).Distinct().ToArray();

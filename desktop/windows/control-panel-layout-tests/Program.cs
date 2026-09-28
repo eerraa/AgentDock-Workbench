@@ -44,6 +44,7 @@ internal static class Program
             Console.Error.WriteLine("Offscreen WPF validation is restricted to GitHub Actions. No window or runtime was started.");
             return 2;
         }
+        UiText.ApplyPreference("ko-KR");
         var source = Path.GetFullPath(args.Length > 0 ? args[0] : ".");
         var output = Path.GetFullPath(args.Length > 1 ? args[1] : "dist/layout-validation");
         Directory.CreateDirectory(output);
@@ -193,14 +194,14 @@ internal static class Program
         Check(container is not null && Math.Abs(container.ActualHeight-InsertionTimeline.MessageRowHeight)<0.1,"Actual supplement row height is inconsistent with scroll anchoring.");
         var text=Descendants(container!).OfType<TextBlock>().Select(block=>block.Text).ToArray();
         Check(text.Contains(UiText.Get("ExecutionUserSupplement")) && text.Any(value=>value.Contains("你好，我是帅哥")) && text.Contains(message.State),"Real timeline template did not render the localized supplement heading, unchanged user text and evidence state.");
-        Check(Descendants(container!).OfType<Button>().Any(button=>Equals(button.Content,"重投补充")),"Supplement-only retry action was not rendered.");
+        Check(Descendants(container!).OfType<Button>().Any(button=>Equals(button.Content,UiText.Get("InsertionRetryButton"))),"Supplement-only retry action was not rendered.");
         var total=window.Calls.Count;
         list.SelectedItem=message;
         Check(Named<FrameworkElement>(window,"CallDetailsTabs").Visibility==Visibility.Collapsed && Named<FrameworkElement>(window,"InfoDetailsText").Visibility==Visibility.Visible,"Selecting a supplement exposed tool controls or attempted tool details.");
         Check(Named<TextBox>(window,"InfoDetailsText").Text.Contains(message.InsertionText) && !message.CanStop && !message.NeedsApproval && !message.CanRetry,"Message details or non-tool semantics were lost.");
         message.ApplyInsertion(Json(new { insertion_id="ins_layout", conversation_id="conversation-0", text=message.InsertionText, status="acknowledged", acknowledged_by="receiver_receipt", delivery_attempts=2, created_at=message.TimelineAt, updated_at=DateTimeOffset.UtcNow.AddSeconds(1), expires_at=DateTimeOffset.UtcNow.AddMinutes(5) }),DateTimeOffset.UtcNow);
         Layout(window,800);
-        Check(window.Calls.Count==total && message.State=="接收端已确认收到" && !message.CanRedeliverInsertion,"Receipt transition duplicated the message or retained retry controls.");
+        Check(window.Calls.Count==total && message.State==UiText.Get("InsertionStateReceiverConfirmed") && !message.CanRedeliverInsertion,"Receipt transition duplicated the message or retained retry controls.");
     }
 
     private static FrameworkElement Layout(Window window, double width = 1180)

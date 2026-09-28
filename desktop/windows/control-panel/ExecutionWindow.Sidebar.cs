@@ -181,7 +181,7 @@ public partial class ExecutionWindow
     private static Dictionary<string, List<ExecutionObject>> ParseSidebarRows(JsonElement page)
     {
         if (page.ValueKind != JsonValueKind.Object || page.Field("groups").ValueKind != JsonValueKind.Array)
-            throw new JsonException("项目列表响应缺少 groups。");
+            throw new JsonException(UiText.Get("SidebarGroupsMissing"));
         var parsed = new Dictionary<string, List<ExecutionObject>>(StringComparer.Ordinal);
         var ids = new HashSet<string>(StringComparer.Ordinal);
         foreach (var group in page.Array("groups"))
@@ -189,13 +189,13 @@ public partial class ExecutionWindow
             var id = group.Text("workspace_id");
             if (id.Length == 0 || parsed.ContainsKey(id) || group.Field("conversations").ValueKind != JsonValueKind.Array ||
                 group.Number("history_limit") is < 0 or > int.MaxValue)
-                throw new JsonException("项目分页响应无效，原列表已保留。");
+                throw new JsonException(UiText.Get("SidebarPageInvalid"));
             var rows = new List<ExecutionObject>();
             foreach (var raw in group.Array("conversations"))
             {
                 var row = ExecutionObject.From(raw, "conversation");
                 if (row.Id.Length == 0 || row.Id.StartsWith("footer:", StringComparison.Ordinal) || !ids.Add(row.Id))
-                    throw new JsonException("对话标识缺失或重复，原列表已保留。");
+                    throw new JsonException(UiText.Get("SidebarIdentityInvalid"));
                 rows.Add(row);
             }
             parsed.Add(id, rows);

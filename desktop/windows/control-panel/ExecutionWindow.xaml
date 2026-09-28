@@ -48,7 +48,7 @@
         </Grid>
       </DataTemplate>
       <DataTemplate x:Key="InsertionRowTemplate">
-        <Grid Margin="14,5" ToolTip="{Binding InsertionHint}" AutomationProperties.Name="用户补充消息">
+        <Grid Margin="14,5" ToolTip="{Binding InsertionHint}" AutomationProperties.Name="{local:Loc InsertionAccessibleName}">
           <Grid.RowDefinitions><RowDefinition Height="24"/><RowDefinition Height="*"/></Grid.RowDefinitions>
           <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
           <DockPanel Grid.Row="0" Margin="0,0,10,0">
@@ -56,7 +56,7 @@
             <TextBlock DockPanel.Dock="Right" Text="{Binding When}" Style="{StaticResource MutedText}" Margin="12,0,0,0" VerticalAlignment="Center"/>
             <TextBlock Text="{Binding State}" Style="{StaticResource MutedText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
           </DockPanel>
-          <Button Grid.Column="1" Content="重投补充" Click="RetryInsertionRow_Click" FontSize="12" Padding="6,1" MinHeight="24" ToolTip="仅在下一次新调用重投这条补充，不重新执行原工具" Visibility="{Binding CanRedeliverInsertion, Converter={StaticResource BoolVisibility}}"/>
+          <Button Grid.Column="1" Content="{local:Loc InsertionRetryButton}" Click="RetryInsertionRow_Click" FontSize="12" Padding="6,1" MinHeight="24" ToolTip="{local:Loc InsertionRetryTooltip}" Visibility="{Binding CanRedeliverInsertion, Converter={StaticResource BoolVisibility}}"/>
           <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding InsertionPreview}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
         </Grid>
       </DataTemplate>
@@ -71,8 +71,8 @@
         <Grid DockPanel.Dock="Top" Margin="4,0,0,12">
 		  <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="30"/><ColumnDefinition Width="30"/></Grid.ColumnDefinitions>
           <Grid>
-            <TextBox x:Name="SearchBox" TextChanged="Search_Changed" ToolTip="{local:Loc ExecutionSearchConversationHelp}" AutomationProperties.Name="搜索对话" Background="Transparent"/>
-            <TextBlock Text="搜索对话" Foreground="{DynamicResource SecondaryText}" Margin="9,0" VerticalAlignment="Center" IsHitTestVisible="False">
+            <TextBox x:Name="SearchBox" TextChanged="Search_Changed" ToolTip="{local:Loc ExecutionSearchConversationHelp}" AutomationProperties.Name="{local:Loc ExecutionSearchConversations}" Background="Transparent"/>
+            <TextBlock Text="{local:Loc ExecutionSearchConversations}" Foreground="{DynamicResource SecondaryText}" Margin="9,0" VerticalAlignment="Center" IsHitTestVisible="False">
               <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Text, ElementName=SearchBox}" Value=""><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style>
             </TextBlock>
           </Grid>

@@ -3161,4 +3161,109 @@ Original description: </value>
   <data name="ExecutionChanged" xml:space="preserve">
     <value>Changes</value>
   </data>
+  <data name="InsertionStatePending" xml:space="preserve"><value>Waiting for the next tool call</value></data>
+  <data name="InsertionStateReserved" xml:space="preserve"><value>Claimed by the next call</value></data>
+  <data name="InsertionStateInner" xml:space="preserve"><value>Added to the inner response; awaiting forwarding</value></data>
+  <data name="InsertionStateForwarded" xml:space="preserve"><value>Forwarded; awaiting context confirmation</value></data>
+  <data name="InsertionStateContextConfirmed" xml:space="preserve"><value>Receipt in model context confirmed</value></data>
+  <data name="InsertionStateReceiverConfirmed" xml:space="preserve"><value>Receiver confirmed receipt</value></data>
+  <data name="InsertionStateLegacyAttached" xml:space="preserve"><value>Attached to a historical inner response; receipt unconfirmed</value></data>
+  <data name="InsertionStateUnknown" xml:space="preserve"><value>Receipt unconfirmed</value></data>
+  <data name="InsertionStateTargetChanged" xml:space="preserve"><value>Paused: target task or workspace changed</value></data>
+  <data name="InsertionStateExpired" xml:space="preserve"><value>Expired before being claimed</value></data>
+  <data name="InsertionStateCancelled" xml:space="preserve"><value>Further delivery stopped</value></data>
+  <data name="InsertionStateNotRecorded" xml:space="preserve"><value>Delivery status not recorded</value></data>
+  <data name="InsertionReasonLegacy" xml:space="preserve"><value>The old version recorded only an inner attachment, not a receipt. Historical messages are not automatically resent.</value></data>
+  <data name="InsertionReasonExpired" xml:space="preserve"><value>No confirmation arrived before expiry; redelivery has stopped. Send a new message to continue.</value></data>
+  <data name="InsertionReasonNoHostReceipt" xml:space="preserve"><value>The host has not declared end-to-end receipt support. New calls may redeliver this supplement within its expiry and attempt limits.</value></data>
+  <data name="InsertionReasonAwaitHost" xml:space="preserve"><value>Waiting for host forwarding and context-commit receipts.</value></data>
+  <data name="InsertionReasonAwaitContext" xml:space="preserve"><value>Forwarded by the outer layer; entry into model context is not yet confirmed.</value></data>
+  <data name="InsertionReasonRestarted" xml:space="preserve"><value>The service restarted before confirmation. New calls may redeliver within the remaining validity period.</value></data>
+  <data name="InsertionReasonInnerUncommitted" xml:space="preserve"><value>The inner response was not confirmed committed; delivery remains unconfirmed.</value></data>
+  <data name="InsertionReasonProjectionFailed" xml:space="preserve"><value>Outer result projection failed; delivery is unconfirmed.</value></data>
+  <data name="InsertionReasonContextFailed" xml:space="preserve"><value>Outer context commit failed; receipt is not confirmed.</value></data>
+  <data name="InsertionRetryRequested" xml:space="preserve"><value>
+Redelivery requested with the next new call.</value></data>
+  <data name="InsertionMessagePrefix" xml:space="preserve"><value>
+Message: </value></data>
+  <data name="InsertionSentPrefix" xml:space="preserve"><value>
+Sent: </value></data>
+  <data name="InsertionInnerCallPrefix" xml:space="preserve"><value>
+Inner call: </value></data>
+  <data name="InsertionOuterCallPrefix" xml:space="preserve"><value>
+Outer call: </value></data>
+  <data name="InsertionConfirmedPrefix" xml:space="preserve"><value>
+Confirmed: </value></data>
+  <data name="InsertionAttemptCount" xml:space="preserve"><value>
+Attempted {0} times. Only this supplement is redelivered; the original tool is not rerun.</value></data>
+  <data name="InsertionView" xml:space="preserve"><value>View supplement</value></data>
+  <data name="InsertionCopy" xml:space="preserve"><value>Copy supplement</value></data>
+  <data name="InsertionSafeRetry" xml:space="preserve"><value>Redeliver supplement safely</value></data>
+  <data name="InsertionStop" xml:space="preserve"><value>Stop further delivery</value></data>
+  <data name="ExecutionActionCreateTask" xml:space="preserve"><value>Create task</value></data>
+  <data name="ExecutionActionResumeTask" xml:space="preserve"><value>Resume task</value></data>
+  <data name="ExecutionActionCheckpoint" xml:space="preserve"><value>Update task progress</value></data>
+  <data name="ExecutionActionCompleteTask" xml:space="preserve"><value>Complete task record</value></data>
+  <data name="ExecutionActionReadTask" xml:space="preserve"><value>View task</value></data>
+  <data name="ExecutionActionCreateFile" xml:space="preserve"><value>Create file</value></data>
+  <data name="ExecutionActionDeleteFile" xml:space="preserve"><value>Delete file</value></data>
+  <data name="ExecutionActionMoveFile" xml:space="preserve"><value>Move file</value></data>
+  <data name="ExecutionActionContext" xml:space="preserve"><value>Load context</value></data>
+  <data name="ExecutionActionCommand" xml:space="preserve"><value>Run command</value></data>
+  <data name="ExecutionActionSession" xml:space="preserve"><value>Manage command session</value></data>
+  <data name="ExecutionActionWorkspace" xml:space="preserve"><value>Manage workspace</value></data>
+  <data name="ExecutionActionDevice" xml:space="preserve"><value>Manage device</value></data>
+  <data name="ExecutionActionPublish" xml:space="preserve"><value>Publish file</value></data>
+  <data name="ExecutionActionFindTool" xml:space="preserve"><value>Search extension tools</value></data>
+  <data name="ExecutionActionInspectTool" xml:space="preserve"><value>Inspect extension tool</value></data>
+  <data name="ExecutionActionExternal" xml:space="preserve"><value>Call extension tool</value></data>
+  <data name="ExecutionActionPlugin" xml:space="preserve"><value>Load plugin</value></data>
+  <data name="ExecutionActionReceipt" xml:space="preserve"><value>Acknowledge supplement</value></data>
+  <data name="ExecutionActionTool" xml:space="preserve"><value>Run tool</value></data>
+  <data name="PermissionProfileEdit" xml:space="preserve"><value>Edit the three permission layers</value></data>
+  <data name="PermissionProfileInherit" xml:space="preserve"><value>Inherit the global three-layer settings</value></data>
+  <data name="PermissionFilesystemLabel" xml:space="preserve"><value>Filesystem</value></data>
+  <data name="PermissionFilesystemDeny" xml:space="preserve"><value>deny · No file access</value></data>
+  <data name="PermissionFilesystemRead" xml:space="preserve"><value>read · Read only</value></data>
+  <data name="PermissionFilesystemWrite" xml:space="preserve"><value>write · Read and write</value></data>
+  <data name="PermissionNetworkLabel" xml:space="preserve"><value>Network</value></data>
+  <data name="PermissionNetworkAllow" xml:space="preserve"><value>allow · Allow network tools</value></data>
+  <data name="PermissionNetworkDeny" xml:space="preserve"><value>deny · Reject network and unconstrained tools</value></data>
+  <data name="PermissionBoundaryLabel" xml:space="preserve"><value>Sandbox boundary · Admission boundary</value></data>
+  <data name="PermissionBoundaryNone" xml:space="preserve"><value>none · No additional workspace boundary</value></data>
+  <data name="PermissionBoundaryWorkspace" xml:space="preserve"><value>workspace · Fixed workspace targets only</value></data>
+  <data name="PermissionBoundaryNotice" xml:space="preserve"><value>This is a tool admission boundary, not an operating-system sandbox. Restricted profiles reject opaque commands, third-party MCP and WSL; they do not attempt elevated execution.</value></data>
+  <data name="PermissionApprovalLabel" xml:space="preserve"><value>Approval Policy</value></data>
+  <data name="PermissionApprovalRequest" xml:space="preserve"><value>on-request · Request approval when needed</value></data>
+  <data name="PermissionApprovalNever" xml:space="preserve"><value>never · Reject operations requiring approval</value></data>
+  <data name="PermissionApprovalGranular" xml:space="preserve"><value>granular · Decide approval eligibility by category</value></data>
+  <data name="PermissionCategoryFiles" xml:space="preserve"><value>File writes</value></data>
+  <data name="PermissionCategoryCommands" xml:space="preserve"><value>Commands and process control</value></data>
+  <data name="PermissionCategoryNetwork" xml:space="preserve"><value>Network</value></data>
+  <data name="PermissionCategoryMcp" xml:space="preserve"><value>Third-party MCP</value></data>
+  <data name="PermissionCategoryManagement" xml:space="preserve"><value>Management</value></data>
+  <data name="PermissionCategoryOther" xml:space="preserve"><value>Other operations</value></data>
+  <data name="PermissionApprovalPrefix" xml:space="preserve"><value>Allow approval requests: </value></data>
+  <data name="PermissionReviewerLabel" xml:space="preserve"><value>Approval Reviewer</value></data>
+  <data name="PermissionReviewerUser" xml:space="preserve"><value>user · User review</value></data>
+  <data name="PermissionReviewerAuto" xml:space="preserve"><value>auto_review · Independent reviewer</value></data>
+  <data name="PermissionReviewerNotice" xml:space="preserve"><value>auto_review requires an administrator-configured auto-review.json and a trusted independent reviewer. Missing configuration, timeouts, invalid results and denials prevent execution. It cannot override the profile or grant permanent access.</value></data>
+  <data name="SidebarGroupsMissing" xml:space="preserve"><value>The project-list response has no groups.</value></data>
+  <data name="SidebarPageInvalid" xml:space="preserve"><value>The project page is invalid; the previous list was retained.</value></data>
+  <data name="SidebarIdentityInvalid" xml:space="preserve"><value>Conversation identifiers are missing or duplicated; the previous list was retained.</value></data>
+  <data name="ExecutionInvalidUnicode" xml:space="preserve"><value>Output contains malformed Unicode.</value></data>
+  <data name="SidebarHistoryOverflow" xml:space="preserve"><value>Conversation history exceeds the pagination range.</value></data>
+  <data name="InsertionAccessibleName" xml:space="preserve"><value>User supplement message</value></data>
+  <data name="InsertionRetryButton" xml:space="preserve"><value>Redeliver</value></data>
+  <data name="InsertionRetryTooltip" xml:space="preserve"><value>Redeliver only this supplement with the next new call; do not rerun the original tool</value></data>
+  <data name="ExecutionSearchConversations" xml:space="preserve"><value>Search conversations</value></data>
+  <data name="ExecutionWorkspaceGuide" xml:space="preserve"><value>Conversations are grouped by workspace on the left. Tasks belong to the current conversation. Selecting tasks or browsing branches does not change the running context.
+
+Each execution record shows its status, action, duration and time. Select a record to inspect its command, output, source and technical details below. Use the context menu for bulk actions.
+
+Terminating a conversation first closes its server-side admission gate, then cancels pending approvals and running calls. Closing this window stops observation, not execution.
+
+Old tasks without steps show that progress was not recorded. Unattributed calls retain their original IDs and can be exported, isolated, archived or moved to trash. Permanent deletion does not delete project source code.
+
+Shortcuts: Ctrl+F searches conversations, F5 refreshes, Esc closes details, and Shift+F10 opens the selected item menu.</value></data>
 </root>

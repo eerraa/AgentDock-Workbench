@@ -229,6 +229,14 @@ Windows Go 수치는 실제 다운로드한 `backend-validation.jsonl`에서 집
 
 실패 후보 artifact `unverified-windows-failure-36362689792`를 외부 `ci-36362689792-candidate`에 내려받아 기존 검증기로 버전·source SHA·실제 bytes·rg 15.2.0·라이선스·Core Skill 3개를 확인했다. Setup SHA-256은 `8e13a4f1188d35d89b79423d49eeda88e57b511591c5c77cfd0dc1b1c19af4a9`, ZIP은 `85e2918be6100e48aa2d639b425160983336e324a7d80887cd7f1afd66d2fc38`이다. 후보 채널은 `candidate-not-released`, AgentDock 서명 상태는 unsigned다. 이 재다운로드는 배포물 바이트 검증이지 설치 성공이나 정식 Release 게시가 아니다. 운영 PC의 Setup·설치·재시작·네트워크 변경은 수행하지 않았다. 최신 제품 소스는 e9b2c6d이며 뒤따르는 기록 커밋은 제품 바이너리를 새로 빌드한 것으로 해석하지 않는다.
 
+## 4.6 완성 요청 — 남은 표시와 Setup 수신 경계
+
+남은 권한 설정·추가 메시지 상태·검색·기본 동작 이름 등 90개 문구를 기존 UiText에 추가했다. 각 언어 리소스는 1,118개이며, 출력·입력·진단 원문을 다시 쓰지 않는다. 원본 PrivilegeTransition와 TaskAdmin의 기술 진단은 원문으로 보존했다. 실제 WPF 회귀의 언어를 한국어로 선택하여 기존 60개 표본에서 한국어 화면을 확인하며 새 배율 행렬이나 시험 실행기를 추가하지 않았다. 순수 정책 회귀는 기존 문구의 의미를 검증하도록 중국어를 명시한다.
+
+Setup 공유 위반은 기존 broker가 result.json 읽기의 모든 비-부재 오류를 즉시 실패로 처리하는 경계에서 발생했다. ERROR_SHARING_VIOLATION과 ERROR_LOCK_VIOLATION만 기존 50ms polling과 기존 전체 기한 안에서 대기하도록 보완했다. 새 timeout·재시작·성공 추정은 없다. 실제 임시 파일의 독점 handle로 읽기 실패를 재현하고 handle 해제 후 원래 결과가 읽히는지 확인했다. 접근 거부·다른 오류는 즉시 반환하며 기존 nonce·JSON·자식 종료 검사는 유지한다. 실제 점유 프로세스가 무엇이었는지는 확정하지 않는다.
+
+집중 Setup 회귀 12 PASS / 1 helper SKIP / 0 FAIL, 기존 순수 정책 890 assertions와 실제 3개 언어 리소스·원문 회귀 6,786 assertions가 통과했다. 한국어 관문은 후보 CI에서도 기존 검사 결과를 확인하도록 하여 게시 직전에만 누락을 발견하는 불필요한 재빌드를 방지한다. 변경 소스의 최종 설치·업그레이드·게시 성공은 CI 결과로 별도 확정한다. 기존 failed CI와 차단 기록은 보존한다. 이번 native 진단 표시/리소스 조회 요청도 실행 전에 차단되어 같은 조회를 재전송하지 않았으며, 이미 읽은 화면 소스의 독립적인 표시 수정과 Setup 결함 수정만 수행했다.
+
 ## 5. 미완료 및 명시적 차단
 
 직전 재개에서 두 개의 읽기 요청이 실행 전에 차단됐다. 원문은 다음과 같다.

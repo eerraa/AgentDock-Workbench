@@ -279,7 +279,6 @@ jobs:
 
       - name: Require complete Korean product validation before publication
         id: korean
-        if: steps.metadata.outputs.publish == 'true'
         run: |
           $ErrorActionPreference = 'Stop'
           $required = @('TestMCPAppKoreanDictionaryAndRendererContract','TestAuthorizePageLocalesPreserveEscapingAndConsent','TestKoreanAuthorizeStillRequiresPasswordAndRegisteredRedirect','TestLocalizedTextPersistsRedactsAndClearsOnNewSummary','TestOwnedExecutionDescriptionsPreserveUnrecognizedAndUserText')

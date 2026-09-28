@@ -173,7 +173,7 @@ func runSetupLaunchBroker(path string, request SetupLaunchRequest) error {
 			_, err = io.WriteString(os.Stdout, stdout)
 			return err
 		}
-		if !errors.Is(err, os.ErrNotExist) {
+		if !setupReceiptPending(err) {
 			return err
 		}
 		select {
@@ -182,6 +182,13 @@ func runSetupLaunchBroker(path string, request SetupLaunchRequest) error {
 		case <-ticker.C:
 		}
 	}
+}
+
+// The worker publishes atomically. Windows can briefly deny the polling reader
+// during replacement; keep waiting within the existing launch deadline, without
+// treating permission errors or an invalid receipt as successful completion.
+func setupReceiptPending(err error) bool {
+	return errors.Is(err, os.ErrNotExist) || errors.Is(err, windows.ERROR_SHARING_VIOLATION) || errors.Is(err, windows.ERROR_LOCK_VIOLATION)
 }
 
 func setupLogTail(path string, limit int64) string {

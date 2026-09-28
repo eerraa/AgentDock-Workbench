@@ -3161,4 +3161,109 @@
   <data name="ExecutionChanged" xml:space="preserve">
     <value>修改</value>
   </data>
+  <data name="InsertionStatePending" xml:space="preserve"><value>等待下一次工具调用</value></data>
+  <data name="InsertionStateReserved" xml:space="preserve"><value>已由下一次调用领取</value></data>
+  <data name="InsertionStateInner" xml:space="preserve"><value>已写入内层响应，待转发</value></data>
+  <data name="InsertionStateForwarded" xml:space="preserve"><value>已转发，待上下文确认</value></data>
+  <data name="InsertionStateContextConfirmed" xml:space="preserve"><value>模型上下文已确认接收</value></data>
+  <data name="InsertionStateReceiverConfirmed" xml:space="preserve"><value>接收端已确认收到</value></data>
+  <data name="InsertionStateLegacyAttached" xml:space="preserve"><value>历史内层响应已附加，接收未确认</value></data>
+  <data name="InsertionStateUnknown" xml:space="preserve"><value>未确认收到</value></data>
+  <data name="InsertionStateTargetChanged" xml:space="preserve"><value>已暂停：目标任务或工作区变化</value></data>
+  <data name="InsertionStateExpired" xml:space="preserve"><value>未领取，已过期</value></data>
+  <data name="InsertionStateCancelled" xml:space="preserve"><value>已停止投递</value></data>
+  <data name="InsertionStateNotRecorded" xml:space="preserve"><value>投递状态未记录</value></data>
+  <data name="InsertionReasonLegacy" xml:space="preserve"><value>旧版本只记录了内层附加，没有接收回执；不自动重发历史消息。</value></data>
+  <data name="InsertionReasonExpired" xml:space="preserve"><value>有效期内没有收到确认，停止重投。需要继续使用时请重新发送。</value></data>
+  <data name="InsertionReasonNoHostReceipt" xml:space="preserve"><value>当前宿主未声明端到端确认能力；后续新调用会在有效期和次数范围内重投补充。</value></data>
+  <data name="InsertionReasonAwaitHost" xml:space="preserve"><value>等待宿主转发与上下文提交回执。</value></data>
+  <data name="InsertionReasonAwaitContext" xml:space="preserve"><value>外层已转发，但尚未确认进入模型上下文。</value></data>
+  <data name="InsertionReasonRestarted" xml:space="preserve"><value>服务重启前未获得确认，后续新调用可在剩余有效期内重投。</value></data>
+  <data name="InsertionReasonInnerUncommitted" xml:space="preserve"><value>内层响应没有确认提交，保留未送达状态。</value></data>
+  <data name="InsertionReasonProjectionFailed" xml:space="preserve"><value>外层结果投影失败，没有确认送达。</value></data>
+  <data name="InsertionReasonContextFailed" xml:space="preserve"><value>外层上下文提交失败，尚未确认接收。</value></data>
+  <data name="InsertionRetryRequested" xml:space="preserve"><value>
+已请求随下一次新调用重投。</value></data>
+  <data name="InsertionMessagePrefix" xml:space="preserve"><value>
+消息：</value></data>
+  <data name="InsertionSentPrefix" xml:space="preserve"><value>
+发送：</value></data>
+  <data name="InsertionInnerCallPrefix" xml:space="preserve"><value>
+内层调用：</value></data>
+  <data name="InsertionOuterCallPrefix" xml:space="preserve"><value>
+外层调用：</value></data>
+  <data name="InsertionConfirmedPrefix" xml:space="preserve"><value>
+确认：</value></data>
+  <data name="InsertionAttemptCount" xml:space="preserve"><value>
+已尝试 {0} 次；只重投本条补充，不重复原工具。</value></data>
+  <data name="InsertionView" xml:space="preserve"><value>查看补充</value></data>
+  <data name="InsertionCopy" xml:space="preserve"><value>复制补充</value></data>
+  <data name="InsertionSafeRetry" xml:space="preserve"><value>安全重投补充</value></data>
+  <data name="InsertionStop" xml:space="preserve"><value>停止后续投递</value></data>
+  <data name="ExecutionActionCreateTask" xml:space="preserve"><value>创建任务</value></data>
+  <data name="ExecutionActionResumeTask" xml:space="preserve"><value>恢复任务</value></data>
+  <data name="ExecutionActionCheckpoint" xml:space="preserve"><value>更新任务进度</value></data>
+  <data name="ExecutionActionCompleteTask" xml:space="preserve"><value>完成任务记录</value></data>
+  <data name="ExecutionActionReadTask" xml:space="preserve"><value>查看任务</value></data>
+  <data name="ExecutionActionCreateFile" xml:space="preserve"><value>创建文件</value></data>
+  <data name="ExecutionActionDeleteFile" xml:space="preserve"><value>删除文件</value></data>
+  <data name="ExecutionActionMoveFile" xml:space="preserve"><value>移动文件</value></data>
+  <data name="ExecutionActionContext" xml:space="preserve"><value>加载上下文</value></data>
+  <data name="ExecutionActionCommand" xml:space="preserve"><value>执行命令</value></data>
+  <data name="ExecutionActionSession" xml:space="preserve"><value>操作命令会话</value></data>
+  <data name="ExecutionActionWorkspace" xml:space="preserve"><value>管理工作区</value></data>
+  <data name="ExecutionActionDevice" xml:space="preserve"><value>管理设备</value></data>
+  <data name="ExecutionActionPublish" xml:space="preserve"><value>发布文件</value></data>
+  <data name="ExecutionActionFindTool" xml:space="preserve"><value>搜索扩展工具</value></data>
+  <data name="ExecutionActionInspectTool" xml:space="preserve"><value>查看扩展工具说明</value></data>
+  <data name="ExecutionActionExternal" xml:space="preserve"><value>调用扩展工具</value></data>
+  <data name="ExecutionActionPlugin" xml:space="preserve"><value>展开插件</value></data>
+  <data name="ExecutionActionReceipt" xml:space="preserve"><value>确认收到补充</value></data>
+  <data name="ExecutionActionTool" xml:space="preserve"><value>执行工具</value></data>
+  <data name="PermissionProfileEdit" xml:space="preserve"><value>修改三层权限设置</value></data>
+  <data name="PermissionProfileInherit" xml:space="preserve"><value>继承全局三层设置</value></data>
+  <data name="PermissionFilesystemLabel" xml:space="preserve"><value>Filesystem · 文件系统</value></data>
+  <data name="PermissionFilesystemDeny" xml:space="preserve"><value>deny · 禁止文件读写</value></data>
+  <data name="PermissionFilesystemRead" xml:space="preserve"><value>read · 只允许读取</value></data>
+  <data name="PermissionFilesystemWrite" xml:space="preserve"><value>write · 允许读写</value></data>
+  <data name="PermissionNetworkLabel" xml:space="preserve"><value>Network · 网络</value></data>
+  <data name="PermissionNetworkAllow" xml:space="preserve"><value>allow · 允许联网工具</value></data>
+  <data name="PermissionNetworkDeny" xml:space="preserve"><value>deny · 拒绝联网及无法约束的工具</value></data>
+  <data name="PermissionBoundaryLabel" xml:space="preserve"><value>Sandbox boundary · 准入边界</value></data>
+  <data name="PermissionBoundaryNone" xml:space="preserve"><value>none · 无额外工作区边界</value></data>
+  <data name="PermissionBoundaryWorkspace" xml:space="preserve"><value>workspace · 仅固定工作区目标</value></data>
+  <data name="PermissionBoundaryNotice" xml:space="preserve"><value>这是工具准入边界，不是操作系统沙箱。受限配置下，不透明命令、第三方 MCP 和 WSL 会被拒绝，不尝试提升权限执行。</value></data>
+  <data name="PermissionApprovalLabel" xml:space="preserve"><value>Approval Policy · 审批策略</value></data>
+  <data name="PermissionApprovalRequest" xml:space="preserve"><value>on-request · 需要确认时申请审批</value></data>
+  <data name="PermissionApprovalNever" xml:space="preserve"><value>never · 不受理审批，需要确认的操作直接拒绝</value></data>
+  <data name="PermissionApprovalGranular" xml:space="preserve"><value>granular · 按类别决定是否受理审批</value></data>
+  <data name="PermissionCategoryFiles" xml:space="preserve"><value>文件写入</value></data>
+  <data name="PermissionCategoryCommands" xml:space="preserve"><value>命令与进程控制</value></data>
+  <data name="PermissionCategoryNetwork" xml:space="preserve"><value>网络</value></data>
+  <data name="PermissionCategoryMcp" xml:space="preserve"><value>第三方 MCP</value></data>
+  <data name="PermissionCategoryManagement" xml:space="preserve"><value>管理操作</value></data>
+  <data name="PermissionCategoryOther" xml:space="preserve"><value>其他操作</value></data>
+  <data name="PermissionApprovalPrefix" xml:space="preserve"><value>允许发起审批：</value></data>
+  <data name="PermissionReviewerLabel" xml:space="preserve"><value>Approval Reviewer · 审批主体</value></data>
+  <data name="PermissionReviewerUser" xml:space="preserve"><value>user · 用户审批</value></data>
+  <data name="PermissionReviewerAuto" xml:space="preserve"><value>auto_review · 独立审查器</value></data>
+  <data name="PermissionReviewerNotice" xml:space="preserve"><value>auto_review 需要管理员配置 auto-review.json 与可信独立审查程序；未配置、超时、无效返回或拒绝均不执行。它不能越过 Profile 或创建永久授权。</value></data>
+  <data name="SidebarGroupsMissing" xml:space="preserve"><value>项目列表响应缺少 groups。</value></data>
+  <data name="SidebarPageInvalid" xml:space="preserve"><value>项目分页响应无效，原列表已保留。</value></data>
+  <data name="SidebarIdentityInvalid" xml:space="preserve"><value>对话标识缺失或重复，原列表已保留。</value></data>
+  <data name="ExecutionInvalidUnicode" xml:space="preserve"><value>输出包含损坏的 Unicode 字符。</value></data>
+  <data name="SidebarHistoryOverflow" xml:space="preserve"><value>历史对话数量超过分页范围。</value></data>
+  <data name="InsertionAccessibleName" xml:space="preserve"><value>用户补充消息</value></data>
+  <data name="InsertionRetryButton" xml:space="preserve"><value>重投补充</value></data>
+  <data name="InsertionRetryTooltip" xml:space="preserve"><value>仅在下一次新调用重投这条补充，不重新执行原工具</value></data>
+  <data name="ExecutionSearchConversations" xml:space="preserve"><value>搜索对话</value></data>
+  <data name="ExecutionWorkspaceGuide" xml:space="preserve"><value>左侧按工作区组织对话。任务位于当前对话内，任务选择和分支浏览不会改变正在执行的上下文。
+
+单条执行记录显示状态、动作、耗时和时间；点击记录后在下方查看命令、输出、来源和技术信息。右键或使用菜单可批量管理记录。
+
+终止对话会先写入服务端门禁，再取消待审批和运行调用。关闭本窗口只退出观察，不会停止执行。
+
+旧任务缺少步骤时显示“进度未记录”。未归属调用保留原始调用 ID，可以导出、隔离、归档和移入回收站。永久删除不会删除项目源码。
+
+快捷键：Ctrl+F 搜索对话，F5 刷新，Esc 关闭详情，Shift+F10 打开所选条目菜单。</value></data>
 </root>

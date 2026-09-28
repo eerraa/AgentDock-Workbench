@@ -40,7 +40,7 @@ public sealed class ExecutionPayloadView(string kind) : INotifyPropertyChanged
             if (TotalBytes == 0) return State == "streaming" ? UiText.Get("ExecutionPayloadZeroStreaming") : UiText.Get("ExecutionPayloadZero");
             if (!_loaded) return State == "partial" ? UiText.Format("ExecutionPayloadPreviewPartial", TotalBytes) : UiText.Format("ExecutionPayloadPreviewSaved", TotalBytes);
             if (State == "complete" && Offset == 0 && NextOffset == TotalBytes && !HasMore) return UiText.Format("ExecutionPayloadAllSaved", TotalBytes);
-            var range = NextOffset > Offset ? UiText.Format("ExecutionPayloadByteRange", Offset + 1, NextOffset) : "当前页无内容";
+            var range = NextOffset > Offset ? UiText.Format("ExecutionPayloadByteRange", Offset + 1, NextOffset) : UiText.Get("ExecutionPayloadEmptyPage");
             return State switch
             {
                 "streaming" => UiText.Format("ExecutionPayloadRangeStreaming", range, TotalBytes),
