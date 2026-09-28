@@ -12,7 +12,7 @@
 | 버전 선언 위치 | `internal/buildinfo/buildinfo.go`, `desktop/windows/control-panel/AgentDock.ControlPanel.csproj`. `go run ./tools/release version`과 `verify-version v<ver>`로 확인 |
 | 업데이트 | Setup으로만 한다. 트레이·창의 업데이트 항목은 fork Releases 페이지 안내만 하고, `agentdock update`는 `--local-archive`만 허용한다 |
 | 배포 대상 | Windows x64 Setup만. arm64·macOS·Linux·Android 코드는 업스트림 그대로 두고 빌드하거나 게시하지 않는다 |
-| 작업 방식 | 메인 워크트리 하나에서 `git switch -c <fix|feat|docs>/<주제>` → 검증 → main에 ff 또는 merge → origin에만 push. force push 금지, 추가 worktree와 증거 archive 금지 |
+| 작업 방식 | 메인 워크트리 하나에서 `git switch -c fix/<주제>`(또는 `feat/`, `docs/`) → 검증 → main에 ff 또는 merge → origin에만 push. force push 금지, 추가 worktree와 증거 archive 금지 |
 
 ## 1. fork 변경 지도
 
