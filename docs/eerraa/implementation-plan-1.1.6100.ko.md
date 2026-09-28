@@ -290,9 +290,24 @@ v1.1.8에서 rg가 조용히 빠지는 경계 두 곳을 찾아 기존 소유자
 
 fork는 Setup으로만 업데이트한다. 트레이와 창의 업데이트 항목은 온라인 확인·다운로드 없이 fork Releases 페이지 안내만 한다. CLI `agentdock update`(인자 없음·`--check`·`--progress-json`)는 네트워크와 generation 접근 전에 거부하고 유지보수용 `--local-archive`만 남긴다. `internal/selfupdate` 패키지와 fork 업데이트 주소는 유지한다. `desktop_windows_test.go`의 업데이트 흐름 계약은 이 정책(온라인 업데이트 호출 금지, Releases 안내)으로 바꿨다. 시작 시 데스크톱 복구(Core·Tray 버전 불일치, 구형 flat 이관)는 여전히 Release ZIP을 찾는다. Setup이 Core와 Tray를 함께 설치하는 현재 배포에서는 발생 조건이 없다고 판단해 코드를 바꾸지 않았다. 다음 게시에서 Release 자산을 Setup과 SHA-256으로 줄이는 게시 스크립트 변경은 릴리스 요청 때 처리한다.
 
-로컬 검증: gofmt·`go vet ./...` 통과. 전체 Go 시험은 시험이 있는 57개 패키지 중 56개가 통과했고, 실패는 아래 `internal/taskstate` 규모 시험 1개다. rg 실제 번들 통합(`bundledrg`·`selfupdate`·`installer`·`tool/file`) 통과. 제어판·순수 정책·레이아웃 시험 프로젝트 빌드 경고·오류 0, 순수 정책 920 assertions, 한국어 표시 검수 6,873 assertions, installer 정적 계약(작업 소유권 5 cases 포함) 통과.
+로컬 검증: gofmt·`go vet ./...` 통과. 전체 Go 시험은 시험이 있는 57개 패키지 중 56개가 통과했고, 실패는 아래 `internal/taskstate` 규모 시험 1개다. rg 실제 번들 통합(`bundledrg`·`selfupdate`·`installer`·`tool/file`) 통과. 제어판·순수 정책·레이아웃 시험 프로젝트 빌드 경고·오류 0, 순수 정책 920 assertions, 한국어 표시 검수 6,876 assertions(검토 후), installer 정적 계약(작업 소유권 5 cases 포함) 통과.
 
 환경 관측: 이 세션 환경의 `AGENTDOCK_INSTRUCTIONS_FILE`이 존재하지 않는 경로를 가리켜 `cmd/agentdock`·`internal/config` 시험 6개가 실패했고, 변수를 제외하면 통과한다. `internal/taskstate`의 1000개 첫 페이지 2초 목표는 전체 병렬 실행이나 다른 작업과 동시 실행 중 3.9–6.9초로 실패했다. 같은 조건의 main 사본도 5.2초로 실패했고, 단독 실행은 브랜치 1.65초·main 1.4–1.6초·v1.1.8 1.6–1.7초로 모두 통과했다. 이 PC의 부하에 따른 시간 초과이며 병합 회귀가 아니다.
+
+사용자 요청으로 독립 에이전트 3개가 병합 정합성·제어판 현지화·rg/설치기/업데이트를 적대적으로 검토했다. 병합에서 빠진 fork·업스트림 변경은 없었고 rg는 정상 설치 경로에서 모두 검증된 채 전달됨을 확인했다. 확인된 결함은 모두 재현하거나 코드로 확인한 뒤 고쳤고, 수정 전 코드를 되돌려 넣으면 각 회귀 시험이 실패함을 확인했다.
+
+| 결함 | 수정 |
+|---|---|
+| 1.1.8이 추가한 레이아웃 시험이 한국어 실행에서 `关闭` 버튼을 찾아 항상 실패하고 뒤따르는 권한 시험과 게시 workflow를 막음 | 리소스 값 `ExecutionClose`로 비교. 삽입 상태 단언도 행 자신의 `State` 대신 정확한 상태 문구로 고정 |
+| x64 Setup payload에 rg가 없어도 engine은 legacy 부재로 수용 | `Assert-AgentDockBundledRgPayload`가 추출 직후·새 Core 사용 전에 5개 파일 존재를 요구. 허용 목록과 같은 목록 사용 |
+| fork 주소 검사가 1.1.8의 새 업스트림 주소를 놓침 | 대상 파일에서 업스트림 소유자 주소를 대소문자 무관 전면 거부 |
+| 게시 관문이 1.1.16102 초과만 요구 | workflow와 verifier 모두 1.1.17100 초과를 요구하고 정책 시험에 1.1.17100 거부 추가 |
+| build report가 upstream 1.1.7을 기록 | 1.1.8·`4bd778d`로 바꾸고 AGENTS.md 기준선과 일치하는지 시험 |
+| 창의 Releases 안내가 열린 동안 트레이에서 한 번 더 열 수 있음 | 안내 창 재진입 방지 |
+| 차이 미리보기 잘림 안내가 마지막 줄에 붙음(main부터) | 세 언어 값에 앞 줄바꿈을 넣고 한국어 검수에 언어별 확인 추가 |
+| CLI 도움말과 문서가 거부되는 `agentdock update [--check]`를 안내 | `--local-archive` 사용법만 안내 |
+
+코드를 바꾸지 않은 제약: `--local-archive`와 데스크톱 복구는 실행 중 Core의 rg pin으로 새 payload를 검사하므로 rg pin 변경은 Setup으로만 배포한다. selfupdate의 구형 flat 이관(`PrepareWindowsLegacyGeneration`)은 설치돼 있던 버전의 generation을 만들며 rg를 복사하지 않는다(main부터 동일). fork Setup은 flat 설치를 만들지 않고 Setup의 legacy 경로는 이어서 rg가 있는 새 generation을 게시하므로 코드를 바꾸지 않았다. 시작 시 복구는 Core·Tray 버전이 다를 때만 Core 시작마다 GitHub API를 한 번 조회하며 Setup만 있는 Release에서는 자산을 찾지 못해 변경 없이 끝난다. 게시 acceptance의 역사적 upgrade 기준(`baseline_version=1.1.16102`)과 `docs/releases/v1.1.18100.md`는 릴리스 준비 때 정한다. `release.yml`과 `windows-installer.yml`의 수동 test_tag 게시에는 저장소 조건이 없으나 v1.1.7부터 동일하다.
 
 실행하지 않은 것: WPF 레이아웃 시험은 Actions 전용 가드를 유지해 빌드만 했다. Windows 패키지 빌드·자산 검증, 실제 Setup 설치·반복·repair·제거, 1.1.17100에서 1.1.18100으로의 Setup 업그레이드와 롤백은 격리 runner 또는 VM이 필요하며 미검증이다. 업스트림의 1.1.8 이후 수정(PR #22: 시작 시 ACL 재적용 생략, 설치 스테이징·롤백)은 포함하지 않았다. 재현되는 것만 별도로 채택한다.
 
