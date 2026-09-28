@@ -3,6 +3,7 @@ package scripts
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -27,10 +28,46 @@ func TestWindowsForkDistributionTargets(t *testing.T) {
 					t.Errorf("fork distribution destination missing: %s", marker)
 				}
 			}
-			if strings.Contains(string(data), "github.com/repos/A-m-o-r-F-a-t-i/agentdock/releases") || strings.Contains(string(data), "github.com/A-m-o-r-F-a-t-i/agentdock/releases") {
+			// Upstream renamed its repository; reject every upstream owner address.
+			if strings.Contains(strings.ToLower(string(data)), "a-m-o-r-f-a-t-i/") {
 				t.Error("Windows fork can still resolve an upstream update payload")
 			}
 		})
+	}
+}
+
+// The published build report must name the baseline recorded in AGENTS.md.
+func TestWindowsBuildReportNamesTheSourceBaseline(t *testing.T) {
+	rules, err := os.ReadFile("../../AGENTS.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	match := regexp.MustCompile("The fixed source baseline is[^`]*`([0-9a-f]{40})`").FindSubmatch(rules)
+	if match == nil {
+		t.Fatal("AGENTS.md does not record a fixed source baseline commit")
+	}
+	script, err := os.ReadFile("../../packaging/windows/build-windows-release.ps1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(script), "upstream_commit='"+string(match[1])+"'") {
+		t.Fatalf("build report does not name the AGENTS.md baseline %s", match[1])
+	}
+}
+
+// Setup refuses an x64 payload without the pinned rg component because the
+// installer engine accepts its absence for legacy payloads.
+func TestWindowsSetupRequiresBundledRgAfterExtraction(t *testing.T) {
+	data, err := os.ReadFile("../install/install.ps1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := string(data)
+	extract := strings.Index(source, "Expand-AgentDockReleaseArchive -ArchivePath $archivePath -DestinationPath $extractDir")
+	check := strings.Index(source, "Assert-AgentDockBundledRgPayload -ExtractDir $extractDir -Architecture $architecture")
+	firstUse := strings.Index(source, "& $sourceBinary ")
+	if extract < 0 || check < extract || firstUse < check {
+		t.Fatalf("Setup must check the rg component after extraction and before using the new Core: %d %d %d", extract, check, firstUse)
 	}
 }
 

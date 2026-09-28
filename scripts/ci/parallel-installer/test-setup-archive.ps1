@@ -143,6 +143,17 @@ try {
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $rgDestination 'share\agentdock\bin\extra.exe'))) 'unknown bundled tool was selected'
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $rgDestination 'share\agentdock\bin\rg.exe.bak'))) 'near-match bundled file was selected'
     Assert-True ($rg.selected_entry_count -eq 16) "unexpected selected count with bundled rg: $($rg.selected_entry_count)"
+
+    # Setup must refuse an x64 payload that lost the component instead of
+    # installing a generation without rg; other architectures never carry it.
+    Assert-AgentDockBundledRgPayload -ExtractDir $rgDestination -Architecture 'amd64'
+    Assert-AgentDockBundledRgPayload -ExtractDir $normalDestination -Architecture 'arm64'
+    Remove-Item -LiteralPath (Join-Path $rgDestination 'share\agentdock\bin\UNLICENSE')
+    foreach ($incomplete in @($normalDestination, $rgDestination)) {
+        $caught = $null
+        try { Assert-AgentDockBundledRgPayload -ExtractDir $incomplete -Architecture 'amd64' } catch { $caught = $_ }
+        Assert-True ($null -ne $caught -and $caught.Exception.Message.Contains('bundled ripgrep')) "x64 payload without complete rg was accepted: $incomplete"
+    }
 } finally {
     Remove-Item -LiteralPath $normalRoot -Recurse -Force -ErrorAction SilentlyContinue
 }

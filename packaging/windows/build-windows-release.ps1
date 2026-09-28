@@ -117,7 +117,7 @@ try {
         throw 'source_state_changed: build outputs are not accepted; source changed during packaging.'
     }
     [ordered]@{
-        repository='eerraa/AgentDock-Workbench'; upstream_version='1.1.7'; upstream_commit='b367eaab95202873fb213b8713440bf7822878c4'
+        repository='eerraa/AgentDock-Workbench'; upstream_version='1.1.8'; upstream_commit='4bd778d4077bbe58cfe19e4abb777f660694377b'
         version=$version; channel=$(if($Candidate){'candidate-not-released'}else{'release'}); source_dirty=($sourceChanges.Count -gt 0); changed_paths=$sourceChanges; commit=$commit; build_date=$buildDate; platforms=@($Architectures | ForEach-Object {"windows/$_"})
         agentdock_authenticode=$(if($SignedBuild){'signed'}else{'unsigned'}); cloudflared_authenticode='valid'
         wsl_helpers='Windows feature payload only; no separate Linux release'
