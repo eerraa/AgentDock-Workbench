@@ -45,8 +45,9 @@ invariants, upstream merge checklist, verification commands, local build). Updat
 it with every fork change; keep history in Git, not in documents. The source
 baseline is the Workbench v1.1.8 prerelease tag
 `4bd778d4077bbe58cfe19e4abb777f660694377b`. Keep only pinned rg, Korean
-presentation and reproducer-proven minimal fixes at the existing owners. Do not
-reintroduce composite hosts, Origin pipes, epochs or parallel state systems.
+presentation, the CUA desktop plugin (`plugins/cua-driver`) and
+reproducer-proven minimal fixes at the existing owners. Do not reintroduce
+composite hosts, Origin pipes, epochs or parallel state systems.
 
 This fork is updated only by running a new Setup. The tray/window update entry
 opens the fork Releases page, and `agentdock update` refuses online checks and
