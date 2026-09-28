@@ -221,7 +221,13 @@ Windows Go 수치는 실제 다운로드한 `backend-validation.jsonl`에서 집
 
 과거 기준판은 기본 `script` 채널 대신 기존 설치기가 제공하는 `setup` 채널로 준비하도록 workflow의 인자 한 줄을 수정했다. 구형 소스나 버전 포인터를 조작하지 않았다. 아직 실제 CI의 설치·업그레이드 성공을 가정하지 않는다. 같은 SHA의 WPF 검사를 native acceptance와 build에서 두 번 실행하던 중복도 제거했다. 필수 native acceptance의 원래 검사·스크린샷과 build 의존성은 그대로 유지하며 검증 범위를 줄이지 않는다.
 
-다만 v1.1.7에서 추가된 권한 설정·새 삽입 상태 등의 잔여 화면 문구를 일괄 보완하는 외부 `resume4-complete-ui-strings.py` 작성 요청이 실행 전에 차단됐다. 원문: “요청의 보안 상태를 결정하지 못해 이 도구 요청은 OpenAI에 의해 차단되었습니다.” 파일 부재를 확인했고 같은 작업을 우회 재전송하지 않았다. 따라서 1,028개 리소스 검사 성공을 전체 화면 한글화 완료로 부풀리지 않는다. 현재 후보는 잔여 문구 미완료이며 정식 게시 대상이 아니다. 새 후보 CI와 실제 기준판 업그레이드 결과는 이후 관측으로 별도 확정한다.
+다만 v1.1.7에서 추가된 권한 설정·새 삽입 상태 등의 잔여 화면 문구를 일괄 보완하는 외부 `resume4-complete-ui-strings.py` 작성 요청이 실행 전에 차단됐다. 원문: “요청의 보안 상태를 결정하지 못해 이 도구 요청은 OpenAI에 의해 차단되었습니다.” 파일 부재를 확인했고 같은 작업을 우회 재전송하지 않았다. 따라서 1,028개 리소스 검사 성공을 전체 화면 한글화 완료로 부풀리지 않는다. 현재 후보는 잔여 문구 미완료이며 정식 게시 대상이 아니다.
+
+제품 커밋 `e9b2c6d23068f41ce0efd64230d8f7d6ceb110cc`은 작업 브랜치에 push했다. 이 정확한 SHA의 실제 CI `36362689792`는 Linux 전체/race, Windows 전체 Go·정적 분석·순수 정책, native 복구 22개 시나리오/272 assertions, WPF 60개 표본/27,538 assertions, ZIP·Setup 빌드 및 패키지 검증을 통과했다. 전체 CI 결과는 **failure**다. 첫 Setup 설치 중 native launcher가 `result.json`을 열 때 `The process cannot access the file because it is being used by another process`라는 파일 공유 위반이 발생했다. 역사적 기준판 단계는 실행되지 않았으므로 `-BaselineChannel setup` 수정의 실제 upgrade 효과도 미검증이다. 앞선 58b6f149의 Setup 성공을 이 후보의 성공으로 합산하지 않는다.
+
+공유 위반이 발생한 기존 결과파일 소유자와 보존 PR `782bb9196b5aee5ee42dcd63eb15ee1b65e9a7e2`를 검토하는 조회도 같은 사전 차단 문구로 실행되지 않았다. 점유 프로세스와 구체적인 코드 원인은 확정하지 않았고 미검토 PR을 이식하지 않았다. 실패를 고치지 않은 채 같은 전체 CI를 다시 실행하지도 않았다. 별도의 로컬 Go fixture 정리 요청과 좁은 툴바의 리소스 조회 역시 실행 전에 차단됐으며, 같은 요청을 다른 경로로 재전송하지 않았다. 따라서 로컬 임시 폴더 제거 및 추가 화면 문구 완료를 주장하지 않는다.
+
+실패 후보 artifact `unverified-windows-failure-36362689792`를 외부 `ci-36362689792-candidate`에 내려받아 기존 검증기로 버전·source SHA·실제 bytes·rg 15.2.0·라이선스·Core Skill 3개를 확인했다. Setup SHA-256은 `8e13a4f1188d35d89b79423d49eeda88e57b511591c5c77cfd0dc1b1c19af4a9`, ZIP은 `85e2918be6100e48aa2d639b425160983336e324a7d80887cd7f1afd66d2fc38`이다. 후보 채널은 `candidate-not-released`, AgentDock 서명 상태는 unsigned다. 이 재다운로드는 배포물 바이트 검증이지 설치 성공이나 정식 Release 게시가 아니다. 운영 PC의 Setup·설치·재시작·네트워크 변경은 수행하지 않았다. 최신 제품 소스는 e9b2c6d이며 뒤따르는 기록 커밋은 제품 바이너리를 새로 빌드한 것으로 해석하지 않는다.
 
 ## 5. 미완료 및 명시적 차단
 
