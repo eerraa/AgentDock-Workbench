@@ -16,7 +16,7 @@
 | fork parent | `A-m-o-r-F-a-t-i/AgentDock-Workbench` |
 | 현재 제품 작업 | 정본 Git에 연결된 `D:\Engineering\worktrees\agentdock-wb-release` |
 | 작업 브랜치 | `work/minimal-wb-release-20260928` |
-| 최신 실제 후보 빌드 소스 | `58b6f1496872c37150be925d76458552965f2058`; CI 36338434227, 상세 결과는 4.3절 |
+| 최신 실제 후보 빌드 소스 | `58b6f1496872c37150be925d76458552965f2058`; CI 36338434227, 상세 결과는 4.3절. 이후 후보와 실패는 4.5–4.7절 |
 | 기존 local main | `cea147b9a3dbeb6f370c2c5231ca7a50604d7bdd` — 제품 후보로 교체·병합하지 않음 |
 | 기존 remote main | `113f709a841ea64f238c528b561ab5f502d95239` — push하지 않음 |
 | 현재 후보 소스 버전 | **1.1.17100, 미배포**; 원본 기준 1.1.7과 구분하며 태그는 생성하지 않음 |
@@ -60,6 +60,8 @@ rg는 기존 generation·검색·installer·selfupdate 소유자를 사용한다
 
 실제 disposable 프로세스 시험은 controller/supervisor/다른 root 생존, 해당 Core만 종료, idempotent 정지, unhealthy Core 표시, 잘못된 경로·역할·handle과 취소 시 비파괴 거부를 확인했다. 접근 불가 경계의 오류 처리를 검증했으나 다른 계정의 실제 서비스에 종료를 시도한 시험은 아니다.
 
+후속 CI 36364901575에서 이 선택이 열 수 없는 같은 이름의 프로세스(`ERROR_ACCESS_DENIED`)를 전체 정지 실패로 바꾸는 결함이 드러났다(4.7절). 열 수 없는 후보는 이 root의 Core임을 증명할 수 없으므로 종료된 PID와 같이 선택·종료하지 않는다. 이는 원본의 경로 기반 열거와 기존 "unknown, never stopped" 계약과 같다. 열린 handle의 경로·역할 조회 실패와 선택된 Core의 종료 handle 거부는 계속 오류다.
+
 ### 2.5 TaskAdmin — 목적별 축소·검증
 
 현재 root·SID·task name·정의·실행파일·인자 및 복구자료 대상 검증을 유지했다. 복원 입력 검증은 기존 Task의 정지·삭제보다 먼저 실행한다. 새 Task 정의는 현행 stable tray action만 허용하고, 구형 stable Core action과 정확한 기존 PowerShell -File launcher는 기존 task/명시적 복구 입력에서만 allowLegacyAction으로 허용한다. 이 제품이 실행하지 않는 `--task-core-host` action은 제외했다.
@@ -89,6 +91,9 @@ Setup receipt 재시도, Named/Quick/Tailscale 표시 묶음, 생성 시점 Job 
 | `381b932e5729c2b03d3a87ffe1131cc2b059810e` | 1.1.17100 후보 및 원격/서명/필수 시험/불변 게시 검증 경로 |
 | `4c4eed6e50363b14bdc09b4fb33a898f3d34d3aa` | 제품 tree를 바꾸지 않는 기존 main 이력 보존 merge |
 | `58b6f1496872c37150be925d76458552965f2058` | 실제 Setup repair 실패의 구형 PowerShell action 호환과 실패 증거 보존 |
+| `900723d6cf9096244e9b8c9b0eed633caf8abd3b` | 남은 한국어 표시와 Setup result.json 공유 위반 대기 |
+| `f253e31` | 도구 생성 제목의 descriptor 결합, Setup E2E 세 언어 확인(이전 미커밋 3개 파일) |
+| `361d426` | 접근 불가 같은 이름 프로세스로 Core 상태·정지가 실패하는 결함 |
 
 직전 b1d8589 제품 소스의 WB_BASE 대비 차이는 43개 파일, 3,785줄 추가·53줄 삭제다. 여기에는 이전 후보의 한국어·rg 및 시험 코드가 포함된다. 이 숫자를 이번에 새로 완성한 기능 수로 해석하지 않는다. 이번 재개의 소스 커밋 4개만 외부 resume-source-patches에 format-patch 및 SHA-256으로 추가 보존했다.
 
@@ -236,6 +241,16 @@ Windows Go 수치는 실제 다운로드한 `backend-validation.jsonl`에서 집
 Setup 공유 위반은 기존 broker가 result.json 읽기의 모든 비-부재 오류를 즉시 실패로 처리하는 경계에서 발생했다. ERROR_SHARING_VIOLATION과 ERROR_LOCK_VIOLATION만 기존 50ms polling과 기존 전체 기한 안에서 대기하도록 보완했다. 새 timeout·재시작·성공 추정은 없다. 실제 임시 파일의 독점 handle로 읽기 실패를 재현하고 handle 해제 후 원래 결과가 읽히는지 확인했다. 접근 거부·다른 오류는 즉시 반환하며 기존 nonce·JSON·자식 종료 검사는 유지한다. 실제 점유 프로세스가 무엇이었는지는 확정하지 않는다.
 
 집중 Setup 회귀 12 PASS / 1 helper SKIP / 0 FAIL, 기존 순수 정책 890 assertions와 실제 3개 언어 리소스·원문 회귀 6,786 assertions가 통과했다. 한국어 관문은 후보 CI에서도 기존 검사 결과를 확인하도록 하여 게시 직전에만 누락을 발견하는 불필요한 재빌드를 방지한다. 변경 소스의 최종 설치·업그레이드·게시 성공은 CI 결과로 별도 확정한다. 기존 failed CI와 차단 기록은 보존한다. 이번 native 진단 표시/리소스 조회 요청도 실행 전에 차단되어 같은 조회를 재전송하지 않았으며, 이미 읽은 화면 소스의 독립적인 표시 수정과 Setup 결함 수정만 수행했다.
+
+## 4.7 이관 후 재개 — Setup 설치 후 Core 정지 실패
+
+source `900723d` / CI 36364901575는 Linux·Windows Go·정적 분석·순수 정책·한국어·native 22개 시나리오/272 assertions·WPF 60개 표본/27,538 assertions·ZIP/Setup 빌드와 패키지 검증을 통과했지만 전체 결과는 **failure**다. 실패 단계 로그를 실제로 조회했다. 첫 Setup(당시 중국어) 설치 자체는 성공했고, 직후 원래 E2E의 `service stop`이 `agentdock: inspect Core candidate 896: Access is denied.`로 실패했다(`test-windows-setup-e2e.ps1:274`). 오류에 wrapper가 없으므로 예약작업 `/End` 뒤의 정지 대기 선택에서 발생했다. 반복 설치·repair·제거와 역사적 upgrade는 미도달이다. 앞선 result.json 공유 위반은 이 실행에서 재발하지 않았다.
+
+원인은 2.4절 선택기가 snapshot의 모든 `agentdock.exe`를 열고 접근 거부를 즉시 오류로 반환한 경계다. 다른 사용자의 프로세스나 Core 종료 직후 재사용된 PID가 있으면 상태·정지가 모두 실패한다. PID 896의 실제 소유자는 로그에 없어서 확정하지 않는다. 58b6f149의 같은 선택기가 한 번 통과한 것은 이 경합이 비결정적임을 뜻한다. timeout 추가·재시도·assertion 변경 없이 `ERROR_ACCESS_DENIED`만 종료된 PID와 같이 미선택으로 처리했다.
+
+회귀 `TestCoreSelectionSkipsInaccessibleSameNameProcess`는 빈 DACL로 만든 같은 이름 fixture에 동일 사용자가 실제 `ERROR_ACCESS_DENIED`를 받는지 먼저 확인한 뒤, 선택·정지가 성공하고 이 root의 Core만 종료하며 다른 프로세스는 생존함을 검사한다. 수정 전 코드에서는 CI와 같은 `inspect Core candidate …: Access is denied.`로 실패했고, 수정 후 기존 Core 역할 시험 5개와 함께 6 PASS / 0 SKIP / 0 FAIL이다. 로컬 worktree의 `.git` 소유자가 Administrators여서 Go VCS stamping이 거부되는 환경 문제는 전역 Git 설정을 바꾸지 않고 자식 프로세스의 `safe.directory` 환경값으로만 해결했다.
+
+이전 미커밋 3개 파일은 `FINISH_ATTEMPT_STATE.json`의 SHA-256과 일치함을 확인한 뒤 그대로 `f253e31`로 커밋했다. 해당 로컬 검사(표시 6,789 assertions, scripts/test 112 PASS)는 이관 전 결과이며 재실행하지 않았다. 실제 Setup의 세 언어, 설치 후 Core 정지·반복 설치·repair·제거와 역사적 1.1.16102 upgrade/rollback은 이 소스의 후속 CI 결과로만 판정한다.
 
 ## 5. 미완료 및 명시적 차단
 
