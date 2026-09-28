@@ -9,16 +9,25 @@ AgentDock에 연결된 에이전트(예: ChatGPT)가 이 Windows PC의 화면을
 
 ## 1. 전제: cua-driver
 
-cua-driver는 AgentDock에 포함되지 않는다. [CUA 공식 문서](https://cua.ai/docs)의 Windows 설치 방법으로 설치한 뒤 아래를 확인한다.
+cua-driver는 AgentDock에 포함되지 않는다. [CUA 공식 문서](https://cua.ai/docs/cua-driver)의 Windows 절차로 설치한다. 일반 PowerShell에서 실행한다.
+
+```powershell
+irm https://cua.ai/driver/install.ps1 | iex   # 설치(사용자 PATH 등록, 로그온 자동 실행 작업 등록)
+cua-driver autostart kick                     # 재로그온 없이 데몬 바로 시작
+```
+
+확인과 업데이트:
 
 ```powershell
 cua-driver --version
-cua-driver autostart status  # 자동 실행 등록과 데몬 실행 여부
-cua-driver autostart enable  # 로그온 시 데몬 자동 실행 등록(한 번만)
-cua-driver autostart kick    # 지금 바로 데몬 시작
+cua-driver doctor            # 세션, UIA 접근, 설치 경로 점검
+cua-driver status            # "Cua Driver daemon is running", socket \\.\pipe\cua-driver
+cua-driver autostart status  # "registered (running)"
+cua-driver check-update
+cua-driver update --apply
 ```
 
-데몬이 없으면 플러그인은 설치돼도 도구 목록을 가져오지 못한다. 데몬이 관리자 권한으로 돌면 관리자 창도 조작할 수 있고, 일반 권한이면 관리자 창에는 입력이 전달되지 않는다.
+데몬이 없으면 플러그인은 설치돼도 도구 목록을 가져오지 못한다. 자동 실행 작업은 UWP 앱 조작을 위해 관리자 권한(HighestAvailable)으로 등록되므로 관리자 창도 조작할 수 있다. 그만큼 원격 에이전트의 권한도 커진다.
 
 ## 2. 자동 설치 (기본)
 
@@ -44,7 +53,7 @@ AgentDock Setup이 설치를 마친 뒤 이 플러그인을 `%USERPROFILE%\.agen
 
 ## 4. 확인과 사용
 
-1. 제어판 "기능과 플러그인"에 `cua-driver`가 켜져 있는지 본다.
+1. 제어판 "기능과 플러그인"에 `cua-driver`가 켜져 있는지 본다. MCP 서버 `idle`은 아직 연결 전이라는 뜻이며 첫 사용 뒤 `ready`가 된다. Heavy는 끈 채로 둔다. 켜면 에이전트가 `plugin_load`를 호출하기 전까지 Skill과 MCP 서버가 보이지 않는다.
 2. 에이전트에게 `cua-driver:list_windows`와 `cua-driver:get_window_state`로 창을 보게 한다. 스크린샷이 보이지 않는다고 하면 스킬의 `view_image` 대안을 쓰게 한다.
 3. 권한 모드가 `rules`면 동작마다 승인을 묻는다. 승인할 때 "이 작업공간에서 허용"을 고르면 그 도구 하나(`cua-driver:click` 등)만 허용된다. 승인된 호출의 결과는 에이전트에게 돌아가지 않으므로, 에이전트는 다시 관찰한 뒤 진행한다.
 
