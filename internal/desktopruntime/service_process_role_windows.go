@@ -78,7 +78,9 @@ func processCommandLine(handle windows.Handle) (string, error) {
 }
 
 // Core selection is separate from the installer's deliberately path-wide
-// cleanup. An inaccessible same-name candidate is unknown, never stopped.
+// cleanup. An inaccessible same-name candidate is unknown, never stopped:
+// another user's process or a PID recycled after the Core exited cannot be
+// proven to be this root's Core and must not fail status or stop.
 func selectedProcessIDsAtPath(binaryPath string, excluded map[uint32]struct{}, matches processHandleFilter) ([]uint32, error) {
 	target, err := filepath.Abs(binaryPath)
 	if err != nil {
@@ -98,7 +100,7 @@ func selectedProcessIDsAtPath(binaryPath string, excluded map[uint32]struct{}, m
 		_, skip := excluded[entry.ProcessID]
 		if !skip && entry.ProcessID != uint32(os.Getpid()) && strings.EqualFold(windows.UTF16ToString(entry.ExeFile[:]), filepath.Base(target)) {
 			handle, openErr := windows.OpenProcess(windows.SYNCHRONIZE|windows.PROCESS_QUERY_LIMITED_INFORMATION, false, entry.ProcessID)
-			if openErr != nil && !errors.Is(openErr, windows.ERROR_INVALID_PARAMETER) {
+			if openErr != nil && !errors.Is(openErr, windows.ERROR_INVALID_PARAMETER) && !errors.Is(openErr, windows.ERROR_ACCESS_DENIED) {
 				return nil, fmt.Errorf("inspect Core candidate %d: %w", entry.ProcessID, openErr)
 			}
 			if openErr == nil {

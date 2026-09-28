@@ -13,9 +13,12 @@ import (
 	"net/http/httptest"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
+	"syscall"
 	"testing"
 	"time"
+	"unsafe"
 )
 
 type coreRoleFixture struct {
@@ -150,6 +153,69 @@ func TestCoreStopPreservesControllersSupervisorsAndOtherRoots(t *testing.T) {
 		for _, p := range []coreRoleFixture{controller, supervisor, other} {
 			assertCoreRoleFixtureAlive(t, p, true)
 		}
+	}
+}
+
+// CI 36364901575 failed Core stop on a same-name PID that could not be opened.
+// Another user's process or a PID recycled while the Core exits is never this
+// root's Core; it must neither be stopped nor fail status or stop.
+func TestCoreSelectionSkipsInaccessibleSameNameProcess(t *testing.T) {
+	binary := buildCoreRoleFixture(t)
+	root := t.TempDir()
+	// An empty DACL denies the same user every process right; only exec.Cmd's
+	// creator handle can still kill and wait for the fixture.
+	descriptor, err := windows.SecurityDescriptorFromString("D:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	other := exec.Command(binary, "service", "launch-core", "--runtime-root", t.TempDir())
+	other.SysProcAttr = &syscall.SysProcAttr{ProcessAttributes: &syscall.SecurityAttributes{
+		Length:             uint32(unsafe.Sizeof(syscall.SecurityAttributes{})),
+		SecurityDescriptor: uintptr(unsafe.Pointer(descriptor)),
+	}}
+	input, err := other.StdinPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = other.Start(); err != nil {
+		t.Fatal(err)
+	}
+	runtime.KeepAlive(descriptor)
+	done := make(chan error, 1)
+	go func() { done <- other.Wait() }()
+	t.Cleanup(func() {
+		input.Close()
+		other.Process.Kill()
+		select {
+		case <-done:
+		case <-time.After(5 * time.Second):
+			t.Error("inaccessible fixture cleanup timed out")
+		}
+	})
+	if handle, err := windows.OpenProcess(windows.SYNCHRONIZE|windows.PROCESS_QUERY_LIMITED_INFORMATION, false, uint32(other.Process.Pid)); err == nil {
+		windows.CloseHandle(handle)
+		t.Skip("this token opens any process (SeDebugPrivilege enabled)")
+	} else if !errors.Is(err, windows.ERROR_ACCESS_DENIED) {
+		t.Fatalf("inaccessible fixture open: %v", err)
+	}
+
+	core := startCoreRoleFixture(t, binary, "service", "launch-core", "--runtime-root", root)
+	ids, err := selectedProcessIDsAtPath(binary, nil, coreProcessRole(root))
+	if err != nil || len(ids) != 1 || ids[0] != uint32(core.command.Process.Pid) {
+		t.Fatalf("selected=%v err=%v", ids, err)
+	}
+	manifest := Manifest{InstallRoot: root, AgentDockBinary: binary, PrivilegeMode: "standard"}
+	ctx, cancel := context.WithTimeout(t.Context(), 8*time.Second)
+	defer cancel()
+	if err := stopCore(ctx, manifest, root); err != nil {
+		t.Fatal(err)
+	}
+	assertCoreRoleFixtureAlive(t, core, false)
+	select {
+	case err := <-done:
+		done <- err
+		t.Fatalf("inaccessible process was stopped: %v", err)
+	default:
 	}
 }
 
