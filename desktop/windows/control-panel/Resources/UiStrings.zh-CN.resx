@@ -1620,9 +1620,6 @@
   <data name="ExecutionConversation" xml:space="preserve">
     <value>对话</value>
   </data>
-  <data name="ExecutionRecentToolCall" xml:space="preserve">
-    <value>最近 2 分钟有执行更新</value>
-  </data>
   <data name="ExecutionManageConversation" xml:space="preserve">
     <value>管理此对话</value>
   </data>
@@ -2891,9 +2888,6 @@
   <data name="ExecutionCollapseAllProjects" xml:space="preserve">
     <value>折叠全部项目</value>
   </data>
-  <data name="ExecutionTotalDuration" xml:space="preserve">
-    <value>总耗时</value>
-  </data>
   <data name="ExecutionHistoryRetry" xml:space="preserve">
     <value>历史加载失败，重试</value>
   </data>
@@ -3163,27 +3157,24 @@
   </data>
   <data name="InsertionStatePending" xml:space="preserve"><value>等待下一次工具调用</value></data>
   <data name="InsertionStateReserved" xml:space="preserve"><value>已由下一次调用领取</value></data>
-  <data name="InsertionStateInner" xml:space="preserve"><value>已写入内层响应，待转发</value></data>
   <data name="InsertionStateForwarded" xml:space="preserve"><value>已转发，待上下文确认</value></data>
   <data name="InsertionStateContextConfirmed" xml:space="preserve"><value>模型上下文已确认接收</value></data>
   <data name="InsertionStateReceiverConfirmed" xml:space="preserve"><value>接收端已确认收到</value></data>
   <data name="InsertionStateLegacyAttached" xml:space="preserve"><value>历史内层响应已附加，接收未确认</value></data>
-  <data name="InsertionStateUnknown" xml:space="preserve"><value>未确认收到</value></data>
+  <data name="InsertionStateUnknown" xml:space="preserve"><value>送达结果未确认</value></data>
   <data name="InsertionStateTargetChanged" xml:space="preserve"><value>已暂停：目标任务或工作区变化</value></data>
   <data name="InsertionStateExpired" xml:space="preserve"><value>未领取，已过期</value></data>
   <data name="InsertionStateCancelled" xml:space="preserve"><value>已停止投递</value></data>
   <data name="InsertionStateNotRecorded" xml:space="preserve"><value>投递状态未记录</value></data>
   <data name="InsertionReasonLegacy" xml:space="preserve"><value>旧版本只记录了内层附加，没有接收回执；不自动重发历史消息。</value></data>
-  <data name="InsertionReasonExpired" xml:space="preserve"><value>有效期内没有收到确认，停止重投。需要继续使用时请重新发送。</value></data>
-  <data name="InsertionReasonNoHostReceipt" xml:space="preserve"><value>当前宿主未声明端到端确认能力；后续新调用会在有效期和次数范围内重投补充。</value></data>
-  <data name="InsertionReasonAwaitHost" xml:space="preserve"><value>等待宿主转发与上下文提交回执。</value></data>
+  <data name="InsertionReasonExpired" xml:space="preserve"><value>原始 300 秒有效期内没有收到确认，已停止重投。需要继续使用时请重新发送。</value></data>
+  <data name="InsertionReasonNoHostReceipt" xml:space="preserve"><value>历史记录没有受信任宿主回执；当前连接能否看到 insertion_ack 仍未验证。</value></data>
+  <data name="InsertionReasonAwaitHost" xml:space="preserve"><value>补充已附入响应，正在等待已协商宿主报告转发或上下文提交。</value></data>
   <data name="InsertionReasonAwaitContext" xml:space="preserve"><value>外层已转发，但尚未确认进入模型上下文。</value></data>
-  <data name="InsertionReasonRestarted" xml:space="preserve"><value>服务重启前未获得确认，后续新调用可在剩余有效期内重投。</value></data>
+  <data name="InsertionReasonRestarted" xml:space="preserve"><value>服务重启前未获得确认，后续新调用可在剩余有效期和次数范围内重投。</value></data>
   <data name="InsertionReasonInnerUncommitted" xml:space="preserve"><value>内层响应没有确认提交，保留未送达状态。</value></data>
   <data name="InsertionReasonProjectionFailed" xml:space="preserve"><value>外层结果投影失败，没有确认送达。</value></data>
   <data name="InsertionReasonContextFailed" xml:space="preserve"><value>外层上下文提交失败，尚未确认接收。</value></data>
-  <data name="InsertionRetryRequested" xml:space="preserve"><value>
-已请求随下一次新调用重投。</value></data>
   <data name="InsertionMessagePrefix" xml:space="preserve"><value>
 消息：</value></data>
   <data name="InsertionSentPrefix" xml:space="preserve"><value>
@@ -3194,8 +3185,6 @@
 外层调用：</value></data>
   <data name="InsertionConfirmedPrefix" xml:space="preserve"><value>
 确认：</value></data>
-  <data name="InsertionAttemptCount" xml:space="preserve"><value>
-已尝试 {0} 次；只重投本条补充，不重复原工具。</value></data>
   <data name="InsertionView" xml:space="preserve"><value>查看补充</value></data>
   <data name="InsertionCopy" xml:space="preserve"><value>复制补充</value></data>
   <data name="InsertionSafeRetry" xml:space="preserve"><value>安全重投补充</value></data>
@@ -3220,8 +3209,6 @@
   <data name="ExecutionActionPlugin" xml:space="preserve"><value>展开插件</value></data>
   <data name="ExecutionActionReceipt" xml:space="preserve"><value>确认收到补充</value></data>
   <data name="ExecutionActionTool" xml:space="preserve"><value>执行工具</value></data>
-  <data name="PermissionProfileEdit" xml:space="preserve"><value>修改三层权限设置</value></data>
-  <data name="PermissionProfileInherit" xml:space="preserve"><value>继承全局三层设置</value></data>
   <data name="PermissionFilesystemLabel" xml:space="preserve"><value>Filesystem · 文件系统</value></data>
   <data name="PermissionFilesystemDeny" xml:space="preserve"><value>deny · 禁止文件读写</value></data>
   <data name="PermissionFilesystemRead" xml:space="preserve"><value>read · 只允许读取</value></data>
@@ -3248,9 +3235,6 @@
   <data name="PermissionReviewerUser" xml:space="preserve"><value>user · 用户审批</value></data>
   <data name="PermissionReviewerAuto" xml:space="preserve"><value>auto_review · 独立审查器</value></data>
   <data name="PermissionReviewerNotice" xml:space="preserve"><value>auto_review 需要管理员配置 auto-review.json 与可信独立审查程序；未配置、超时、无效返回或拒绝均不执行。它不能越过 Profile 或创建永久授权。</value></data>
-  <data name="SidebarGroupsMissing" xml:space="preserve"><value>项目列表响应缺少 groups。</value></data>
-  <data name="SidebarPageInvalid" xml:space="preserve"><value>项目分页响应无效，原列表已保留。</value></data>
-  <data name="SidebarIdentityInvalid" xml:space="preserve"><value>对话标识缺失或重复，原列表已保留。</value></data>
   <data name="ExecutionInvalidUnicode" xml:space="preserve"><value>输出包含损坏的 Unicode 字符。</value></data>
   <data name="SidebarHistoryOverflow" xml:space="preserve"><value>历史对话数量超过分页范围。</value></data>
   <data name="InsertionAccessibleName" xml:space="preserve"><value>用户补充消息</value></data>
@@ -3266,4 +3250,30 @@
 旧任务缺少步骤时显示“进度未记录”。未归属调用保留原始调用 ID，可以导出、隔离、归档和移入回收站。永久删除不会删除项目源码。
 
 快捷键：Ctrl+F 搜索对话，F5 刷新，Esc 关闭详情，Shift+F10 打开所选条目菜单。</value></data>
+  <data name="PermissionCustomEnable" xml:space="preserve"><value>启用自定义权限设置</value></data>
+  <data name="PermissionCustomInherit" xml:space="preserve"><value>继承全局自定义权限设置</value></data>
+  <data name="PermissionCustomModeNote" xml:space="preserve"><value>未启用自定义权限时，权限由当前执行模式统一控制；已保存的三层设置会保留，但不参与权限判定。</value></data>
+  <data name="ExecutionStatePendingApprovalCount" xml:space="preserve"><value>待审批 {0}</value></data>
+  <data name="ExecutionStateInFlight" xml:space="preserve"><value>执行中</value></data>
+  <data name="ExecutionStatePendingApprovalHint" xml:space="preserve"><value>存在等待本机审批的根调用；近期交互标识会独立过期。</value></data>
+  <data name="ExecutionStateInFlightHint" xml:space="preserve"><value>根调用或后台命令仍在运行，可继续查看或停止；近期交互标识会独立过期。</value></data>
+  <data name="ExecutionProcessStillRunning" xml:space="preserve"><value>仍在运行</value></data>
+  <data name="ExecutionProcessStillRunningAfterRpc" xml:space="preserve"><value>仍在运行（RPC 已返回）</value></data>
+  <data name="ExecutionRecentInteraction" xml:space="preserve"><value>最近 2 分钟有新的外部交互</value></data>
+  <data name="ExecutionBackground" xml:space="preserve"><value>后台</value></data>
+  <data name="InsertionStateAwaitReceiverReceipt" xml:space="preserve"><value>已附加，等待接收回执</value></data>
+  <data name="InsertionStateAwaitHostReceipt" xml:space="preserve"><value>已附加，等待宿主转发回执</value></data>
+  <data name="InsertionStateAwaitReceipt" xml:space="preserve"><value>已附加，等待回执</value></data>
+  <data name="InsertionStateExpiredUnconfirmed" xml:space="preserve"><value>有效期结束，未确认收到</value></data>
+  <data name="InsertionReasonAwaitReceiver" xml:space="preserve"><value>补充已附入响应，正在等待接收端调用 insertion_ack。当前连接能否看到该工具尚未验证；重复发送不会补齐缺失的确认入口。</value></data>
+  <data name="InsertionScheduledAttempts" xml:space="preserve"><value>已预约投递 {0} 次；只重投本条补充，不重复原工具。</value></data>
+  <data name="InsertionRetriesExhausted" xml:space="preserve"><value>总重投次数已用尽。</value></data>
+  <data name="InsertionAutomaticRetriesEnded" xml:space="preserve"><value>自动重投已结束；还可人工请求 {0} 次。</value></data>
+  <data name="InsertionRetryBudget" xml:space="preserve"><value>自动余量 {0} 次；总余量 {1} 次。</value></data>
+  <data name="InsertionRetrySkipRequested" xml:space="preserve"><value>已请求跳过自动等待；只会由下一次新根调用领取。</value></data>
+  <data name="InsertionNextRetryAt" xml:space="preserve"><value>下一次自动重投最早时间：</value></data>
+  <data name="InsertionManualRetryNote" xml:space="preserve"><value>人工重投会跳过当前自动等待，但不能修复当前连接缺失的 insertion_ack 入口。</value></data>
+  <data name="SidebarPageResponseInvalid" xml:space="preserve"><value>对话列表响应无效，已保留上次可信列表（{0}，响应代次 {1}）。</value></data>
+  <data name="SidebarWorkspaceResponseInvalid" xml:space="preserve"><value>项目对话响应无效，已保留该项目上次可信内容（{0}，响应代次 {1}）。</value></data>
+  <data name="SidebarMoreIsolated" xml:space="preserve"><value>另有 {0} 个项目响应被隔离。</value></data>
 </root>

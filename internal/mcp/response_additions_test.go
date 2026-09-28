@@ -85,7 +85,7 @@ func TestResponseAdditionsBothAdaptersPreserveSuccessAndErrors(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				id := queued["insertion"].(insertion.Item).ID
+				id := queued["insertion"].(insertion.PublicItem).ID
 				var next map[string]any
 				if fail {
 					next = call("read_file", map[string]any{"path": filepath.Join(h.runtime.Config().AgentDockDefaultDir, "missing.txt")})
@@ -93,6 +93,7 @@ func TestResponseAdditionsBothAdaptersPreserveSuccessAndErrors(t *testing.T) {
 					next = call("list_dir", map[string]any{"path": h.runtime.Config().AgentDockDefaultDir, "max_entries": 1})
 				}
 				assertResponseSupplement(t, next, id, text)
+				assertInsertionAttention(t, next)
 				if got, _ := next["isError"].(bool); got != fail {
 					t.Fatalf("business error changed: %#v", next)
 				}
@@ -100,6 +101,9 @@ func TestResponseAdditionsBothAdaptersPreserveSuccessAndErrors(t *testing.T) {
 					t.Fatal("binding fields were overwritten")
 				}
 				ack := call("insertion_ack", supplementReceipts(t, next))
+				if asMap(ack["structuredContent"])["next_action"] != app.InsertionReceiptNextAction {
+					t.Fatal("receipt did not reinforce summary and same-turn continuation")
+				}
 				if ack["isError"] == true {
 					t.Fatalf("receiver acknowledgement failed: %v", ack)
 				}
@@ -111,7 +115,7 @@ func TestResponseAdditionsBothAdaptersPreserveSuccessAndErrors(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				items := queue["insertions"].([]insertion.Item)
+				items := queue["insertions"].([]insertion.PublicItem)
 				if len(items) != 1 || items[0].Status != "acknowledged" || items[0].AcknowledgedBy != "receiver_receipt" {
 					t.Fatalf("bad queue status: %#v", items)
 				}

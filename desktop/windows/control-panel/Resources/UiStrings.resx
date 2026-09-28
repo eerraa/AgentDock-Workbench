@@ -1620,9 +1620,6 @@ Added/deleted lines: {6} / {7}
   <data name="ExecutionConversation" xml:space="preserve">
     <value>Conversation</value>
   </data>
-  <data name="ExecutionRecentToolCall" xml:space="preserve">
-    <value>Execution updated in the last 2 minutes</value>
-  </data>
   <data name="ExecutionManageConversation" xml:space="preserve">
     <value>Manage this conversation</value>
   </data>
@@ -2891,9 +2888,6 @@ Shortcuts: Ctrl+F searches conversations; F5 refreshes; Esc closes details; Shif
   <data name="ExecutionCollapseAllProjects" xml:space="preserve">
     <value>Collapse all projects</value>
   </data>
-  <data name="ExecutionTotalDuration" xml:space="preserve">
-    <value>Total duration</value>
-  </data>
   <data name="ExecutionHistoryRetry" xml:space="preserve">
     <value>History could not be loaded. Retry</value>
   </data>
@@ -3163,27 +3157,24 @@ Original description: </value>
   </data>
   <data name="InsertionStatePending" xml:space="preserve"><value>Waiting for the next tool call</value></data>
   <data name="InsertionStateReserved" xml:space="preserve"><value>Claimed by the next call</value></data>
-  <data name="InsertionStateInner" xml:space="preserve"><value>Added to the inner response; awaiting forwarding</value></data>
   <data name="InsertionStateForwarded" xml:space="preserve"><value>Forwarded; awaiting context confirmation</value></data>
   <data name="InsertionStateContextConfirmed" xml:space="preserve"><value>Receipt in model context confirmed</value></data>
   <data name="InsertionStateReceiverConfirmed" xml:space="preserve"><value>Receiver confirmed receipt</value></data>
   <data name="InsertionStateLegacyAttached" xml:space="preserve"><value>Attached to a historical inner response; receipt unconfirmed</value></data>
-  <data name="InsertionStateUnknown" xml:space="preserve"><value>Receipt unconfirmed</value></data>
+  <data name="InsertionStateUnknown" xml:space="preserve"><value>Delivery result unconfirmed</value></data>
   <data name="InsertionStateTargetChanged" xml:space="preserve"><value>Paused: target task or workspace changed</value></data>
   <data name="InsertionStateExpired" xml:space="preserve"><value>Expired before being claimed</value></data>
   <data name="InsertionStateCancelled" xml:space="preserve"><value>Further delivery stopped</value></data>
   <data name="InsertionStateNotRecorded" xml:space="preserve"><value>Delivery status not recorded</value></data>
   <data name="InsertionReasonLegacy" xml:space="preserve"><value>The old version recorded only an inner attachment, not a receipt. Historical messages are not automatically resent.</value></data>
-  <data name="InsertionReasonExpired" xml:space="preserve"><value>No confirmation arrived before expiry; redelivery has stopped. Send a new message to continue.</value></data>
-  <data name="InsertionReasonNoHostReceipt" xml:space="preserve"><value>The host has not declared end-to-end receipt support. New calls may redeliver this supplement within its expiry and attempt limits.</value></data>
-  <data name="InsertionReasonAwaitHost" xml:space="preserve"><value>Waiting for host forwarding and context-commit receipts.</value></data>
+  <data name="InsertionReasonExpired" xml:space="preserve"><value>No confirmation arrived within the original 300-second validity period; redelivery has stopped. Send a new message to continue.</value></data>
+  <data name="InsertionReasonNoHostReceipt" xml:space="preserve"><value>The history has no trusted host receipt; whether the current connection can see insertion_ack is still unverified.</value></data>
+  <data name="InsertionReasonAwaitHost" xml:space="preserve"><value>The supplement was attached to a response and is waiting for the negotiated host to report forwarding or context commit.</value></data>
   <data name="InsertionReasonAwaitContext" xml:space="preserve"><value>Forwarded by the outer layer; entry into model context is not yet confirmed.</value></data>
-  <data name="InsertionReasonRestarted" xml:space="preserve"><value>The service restarted before confirmation. New calls may redeliver within the remaining validity period.</value></data>
+  <data name="InsertionReasonRestarted" xml:space="preserve"><value>The service restarted before confirmation. New calls may redeliver within the remaining validity period and attempt limits.</value></data>
   <data name="InsertionReasonInnerUncommitted" xml:space="preserve"><value>The inner response was not confirmed committed; delivery remains unconfirmed.</value></data>
   <data name="InsertionReasonProjectionFailed" xml:space="preserve"><value>Outer result projection failed; delivery is unconfirmed.</value></data>
   <data name="InsertionReasonContextFailed" xml:space="preserve"><value>Outer context commit failed; receipt is not confirmed.</value></data>
-  <data name="InsertionRetryRequested" xml:space="preserve"><value>
-Redelivery requested with the next new call.</value></data>
   <data name="InsertionMessagePrefix" xml:space="preserve"><value>
 Message: </value></data>
   <data name="InsertionSentPrefix" xml:space="preserve"><value>
@@ -3194,8 +3185,6 @@ Inner call: </value></data>
 Outer call: </value></data>
   <data name="InsertionConfirmedPrefix" xml:space="preserve"><value>
 Confirmed: </value></data>
-  <data name="InsertionAttemptCount" xml:space="preserve"><value>
-Attempted {0} times. Only this supplement is redelivered; the original tool is not rerun.</value></data>
   <data name="InsertionView" xml:space="preserve"><value>View supplement</value></data>
   <data name="InsertionCopy" xml:space="preserve"><value>Copy supplement</value></data>
   <data name="InsertionSafeRetry" xml:space="preserve"><value>Redeliver supplement safely</value></data>
@@ -3220,8 +3209,6 @@ Attempted {0} times. Only this supplement is redelivered; the original tool is n
   <data name="ExecutionActionPlugin" xml:space="preserve"><value>Load plugin</value></data>
   <data name="ExecutionActionReceipt" xml:space="preserve"><value>Acknowledge supplement</value></data>
   <data name="ExecutionActionTool" xml:space="preserve"><value>Run tool</value></data>
-  <data name="PermissionProfileEdit" xml:space="preserve"><value>Edit the three permission layers</value></data>
-  <data name="PermissionProfileInherit" xml:space="preserve"><value>Inherit the global three-layer settings</value></data>
   <data name="PermissionFilesystemLabel" xml:space="preserve"><value>Filesystem</value></data>
   <data name="PermissionFilesystemDeny" xml:space="preserve"><value>deny · No file access</value></data>
   <data name="PermissionFilesystemRead" xml:space="preserve"><value>read · Read only</value></data>
@@ -3248,9 +3235,6 @@ Attempted {0} times. Only this supplement is redelivered; the original tool is n
   <data name="PermissionReviewerUser" xml:space="preserve"><value>user · User review</value></data>
   <data name="PermissionReviewerAuto" xml:space="preserve"><value>auto_review · Independent reviewer</value></data>
   <data name="PermissionReviewerNotice" xml:space="preserve"><value>auto_review requires an administrator-configured auto-review.json and a trusted independent reviewer. Missing configuration, timeouts, invalid results and denials prevent execution. It cannot override the profile or grant permanent access.</value></data>
-  <data name="SidebarGroupsMissing" xml:space="preserve"><value>The project-list response has no groups.</value></data>
-  <data name="SidebarPageInvalid" xml:space="preserve"><value>The project page is invalid; the previous list was retained.</value></data>
-  <data name="SidebarIdentityInvalid" xml:space="preserve"><value>Conversation identifiers are missing or duplicated; the previous list was retained.</value></data>
   <data name="ExecutionInvalidUnicode" xml:space="preserve"><value>Output contains malformed Unicode.</value></data>
   <data name="SidebarHistoryOverflow" xml:space="preserve"><value>Conversation history exceeds the pagination range.</value></data>
   <data name="InsertionAccessibleName" xml:space="preserve"><value>User supplement message</value></data>
@@ -3266,4 +3250,30 @@ Terminating a conversation first closes its server-side admission gate, then can
 Old tasks without steps show that progress was not recorded. Unattributed calls retain their original IDs and can be exported, isolated, archived or moved to trash. Permanent deletion does not delete project source code.
 
 Shortcuts: Ctrl+F searches conversations, F5 refreshes, Esc closes details, and Shift+F10 opens the selected item menu.</value></data>
+  <data name="PermissionCustomEnable" xml:space="preserve"><value>Enable custom permission settings</value></data>
+  <data name="PermissionCustomInherit" xml:space="preserve"><value>Inherit the global custom permission settings</value></data>
+  <data name="PermissionCustomModeNote" xml:space="preserve"><value>When custom permissions are off, the current execution mode controls permissions. Saved three-layer settings are kept but are not used for permission decisions.</value></data>
+  <data name="ExecutionStatePendingApprovalCount" xml:space="preserve"><value>Awaiting approval {0}</value></data>
+  <data name="ExecutionStateInFlight" xml:space="preserve"><value>Running</value></data>
+  <data name="ExecutionStatePendingApprovalHint" xml:space="preserve"><value>A root call is waiting for approval on this computer. The recent-interaction marker expires independently.</value></data>
+  <data name="ExecutionStateInFlightHint" xml:space="preserve"><value>A root call or background command is still running; you can keep viewing it or stop it. The recent-interaction marker expires independently.</value></data>
+  <data name="ExecutionProcessStillRunning" xml:space="preserve"><value>Still running</value></data>
+  <data name="ExecutionProcessStillRunningAfterRpc" xml:space="preserve"><value>Still running (RPC returned)</value></data>
+  <data name="ExecutionRecentInteraction" xml:space="preserve"><value>New external interaction in the last 2 minutes</value></data>
+  <data name="ExecutionBackground" xml:space="preserve"><value>Background</value></data>
+  <data name="InsertionStateAwaitReceiverReceipt" xml:space="preserve"><value>Attached; awaiting receiver receipt</value></data>
+  <data name="InsertionStateAwaitHostReceipt" xml:space="preserve"><value>Attached; awaiting host forwarding receipt</value></data>
+  <data name="InsertionStateAwaitReceipt" xml:space="preserve"><value>Attached; awaiting receipt</value></data>
+  <data name="InsertionStateExpiredUnconfirmed" xml:space="preserve"><value>Validity ended; receipt unconfirmed</value></data>
+  <data name="InsertionReasonAwaitReceiver" xml:space="preserve"><value>The supplement was attached to a response and is waiting for the receiver to call insertion_ack. Whether the current connection can see that tool is unverified; sending again cannot add a missing confirmation entry point.</value></data>
+  <data name="InsertionScheduledAttempts" xml:space="preserve"><value>Delivery scheduled {0} times. Only this supplement is redelivered; the original tool is not rerun.</value></data>
+  <data name="InsertionRetriesExhausted" xml:space="preserve"><value>All redelivery attempts have been used.</value></data>
+  <data name="InsertionAutomaticRetriesEnded" xml:space="preserve"><value>Automatic redelivery has ended; {0} manual requests remain.</value></data>
+  <data name="InsertionRetryBudget" xml:space="preserve"><value>Automatic attempts left: {0}; total attempts left: {1}.</value></data>
+  <data name="InsertionRetrySkipRequested" xml:space="preserve"><value>Skipping the automatic wait was requested; only the next new root call will claim it.</value></data>
+  <data name="InsertionNextRetryAt" xml:space="preserve"><value>Earliest next automatic redelivery: </value></data>
+  <data name="InsertionManualRetryNote" xml:space="preserve"><value>Manual redelivery skips the current automatic wait but cannot fix a missing insertion_ack entry point on this connection.</value></data>
+  <data name="SidebarPageResponseInvalid" xml:space="preserve"><value>The conversation list response is invalid; the last trusted list is kept ({0}, response generation {1}).</value></data>
+  <data name="SidebarWorkspaceResponseInvalid" xml:space="preserve"><value>The project conversation response is invalid; the last trusted content for this project is kept ({0}, response generation {1}).</value></data>
+  <data name="SidebarMoreIsolated" xml:space="preserve"><value>{0} more project responses were isolated.</value></data>
 </root>

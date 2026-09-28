@@ -142,12 +142,11 @@ func runSetupLaunchBroker(path string, request SetupLaunchRequest) error {
 	ticker := time.NewTicker(50 * time.Millisecond)
 	defer ticker.Stop()
 	for {
-		data, err := os.ReadFile(filepath.Join(root, "result.json"))
-		if err == nil {
-			var result setupLaunchResult
-			if err := json.Unmarshal(data, &result); err != nil {
-				return err
-			}
+		result, ready, err := readSetupReceipt(filepath.Join(root, "result.json"))
+		if err != nil {
+			return err
+		}
+		if ready {
 			// A manually retried request path can still contain the previous
 			// worker's receipt. Only this launch's nonce may acknowledge success.
 			if result.TaskName != request.TaskName {
@@ -173,22 +172,12 @@ func runSetupLaunchBroker(path string, request SetupLaunchRequest) error {
 			_, err = io.WriteString(os.Stdout, stdout)
 			return err
 		}
-		if !setupReceiptPending(err) {
-			return err
-		}
 		select {
 		case <-deadline.C:
 			return fmt.Errorf("native setup launch did not finish within %d seconds; request=%s; stderr: %s", request.TimeoutSeconds+10, path, setupLogTail(filepath.Join(root, "stderr.log"), 16<<10))
 		case <-ticker.C:
 		}
 	}
-}
-
-// The worker publishes atomically. Windows can briefly deny the polling reader
-// during replacement; keep waiting within the existing launch deadline, without
-// treating permission errors or an invalid receipt as successful completion.
-func setupReceiptPending(err error) bool {
-	return errors.Is(err, os.ErrNotExist) || errors.Is(err, windows.ERROR_SHARING_VIOLATION) || errors.Is(err, windows.ERROR_LOCK_VIOLATION)
 }
 
 func setupLogTail(path string, limit int64) string {

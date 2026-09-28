@@ -13,11 +13,19 @@ on:
         required: true
         default: main
       publish:
-        description: 'Publish a formal Latest release only after every platform passes'
+        description: 'Publish only after every platform passes; channel is selected by prerelease'
+        type: boolean
+        default: false
+      prerelease:
+        description: 'Publish a prerelease; preserve the stable Latest release'
         type: boolean
         default: false
       installation_tests:
         description: 'Run isolated Windows Setup installation/uninstall on the hosted runner'
+        type: boolean
+        default: false
+      ignore_macos_intel_scale:
+        description: 'Candidate only: omit the known macOS Intel 100k scale test; all other checks remain required'
         type: boolean
         default: false
 
@@ -32,12 +40,17 @@ jobs:
   resolve-source:
     # Explicit same-version replacement uses the verified-build publisher.
     # A moved tag must not dispatch a second automatic release.
-    if: github.repository == 'A-m-o-r-F-a-t-i/agentdock' && (github.event_name != 'push' || (github.event.forced != true && github.event.deleted != true))
+    if: github.repository_id == '1370391430' && (github.event_name != 'push' || (github.event.forced != true && github.event.deleted != true))
     runs-on: ubuntu-24.04
     outputs:
       commit: ${{ steps.identity.outputs.commit }}
       version: ${{ steps.identity.outputs.version }}
     steps:
+      - name: Reject publishing with an ignored validation gate
+        if: ${{ inputs.ignore_macos_intel_scale && (inputs.publish || github.event_name == 'push') }}
+        run: |
+          echo 'The macOS Intel scale exception is only allowed for non-publishing candidate builds.' >&2
+          exit 1
       - uses: actions/checkout@v5
         with:
           ref: ${{ inputs.ref || github.ref }}
@@ -68,7 +81,13 @@ jobs:
       architectures: amd64,arm64
       release_build: true
       publish: false
-      installation_tests: ${{ inputs.installation_tests || false }}
+      installation_tests: ${{ inputs.installation_tests || inputs.publish || github.event_name == 'push' }}
+
+  android:
+    needs: resolve-source
+    uses: ./.github/workflows/parallel-android.yml
+    with:
+      source_sha: ${{ needs.resolve-source.outputs.commit }}
 
   windows-arm-package:
     needs: [resolve-source, windows]
@@ -96,6 +115,11 @@ jobs:
           if ((go env GOARCH) -ne 'arm64') { throw 'ARM64 native runner required' }
           & ./scripts/test/verify-windows-release-assets.ps1 -ReleaseDirectory dist/windows-package/release -BuildReport dist/windows-package/build-report.json -ExpectedVersion '${{ needs.resolve-source.outputs.version }}' -ExpectedCommit '${{ needs.resolve-source.outputs.commit }}' -ExpectedChannel release -ExpectedAuthenticode unsigned -Architecture arm64 -Architectures amd64,arm64
           if ($LASTEXITCODE -ne 0) { throw 'Native ARM64 payload verification failed' }
+      - name: Native ARM64 receipt sharing and corruption regression
+        run: |
+          $ErrorActionPreference='Stop'
+          go test ./internal/desktopruntime -run '^TestPostmergeSetupReceipt' -count=3 -timeout=90s -v
+          if ($LASTEXITCODE -ne 0) { throw 'Native ARM64 receipt recovery regression failed' }
       - name: Isolated ARM64 install repair and uninstall
         run: |
           $ErrorActionPreference='Stop'
@@ -144,6 +168,8 @@ jobs:
         with:
           python-version: '3.12'
       - name: Native backend regression
+        env:
+          IGNORE_INTEL_SCALE: ${{ inputs.ignore_macos_intel_scale && matrix.platform == 'darwin' && matrix.arch == 'amd64' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -164,8 +190,14 @@ jobs:
           done <<< "$all_packages"
           test "$found" -eq 1
           test "${#remaining[@]}" -gt 0
-          go test -p 1 ./internal/activity -count=1 -timeout=8m
-          go test -p 1 ./internal/activity -run '^TestExecutionProjectionScale100k$' -count=3 -v -timeout=8m
+          if [[ "$IGNORE_INTEL_SCALE" == 'true' ]]; then
+            echo '::warning::User-authorized candidate exception: macOS Intel TestExecutionProjectionScale100k is ignored, not passed.'
+            echo 'macOS Intel 100k scale test: **ignored by explicit candidate request**. The original 2s limit is unchanged.' >> "$GITHUB_STEP_SUMMARY"
+            go test -p 1 ./internal/activity -skip '^TestExecutionProjectionScale100k$' -count=1 -timeout=8m
+          else
+            go test -p 1 ./internal/activity -count=1 -timeout=8m
+            go test -p 1 ./internal/activity -run '^TestExecutionProjectionScale100k$' -count=3 -v -timeout=8m
+          fi
           go test -p 2 "${remaining[@]}" -count=1 -timeout=8m
           go vet ./...
       - name: Linux native package tools
@@ -191,6 +223,23 @@ jobs:
           EXPECTED_VERSION: ${{ needs.resolve-source.outputs.version }}
           TARGET_ARCH: ${{ matrix.arch }}
         run: python3 scripts/test/test-linux-native-packages.py --directory dist/unix --version "$EXPECTED_VERSION" --commit "$EXPECTED_COMMIT" --arch "$TARGET_ARCH"
+      - name: Record the explicit candidate validation exception
+        if: ${{ inputs.ignore_macos_intel_scale && matrix.platform == 'darwin' && matrix.arch == 'amd64' }}
+        env:
+          EXPECTED_COMMIT: ${{ needs.resolve-source.outputs.commit }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          Path('dist/unix/validation-exceptions-darwin-amd64.json').write_text(json.dumps({
+              'source_sha': os.environ['EXPECTED_COMMIT'],
+              'platform': 'darwin/amd64',
+              'test': 'TestExecutionProjectionScale100k',
+              'status': 'ignored_by_user_request',
+              'original_cold_limit_seconds': 2,
+              'publication': False
+          }, indent=2) + '\n')
+          PY
       - uses: actions/upload-artifact@v7
         with:
           name: workbench-${{ matrix.platform }}-${{ matrix.arch }}-${{ github.run_id }}
@@ -260,8 +309,8 @@ jobs:
           retention-days: 30
 
   publish:
-    needs: [resolve-source, windows, windows-arm-package, unix, macos-app]
-    name: Verify complete artifact set and publish Latest
+    needs: [resolve-source, windows, windows-arm-package, unix, macos-app, android]
+    name: Verify complete artifact set and publish selected channel
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     permissions:
@@ -291,10 +340,17 @@ jobs:
           EXPECTED_COMMIT: ${{ needs.resolve-source.outputs.commit }}
           EXPECTED_VERSION: ${{ needs.resolve-source.outputs.version }}
           WINDOWS_COMMIT: ${{ needs.windows.outputs.commit }}
+          PRERELEASE: ${{ inputs.prerelease || false }}
         run: |
           set -euo pipefail
           test "$EXPECTED_COMMIT" = "$WINDOWS_COMMIT"
-          python3 scripts/release/publish-workbench.py --input input --dist dist/release --version "$EXPECTED_VERSION" --commit "$EXPECTED_COMMIT"
+          args=()
+          if [[ "$PRERELEASE" == true ]]; then args+=(--prerelease); fi
+          python3 scripts/release/publish-workbench.py --input input --dist dist/release --version "$EXPECTED_VERSION" --commit "$EXPECTED_COMMIT" "${args[@]}"
+      - name: Include candidate exceptions in the assembled artifact
+        if: ${{ inputs.ignore_macos_intel_scale }}
+        run: |
+          cp input/unix/workbench-darwin-amd64-${{ github.run_id }}/validation-exceptions-darwin-amd64.json dist/release/candidate-validation-exceptions.json
       - uses: actions/upload-artifact@v7
         with:
           name: workbench-complete-${{ github.run_id }}
@@ -307,4 +363,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           EXPECTED_COMMIT: ${{ needs.resolve-source.outputs.commit }}
           EXPECTED_VERSION: ${{ needs.resolve-source.outputs.version }}
-        run: python3 scripts/release/publish-workbench.py --input input --dist dist/release --version "$EXPECTED_VERSION" --commit "$EXPECTED_COMMIT" --publish
+          PRERELEASE: ${{ inputs.prerelease || false }}
+        run: |
+          set -euo pipefail
+          args=()
+          if [[ "$PRERELEASE" == true ]]; then args+=(--prerelease); fi
+          python3 scripts/release/publish-workbench.py --input input --dist dist/release --version "$EXPECTED_VERSION" --commit "$EXPECTED_COMMIT" --publish "${args[@]}"

@@ -5,6 +5,8 @@ import json
 import os
 from pathlib import Path
 import tempfile
+import subprocess
+import textwrap
 import unittest
 from unittest.mock import patch
 
@@ -50,8 +52,8 @@ class ReleaseGate(unittest.TestCase):
         for name,value in self.reports.items():(self.inputs/name).write_text(json.dumps(value))
     def assemble(self):return release.assemble(self.inputs,self.dist,self.version,self.commit)
     def test_complete_and_repeat(self):
-        result=self.assemble();self.assertEqual(len(result['assets']),16)
-        self.assertEqual(len(list(self.dist.iterdir())),34)
+        result=self.assemble();self.assertEqual(len(result['assets']),len(self.payloads))
+        self.assertEqual(len(list(self.dist.iterdir())),2*len(self.payloads)+2)
         self.assertEqual(self.assemble()['commit'],self.commit)
     def test_missing_target_asset(self):
         (self.inputs/'AgentDockSetup-arm64.exe').unlink()
@@ -77,8 +79,8 @@ class ReleaseGate(unittest.TestCase):
 
 class EnhancedReleaseGate(ReleaseGate):
     target_version='1.1.7'
-    def test_corrected_117_keeps_enhanced_acceptance(self):
-        self.assertEqual(self.version,'1.1.7')
+    def test_117_and_newer_keep_enhanced_acceptance(self):
+        self.assertGreaterEqual(tuple(map(int,self.version.split('.'))),(1,1,7))
         manifest=self.assemble()
         native=[item for item in manifest['validation'] if item.get('native_privilege')=='passed']
         self.assertEqual({item['platform'] for item in native},{'windows/amd64','windows/arm64'})
@@ -86,7 +88,7 @@ class EnhancedReleaseGate(ReleaseGate):
         workflow=(ROOT/'.github/workflows/workbench-release.yml').read_text()
         self.assertIn("github.event.forced != true",workflow)
         self.assertIn("github.event.deleted != true",workflow)
-        self.assertIn('needs: [resolve-source, windows, windows-arm-package, unix, macos-app]',workflow)
+        self.assertIn('needs: [resolve-source, windows, windows-arm-package, unix, macos-app, android]',workflow)
         recovery=(ROOT/'.github/workflows/workbench-publish-existing.yml').read_text()
         self.assertIn(">= (1,1,7)",recovery)
         self.assertIn('Native Windows ARM64 install and uninstall',recovery)
@@ -114,6 +116,41 @@ class EnhancedReleaseGate(ReleaseGate):
         self.reports['acceptance-source-arm64.json']['commit']='b'*40;self.flush()
         with self.assertRaisesRegex(RuntimeError,'different source'):self.assemble()
 
+class AndroidReleaseGate(EnhancedReleaseGate):
+    target_version='1.1.8'
+    def setUp(self):
+        super().setUp()
+        apk=f'AgentDock-Workbench-{self.version}-Android-test-signed.apk'
+        self.reports['verification-android.json']={
+            'version':self.version,'commit':self.commit,'product_name':release.PRODUCT,
+            'platform':'android/arm64','apk_validation':'passed','emulator_validation':'passed',
+            'api_levels':[26,33,34,35,37],'signing':'test-signed Android debug key',
+            'physical_arm64_termux':'not_run',
+            'emulators':[{'api':api,'tests':13,'passed':13,'screenshots':23,'attempt_exit_codes':[0]} for api in [26,33,34,35,37]],
+            'assets':{apk:release.digest(self.inputs/apk)}}
+        self.flush()
+    def test_android_payload_and_prerelease_manifest(self):
+        manifest=release.assemble(self.inputs,self.dist,self.version,self.commit,True)
+        self.assertTrue(manifest['prerelease'])
+        self.assertEqual(len(manifest['assets']),17)
+        self.assertIn('android/arm64',manifest['platforms'])
+        self.assertEqual(manifest['signing']['android'],'test-signed Android debug key')
+    def test_missing_android_report_blocks_publication(self):
+        (self.inputs/'verification-android.json').unlink()
+        with self.assertRaisesRegex(RuntimeError,'Missing verified build input'):self.assemble()
+    def test_cancelled_android_matrix_blocks_publication(self):
+        self.reports['verification-android.json']['emulator_validation']='cancelled';self.flush()
+        with self.assertRaisesRegex(RuntimeError,'five-API validation incomplete'):self.assemble()
+    def test_missing_android_api_blocks_publication(self):
+        self.reports['verification-android.json']['emulators'].pop();self.flush()
+        with self.assertRaisesRegex(RuntimeError,'five-API validation incomplete'):self.assemble()
+    def test_mixed_android_source_blocks_publication(self):
+        self.reports['verification-android.json']['commit']='b'*40;self.flush()
+        with self.assertRaisesRegex(RuntimeError,'different source'):self.assemble()
+    def test_incomplete_android_tests_block_publication(self):
+        self.reports['verification-android.json']['emulators'][0]['passed']=12;self.flush()
+        with self.assertRaisesRegex(RuntimeError,'navigation/screenshot evidence'):self.assemble()
+
 class PublicationGate(unittest.TestCase):
     def setUp(self):
         temporary=tempfile.TemporaryDirectory();self.addCleanup(temporary.cleanup)
@@ -125,6 +162,8 @@ class PublicationGate(unittest.TestCase):
         self.asset={'name':path.name,'size':path.stat().st_size,'digest':'sha256:'+release.digest(path),'state':'uploaded'}
         self.record={'id':123,'tag_name':self.tag,'draft':True,'prerelease':False,'name':'AgentDock Workbench 1.1.7','assets':[self.asset],'html_url':'https://github.com/example/release'}
         self.commands=[];self.lookup=[]
+        self.stable=dict(self.record,id=99,tag_name='v1.1.6',draft=False)
+        self.latest=self.stable
         for mock in [patch.object(release,'ROOT',self.root),patch.dict(os.environ,{'GITHUB_REPOSITORY':release.REPOSITORY,'GITHUB_STEP_SUMMARY':''}),patch.object(release,'run',side_effect=self.fake_command)]:
             mock.start();self.addCleanup(mock.stop)
     def fake_command(self,*args):
@@ -136,12 +175,18 @@ class PublicationGate(unittest.TestCase):
             if args[4].startswith(f'https://uploads.github.com/repos/{release.REPOSITORY}/releases/123/assets?name='):
                 self.record['assets']=[self.asset];return json.dumps(self.asset)
         if args[:4]==('gh','api','--method','PATCH'):
-            self.assertEqual(args[4],self.endpoint);self.record['draft']=False;return json.dumps(self.record)
+            self.assertEqual(args[4],self.endpoint)
+            self.record['draft']=False
+            self.record['prerelease']='prerelease=true' in args
+            self.record['name']=next(value.split('=',1)[1] for value in args if value.startswith('name='))
+            if 'make_latest=true' in args:self.latest=self.record
+            return json.dumps(self.record)
         if args[:2]==('gh','api'):
             target=args[2]
             self.assertNotIn('/releases/tags/',target,'Draft publication must never query the published-only tag endpoint')
             if '/releases?' in target:return json.dumps(self.lookup.pop(0) if self.lookup else [self.record])
-            if target==self.endpoint or target.endswith('/releases/latest'):return json.dumps(self.record)
+            if target==self.endpoint:return json.dumps(self.record)
+            if target.endswith('/releases/latest'):return json.dumps(self.latest)
         raise AssertionError('Unexpected command '+repr(args))
     def publish(self):release.publish(self.dist,'1.1.7',self.commit)
     def mutations(self):return [args for args in self.commands if args[:4] in [('gh','api','--method','POST'),('gh','api','--method','PATCH')]]
@@ -187,5 +232,56 @@ class PublicationGate(unittest.TestCase):
         self.lookup=[[{'tag_name':'unrelated'}]*100 for _ in range(20)]
         with self.assertRaisesRegex(RuntimeError,'bounded search'):self.publish()
         self.assertEqual(self.mutations(),[])
+
+    def test_prerelease_preserves_stable_latest(self):
+        release.publish(self.dist,'1.1.7',self.commit,True)
+        self.assertTrue(self.record['prerelease'])
+        self.assertFalse(self.record['draft'])
+        self.assertEqual(self.record['name'],'AgentDock Workbench 1.1.7 Pre-release')
+        self.assertEqual(self.latest['id'],99)
+        mutation=self.mutations()[-1]
+        self.assertIn('prerelease=true',mutation)
+        self.assertIn('make_latest=false',mutation)
+        self.assertNotIn('make_latest=true',mutation)
+    def test_stable_release_remains_latest_by_default(self):
+        self.publish()
+        self.assertEqual(self.latest['id'],123)
+        self.assertIn('make_latest=true',self.mutations()[-1])
+
+class CandidateScaleException(unittest.TestCase):
+    def test_exception_is_opt_in_scoped_and_non_publishing(self):
+        workflow=(ROOT/'.github/workflows/workbench-release.yml').read_text()
+        option=workflow.split('      ignore_macos_intel_scale:',1)[1].split('\npermissions:',1)[0]
+        self.assertIn('default: false',option)
+        self.assertIn("inputs.ignore_macos_intel_scale && (inputs.publish || github.event_name == 'push')",workflow)
+        self.assertIn("IGNORE_INTEL_SCALE: ${{ inputs.ignore_macos_intel_scale && matrix.platform == 'darwin' && matrix.arch == 'amd64' }}",workflow)
+        self.assertIn('candidate-validation-exceptions.json',workflow)
+        self.assertIn("'status': 'ignored_by_user_request'",workflow)
+        self.assertIn('coldLimit := 2 * time.Second',(ROOT/'internal/activity/scale_test.go').read_text())
+
+    @unittest.skipUnless(os.name=='posix','exercise the Bash native-Unix workflow step')
+    def test_only_exact_scale_case_is_omitted_and_remaining_checks_run(self):
+        workflow=(ROOT/'.github/workflows/workbench-release.yml').read_text()
+        step=workflow.split('      - name: Native backend regression\n',1)[1].split('      - name:',1)[0]
+        script=textwrap.dedent(step.split('        run: |\n',1)[1])
+        for ignored in ['false','true']:
+            with self.subTest(ignored=ignored), tempfile.TemporaryDirectory() as directory:
+                root=Path(directory)
+                fake_go=root/'go'
+                fake_go.write_text('#!/bin/sh\nif [ "$1" = list ]; then\n printf "%s\\n" github.com/uvwt/agentdock/internal/activity github.com/uvwt/agentdock/cmd/agentdock\nelse\n printf "%s\\n" "$*" >> "$GO_INVOCATIONS"\nfi\n')
+                fake_go.chmod(0o700)
+                env=dict(os.environ,PATH=str(root)+os.pathsep+os.environ['PATH'],IGNORE_INTEL_SCALE=ignored,GO_INVOCATIONS=str(root/'calls'),GITHUB_STEP_SUMMARY=str(root/'summary'))
+                subprocess.run(['bash','-c',script],env=env,check=True,capture_output=True,text=True)
+                calls=(root/'calls').read_text().splitlines()
+                self.assertIn('test -p 2 github.com/uvwt/agentdock/cmd/agentdock -count=1 -timeout=8m',calls)
+                self.assertIn('vet ./...',calls)
+                if ignored=='true':
+                    self.assertEqual(len(calls),3)
+                    self.assertIn('test -p 1 ./internal/activity -skip ^TestExecutionProjectionScale100k$ -count=1 -timeout=8m',calls)
+                    self.assertIn('ignored by explicit candidate request',(root/'summary').read_text())
+                else:
+                    self.assertEqual(len(calls),4)
+                    self.assertIn('test -p 1 ./internal/activity -run ^TestExecutionProjectionScale100k$ -count=3 -v -timeout=8m',calls)
+                    self.assertFalse(any('-skip' in call for call in calls))
 
 if __name__=='__main__':unittest.main()

@@ -33,16 +33,16 @@ func insertionProjectionFixture(t *testing.T) (*mcpAppTestHarness, context.Conte
 	if err != nil {
 		t.Fatal(err)
 	}
-	return h, ctx, conversation, queued["insertion"].(insertion.Item).ID
+	return h, ctx, conversation, queued["insertion"].(insertion.PublicItem).ID
 }
 
-func insertionQueueItem(t *testing.T, h *mcpAppTestHarness, conversation string) insertion.Item {
+func insertionQueueItem(t *testing.T, h *mcpAppTestHarness, conversation string) insertion.PublicItem {
 	t.Helper()
 	result, err := h.runtime.RuntimeInsertions(activity.WithLocalManagement(t.Context()), conversation)
 	if err != nil {
 		t.Fatal(err)
 	}
-	items := result["insertions"].([]insertion.Item)
+	items := result["insertions"].([]insertion.PublicItem)
 	if len(items) != 1 {
 		t.Fatalf("queue has %d records", len(items))
 	}
@@ -81,6 +81,7 @@ func TestProjectedThirdCallPreservesSupplementBeforeFourthAction(t *testing.T) {
 			host := insertion.Transport{HostType: "isolated_functions_exec", OuterCallID: "outer_third", Passthrough: true, ContextAcknowledgement: true}
 			result, err := h.server.InvokeProjected(ctx, "session_observe", map[string]any{"action": "list"}, host, project, func(_ context.Context, final map[string]any) error {
 				assertResponseSupplement(t, final, id, "你好，我是帅哥")
+				assertInsertionAttention(t, final)
 				pending := insertionQueueItem(t, h, conversation)
 				if pending.Status != "outer_forwarded" || pending.AcknowledgedAt != nil {
 					t.Fatal("inner response was acknowledged before model-context commit")
@@ -168,8 +169,15 @@ func TestUnintegratedProjectionLosesDisplayButNeverEndsDelivery(t *testing.T) {
 		t.Fatal("fixture did not reproduce selective projection loss")
 	}
 	item := insertionQueueItem(t, h, conversation)
-	if item.Status != "delivery_unknown" || item.AcknowledgedAt != nil {
-		t.Fatal("unintegrated host reported final success")
+	if item.Status != "inner_appended" || item.DeliveryReason != "awaiting_receiver_receipt" || item.AcknowledgedAt != nil || item.NextRetryAt == nil {
+		t.Fatal("unintegrated host reported final success or omitted its receipt wait")
+	}
+	// Manual retry has an explicit policy: it bypasses the automatic 30-second
+	// wait, but only a later root call can reserve the same supplement.
+	local := activity.WithLocalManagement(t.Context())
+	retried, err := h.runtime.RuntimeRetryInsertion(local, conversation, id)
+	if err != nil || !retried["insertion"].(insertion.PublicItem).RetryRequested {
+		t.Fatalf("manual retry request: %v %v", retried, err)
 	}
 	// The next new business call gets the supplement, without replaying the
 	// original session_observe operation and without creating a new insertion ID.
@@ -178,6 +186,7 @@ func TestUnintegratedProjectionLosesDisplayButNeverEndsDelivery(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertResponseSupplement(t, next, id, "你好，我是帅哥")
+	assertInsertionAttention(t, next)
 	if item = insertionQueueItem(t, h, conversation); item.DeliveryAttempts != 2 {
 		t.Fatalf("bounded retry count=%d", item.DeliveryAttempts)
 	}
@@ -233,6 +242,7 @@ func TestProjectedFailuresNeverFabricateContextCommit(t *testing.T) {
 				}
 			}
 			assertResponseSupplement(t, final, id, "你好，我是帅哥")
+			assertInsertionAttention(t, final)
 		})
 	}
 }

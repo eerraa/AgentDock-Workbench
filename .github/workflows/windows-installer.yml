@@ -99,6 +99,12 @@ jobs:
           $ErrorActionPreference = 'Stop'
           go test ./internal/envstore ./internal/fs/securepath
 
+      - name: Test archive normalization and security on Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & .\scripts\ci\parallel-installer\test-setup-archive.ps1
+
       - name: Test Setup runtime diagnostics
         shell: powershell
         run: |
@@ -121,6 +127,13 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           go test ./internal/desktopruntime -run TestSelectInteractiveTaskSessionID -count=1
+
+      - name: Test native process-stop race and genuine access denial
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          go test ./internal/desktopruntime -run '^TestBinaryProcessStop' -count=3 -v
+          if ($LASTEXITCODE -ne 0) { throw 'Native process-stop regression failed.' }
 
       - name: Run full install and in-place upgrade as standard user
         shell: powershell
