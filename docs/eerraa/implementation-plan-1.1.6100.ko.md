@@ -2,7 +2,7 @@
 
 기록일: 2026-09-28 KST
 작업: `tsk_c83ac7427fcaa1db`
-상태: **2ae798f 후보 CI 전체 통과(Setup 설치·반복·repair·제거, 1.1.16102 upgrade·rollback 포함) / 제외 항목 재검토 후 결함 3개 추가 / 사용자 결정으로 CI 없이 로컬 Windows 빌드를 정식 게시 대상으로 함(4.8절)**
+상태: **v1.1.17100 게시 후 기준선을 Workbench v1.1.8 프리릴리스로 옮기는 브랜치 작업(4.9절). fork는 Setup으로만 업데이트. 1.1.18100 후보 소스이며 게시 전**
 
 이 문서는 현재 AGENTS.md가 가리키는 단일 실행 정본이다. 파일명의 1.1.6100은 과거 경로이며 현재 배포 버전이 아니다. 과거 main의 통합 기록은 기존 Git 이력과 외부 archive에 보존되어 있다. 아래 결과는 이번 원본 기반 후보에 실제 수행한 검사만 나타내며 과거 통합본의 PASS를 합산하지 않는다.
 
@@ -10,7 +10,7 @@
 
 | 항목 | 실제 기준 |
 |---|---|
-| 고정 원본 | Workbench v1.1.7 / `b367eaab95202873fb213b8713440bf7822878c4` |
+| 고정 원본 | Workbench v1.1.8 프리릴리스 / `4bd778d4077bbe58cfe19e4abb777f660694377b` (4.9절). 이전 원본 v1.1.7 / `b367eaab95202873fb213b8713440bf7822878c4` |
 | 최종 정본 경로 | `D:\Engineering\agentdock-workbench` |
 | 사용자 원격 | `eerraa/AgentDock-Workbench`; repository ID 1380606195 |
 | fork parent | `A-m-o-r-F-a-t-i/AgentDock-Workbench` |
@@ -19,7 +19,7 @@
 | 최신 실제 후보 빌드 소스 | `58b6f1496872c37150be925d76458552965f2058`; CI 36338434227, 상세 결과는 4.3절. 이후 후보와 실패는 4.5–4.7절 |
 | 이전 local main | `cea147b9a3dbeb6f370c2c5231ca7a50604d7bdd` — 게시 소스의 조상. 게시 시 새 merge 없이 fast-forward |
 | 이전 remote main | `113f709a841ea64f238c528b561ab5f502d95239` — 게시 소스의 조상. 게시 시 force 없이 fast-forward |
-| 게시 버전 | **1.1.17100**; 원본 기준 1.1.7과 구분. 4.8절 게시 소스 커밋에 `v1.1.17100` 태그 |
+| 게시 버전 | **1.1.17100**; 원본 기준 1.1.7과 구분. 4.8절 게시 소스 커밋에 `v1.1.17100` 태그. 다음 후보는 **1.1.18100**(4.9절) |
 | 외부 근거 | `D:\Engineering\archives\agentdock\2026-09-28\minimal-release-c83ac742` |
 
 직전 문서 커밋 8174fec는 제품 변경 없이 검증 기록을 보존했다. 이후 새 배포 설정·후보 버전 변경이 진행 중이며, HEAD와 CI 결과는 외부 실행 기록으로 구분한다. `RESUME_FINAL_STATE.json`은 직전 재개의 종료 관측이지 후속 변경의 완료 증명이 아니다.
@@ -270,6 +270,31 @@ source `2ae798f` / CI 36368050134는 모든 job이 성공했다. Setup E2E는 �
 각 수정은 수정 전 실패와 수정 후 통과를 로컬에서 확인했다. 예약 작업 시험 5 cases는 PowerShell 5.1과 7에서 통과했고 조건 제거 시 실패한다. Funnel 시험은 수정 전 `verified_at` 유지로 실패했고, 수정 후 Tailscale/Funnel 35 PASS다. loopback 시험은 프록시 사용 시 실패하고, 수정 후 desktop 순수 정책 892 assertions가 통과한다. go vet 전체, `internal/desktopruntime`·`scripts/test` 315 PASS / 2 SKIP / 0 FAIL, installer 정적 계약이 통과했다.
 
 사용자는 이 3개 반영 후 CI를 생략하고 로컬 Windows 빌드만 정식 Release에 포함하도록 결정했다. 따라서 이 소스의 전체 Go·Linux·race·native·WPF, 실제 Setup 설치·업그레이드 시험은 **실행하지 않는다.** 설치·업그레이드 통과는 직전 `2ae798f`의 결과이며 이 배포 파일의 결과로 옮겨 적지 않는다. `verification-scope.json`에 이 구분을 그대로 기록하고, 기존 verifier의 `-RequireAcceptance`는 통과하도록 값을 바꾸지 않는다. 이 문서를 포함한 커밋이 v1.1.17100 게시 소스다. 게시 결과(URL·hash·재다운로드)는 Release와 외부 evidence에 기록하며, 게시 후 main에 기록 커밋을 추가하지 않는다.
+
+## 4.9 기준선 1.1.8 재적용과 Setup 전용 업데이트
+
+v1.1.17100은 `https://github.com/eerraa/AgentDock-Workbench/releases/tag/v1.1.17100`에 게시되었다. 이 문서에 적힌 외부 근거(archives) 경로는 사용자 결정으로 삭제되어 더 이상 없다. 사용자는 2026-09-28 업스트림 Workbench v1.1.8 프리릴리스(`4bd778d4077bbe58cfe19e4abb777f660694377b`)를 새 기준선으로 삼고 기존 fork 구현을 그대로 유지하도록 결정했다. v1.1.8은 v1.1.7의 직계 후손(126 커밋, 353 파일)이며 업스트림 main에는 아직 병합되지 않았다.
+
+방식은 1.1.7 때의 재이식이 아니라 main에서 `feat/rebase-1.1.8`을 만들어 v1.1.8을 병합하는 것이다. main은 이미 v1.1.7 위의 최소 변경뿐이므로 결과는 같고 이력과 fast-forward를 보존한다. 병합 결과의 `git diff v1.1.8`은 기존 fork 변경과 이 절의 변경만 포함함을 확인했다.
+
+충돌 17개는 다음 원칙으로 해결했다. 버전은 1.1.18100으로 1.1.16102·1.1.17100보다 크다. fork 저장소 주소(Setup·Release·workflow 저장소 조건)를 유지했다. Setup receipt 공유 위반 대기는 업스트림 `setup_receipt_windows.go`(1409b27)가 같은 경계를 구현하므로 fork의 중복 함수를 제거하고 fork 시험은 유지했다. OAuth는 업스트림의 등록 콜백 정확 일치 검사에 fork의 한국어 오류 페이지를 연결했다. 제어판은 업스트림 동작을 그대로 받고 문구만 리소스 키로 옮겼다.
+
+v1.1.8에서 rg가 조용히 빠지는 경계 두 곳을 찾아 기존 소유자에서 보완했다.
+
+| 경계 | 1.1.8 결함 | 보완과 회귀 |
+|---|---|---|
+| `install.ps1` payload 선택 | 새 허용 목록에 `share/agentdock/bin/*`가 없어 Setup이 rg 없이 설치 | 고정 5개 파일만 정확한 이름으로 허용. 무결성은 기존 installer engine이 검증. `test-setup-archive.ps1`에 rg 선택·근사 이름 비선택 시험을 추가. 업스트림 파일에서는 실패, 수정본은 PowerShell 5.1·7 통과 |
+| `selfupdate` 단일 패스 추출 | `--local-archive`·복구 경로의 generation에서 rg가 사라지고 부분·변조 번들도 수용 | `extractWindowsReleasePayload`에 rg 허용·`VerifyIfPresent`·취소를 연결. 부분 번들 단위 시험과 실제 rg 통합 시험이 수정 전 실패, 수정 후 통과 |
+
+1.1.8의 새 제어판 중국어 문구(권한 사용자 설정, 실행 상태, 백그라운드 처리 시간, 삽입 상태·재전달 안내, 사이드바 격리 안내)를 UiText 키로 옮겼다. 키 28개를 추가하고 업스트림 원문이 바뀐 5개 값을 갱신했으며 쓰이지 않게 된 14개를 삭제해 언어별 1,131개다. zh-CN 값은 업스트림 원문과 같아 순수 정책 시험의 중국어 단언을 그대로 만족한다. 한국어로 실행되는 레이아웃 시험의 중국어 단언 3곳은 리소스 값 비교로 바꿨다.
+
+fork는 Setup으로만 업데이트한다. 트레이와 창의 업데이트 항목은 온라인 확인·다운로드 없이 fork Releases 페이지 안내만 한다. CLI `agentdock update`(인자 없음·`--check`·`--progress-json`)는 네트워크와 generation 접근 전에 거부하고 유지보수용 `--local-archive`만 남긴다. `internal/selfupdate` 패키지와 fork 업데이트 주소는 유지한다. `desktop_windows_test.go`의 업데이트 흐름 계약은 이 정책(온라인 업데이트 호출 금지, Releases 안내)으로 바꿨다. 시작 시 데스크톱 복구(Core·Tray 버전 불일치, 구형 flat 이관)는 여전히 Release ZIP을 찾는다. Setup이 Core와 Tray를 함께 설치하는 현재 배포에서는 발생 조건이 없다고 판단해 코드를 바꾸지 않았다. 다음 게시에서 Release 자산을 Setup과 SHA-256으로 줄이는 게시 스크립트 변경은 릴리스 요청 때 처리한다.
+
+로컬 검증: gofmt·`go vet ./...` 통과. 전체 Go 시험은 시험이 있는 57개 패키지 중 56개가 통과했고, 실패는 아래 `internal/taskstate` 규모 시험 1개다. rg 실제 번들 통합(`bundledrg`·`selfupdate`·`installer`·`tool/file`) 통과. 제어판·순수 정책·레이아웃 시험 프로젝트 빌드 경고·오류 0, 순수 정책 920 assertions, 한국어 표시 검수 6,873 assertions, installer 정적 계약(작업 소유권 5 cases 포함) 통과.
+
+환경 관측: 이 세션 환경의 `AGENTDOCK_INSTRUCTIONS_FILE`이 존재하지 않는 경로를 가리켜 `cmd/agentdock`·`internal/config` 시험 6개가 실패했고, 변수를 제외하면 통과한다. `internal/taskstate`의 1000개 첫 페이지 2초 목표는 전체 병렬 실행이나 다른 작업과 동시 실행 중 3.9–6.9초로 실패했다. 같은 조건의 main 사본도 5.2초로 실패했고, 단독 실행은 브랜치 1.65초·main 1.4–1.6초·v1.1.8 1.6–1.7초로 모두 통과했다. 이 PC의 부하에 따른 시간 초과이며 병합 회귀가 아니다.
+
+실행하지 않은 것: WPF 레이아웃 시험은 Actions 전용 가드를 유지해 빌드만 했다. Windows 패키지 빌드·자산 검증, 실제 Setup 설치·반복·repair·제거, 1.1.17100에서 1.1.18100으로의 Setup 업그레이드와 롤백은 격리 runner 또는 VM이 필요하며 미검증이다. 업스트림의 1.1.8 이후 수정(PR #22: 시작 시 ACL 재적용 생략, 설치 스테이징·롤백)은 포함하지 않았다. 재현되는 것만 별도로 채택한다.
 
 ## 5. 미완료 및 명시적 차단
 

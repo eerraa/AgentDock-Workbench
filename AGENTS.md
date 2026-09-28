@@ -42,10 +42,16 @@ without tasks, old records, rejected writes and asynchronous command completion.
 
 Canonical implementation and delivery record:
 `docs/eerraa/implementation-plan-1.1.6100.ko.md`. Its historical filename is not a
-release version. The fixed source baseline is Workbench v1.1.7,
-`b367eaab95202873fb213b8713440bf7822878c4`. Keep only pinned rg, Korean
-presentation and reproducer-proven minimal fixes at the existing owners. Do not
-reintroduce composite hosts, Origin pipes, epochs or parallel state systems.
+release version. The fixed source baseline is the Workbench v1.1.8 prerelease tag,
+`4bd778d4077bbe58cfe19e4abb777f660694377b`, merged onto the earlier v1.1.7
+(`b367eaab95202873fb213b8713440bf7822878c4`) fork line. Keep only pinned rg,
+Korean presentation and reproducer-proven minimal fixes at the existing owners. Do
+not reintroduce composite hosts, Origin pipes, epochs or parallel state systems.
+
+This fork is updated only by running a new Setup. The tray/window update entry
+opens the fork Releases page, and `agentdock update` refuses online checks and
+downloads; only the maintenance `--local-archive` path remains. Do not re-enable
+the online updater or publish updater archives as a user update path.
 
 The 2026-09-28 user request explicitly authorizes normal main integration and
 push, a new consistent version/tag, CI dispatch and a formal Windows x64 Release
@@ -61,8 +67,9 @@ or disposable VM; do not impersonate one through environment variables. Local
 explicit disposable unit/native fixtures are allowed. Preserve runner-only test
 guards and distinguish a local build from an unexecuted runner test.
 
-A new distribution must compare above the supported historical 1.1.16102 release;
-never reuse that version for new bytes or confuse it with the upstream baseline.
+A new distribution must compare above the published 1.1.16102 and 1.1.17100
+releases; never reuse a version for new bytes or confuse it with the upstream
+baseline.
 Source, tests, packaging, installation, publication and actual asset redownload
 verification are separate delivery states. A formal release requires all of them,
 including Korean and rg content in the actual payload, immutable source identity,
