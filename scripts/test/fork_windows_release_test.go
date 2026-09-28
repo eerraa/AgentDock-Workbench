@@ -42,7 +42,7 @@ func TestWindowsBuildReportNamesTheSourceBaseline(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	match := regexp.MustCompile("The fixed source baseline is[^`]*`([0-9a-f]{40})`").FindSubmatch(rules)
+	match := regexp.MustCompile("source\\s+baseline\\s+is[^`]*`([0-9a-f]{40})`").FindSubmatch(rules)
 	if match == nil {
 		t.Fatal("AGENTS.md does not record a fixed source baseline commit")
 	}
