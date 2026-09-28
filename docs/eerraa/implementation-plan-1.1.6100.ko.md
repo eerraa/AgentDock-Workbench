@@ -2,7 +2,7 @@
 
 기록일: 2026-09-28 KST
 작업: `tsk_c83ac7427fcaa1db`
-상태: **Windows 후보 패키지·Setup 설치/제거·실제 다운로드 검증 완료 / 전체 한국어·지원 upgrade 미완료 / 정식 Release 미게시**
+상태: **2ae798f 후보 CI 전체 통과(Setup 설치·반복·repair·제거, 1.1.16102 upgrade·rollback 포함) / 제외 항목 재검토 후 결함 3개 추가 / 사용자 결정으로 CI 없이 로컬 Windows 빌드를 정식 게시 대상으로 함(4.8절)**
 
 이 문서는 현재 AGENTS.md가 가리키는 단일 실행 정본이다. 파일명의 1.1.6100은 과거 경로이며 현재 배포 버전이 아니다. 과거 main의 통합 기록은 기존 Git 이력과 외부 archive에 보존되어 있다. 아래 결과는 이번 원본 기반 후보에 실제 수행한 검사만 나타내며 과거 통합본의 PASS를 합산하지 않는다.
 
@@ -17,9 +17,9 @@
 | 현재 제품 작업 | 정본 Git에 연결된 `D:\Engineering\worktrees\agentdock-wb-release` |
 | 작업 브랜치 | `work/minimal-wb-release-20260928` |
 | 최신 실제 후보 빌드 소스 | `58b6f1496872c37150be925d76458552965f2058`; CI 36338434227, 상세 결과는 4.3절. 이후 후보와 실패는 4.5–4.7절 |
-| 기존 local main | `cea147b9a3dbeb6f370c2c5231ca7a50604d7bdd` — 제품 후보로 교체·병합하지 않음 |
-| 기존 remote main | `113f709a841ea64f238c528b561ab5f502d95239` — push하지 않음 |
-| 현재 후보 소스 버전 | **1.1.17100, 미배포**; 원본 기준 1.1.7과 구분하며 태그는 생성하지 않음 |
+| 이전 local main | `cea147b9a3dbeb6f370c2c5231ca7a50604d7bdd` — 게시 소스의 조상. 게시 시 새 merge 없이 fast-forward |
+| 이전 remote main | `113f709a841ea64f238c528b561ab5f502d95239` — 게시 소스의 조상. 게시 시 force 없이 fast-forward |
+| 게시 버전 | **1.1.17100**; 원본 기준 1.1.7과 구분. 4.8절 게시 소스 커밋에 `v1.1.17100` 태그 |
 | 외부 근거 | `D:\Engineering\archives\agentdock\2026-09-28\minimal-release-c83ac742` |
 
 직전 문서 커밋 8174fec는 제품 변경 없이 검증 기록을 보존했다. 이후 새 배포 설정·후보 버전 변경이 진행 중이며, HEAD와 CI 결과는 외부 실행 기록으로 구분한다. `RESUME_FINAL_STATE.json`은 직전 재개의 종료 관측이지 후속 변경의 완료 증명이 아니다.
@@ -94,6 +94,7 @@ Setup receipt 재시도, Named/Quick/Tailscale 표시 묶음, 생성 시점 Job 
 | `900723d6cf9096244e9b8c9b0eed633caf8abd3b` | 남은 한국어 표시와 Setup result.json 공유 위반 대기 |
 | `f253e31` | 도구 생성 제목의 descriptor 결합, Setup E2E 세 언어 확인(이전 미커밋 3개 파일) |
 | `361d426` | 접근 불가 같은 이름 프로세스로 Core 상태·정지가 실패하는 결함 |
+| 4.8절 커밋 | Setup 롤백의 예약 작업 무조건 중지, Funnel 시간 초과 후 Ready 재표시, 제어판 loopback 요청의 프록시·리다이렉트 사용 |
 
 직전 b1d8589 제품 소스의 WB_BASE 대비 차이는 43개 파일, 3,785줄 추가·53줄 삭제다. 여기에는 이전 후보의 한국어·rg 및 시험 코드가 포함된다. 이 숫자를 이번에 새로 완성한 기능 수로 해석하지 않는다. 이번 재개의 소스 커밋 4개만 외부 resume-source-patches에 format-patch 및 SHA-256으로 추가 보존했다.
 
@@ -251,6 +252,24 @@ source `900723d` / CI 36364901575는 Linux·Windows Go·정적 분석·순수 �
 회귀 `TestCoreSelectionSkipsInaccessibleSameNameProcess`는 빈 DACL로 만든 같은 이름 fixture에 동일 사용자가 실제 `ERROR_ACCESS_DENIED`를 받는지 먼저 확인한 뒤, 선택·정지가 성공하고 이 root의 Core만 종료하며 다른 프로세스는 생존함을 검사한다. 수정 전 코드에서는 CI와 같은 `inspect Core candidate …: Access is denied.`로 실패했고, 수정 후 기존 Core 역할 시험 5개와 함께 6 PASS / 0 SKIP / 0 FAIL이다. 로컬 worktree의 `.git` 소유자가 Administrators여서 Go VCS stamping이 거부되는 환경 문제는 전역 Git 설정을 바꾸지 않고 자식 프로세스의 `safe.directory` 환경값으로만 해결했다.
 
 이전 미커밋 3개 파일은 `FINISH_ATTEMPT_STATE.json`의 SHA-256과 일치함을 확인한 뒤 그대로 `f253e31`로 커밋했다. 해당 로컬 검사(표시 6,789 assertions, scripts/test 112 PASS)는 이관 전 결과이며 재실행하지 않았다. 실제 Setup의 세 언어, 설치 후 Core 정지·반복 설치·repair·제거와 역사적 1.1.16102 upgrade/rollback은 이 소스의 후속 CI 결과로만 판정한다.
+
+## 4.8 후보 CI 통과, 제외 항목 재검토, 로컬 빌드 게시 결정
+
+source `2ae798f` / CI 36368050134는 모든 job이 성공했다. Setup E2E는 설치(한국어)·반복 설치(영어)·구형 PowerShell 작업 repair(중국어)·Core 정지/재시작·제거를 통과했다. 역사적 1.1.16102 기준판 설치·health, 주입 실패 rollback, 1.1.17100 upgrade, 동일 버전 repair 네 단계도 처음으로 모두 통과했다(`upgrade-validation.json` passed=true). 채널은 candidate-not-released이며 이 artifact는 게시하지 않았다.
+
+사용자 요청으로 2.6절 제외 결정을 재검토했다. 기존 근거는 "v1.1.7에서 결함이 입증될 때만 채택"이라는 범위 규칙뿐이었고 항목별 결함 분석은 없었다. 제외된 upstream PR #4–#9·#11과 옛 main 항목을 v1.1.7 코드와 대조했다. PR 전체 채택이 필요한 항목은 없었으며, v1.1.7에 실제로 있고 작은 수정으로 닫히는 결함 3개만 채택했다.
+
+| 채택 | v1.1.7 근거 | 수정 |
+|---|---|---|
+| Setup 롤백의 예약 작업 무조건 중지 | `install.ps1` 롤백이 task transaction 시작 여부와 무관하게 `Stop-ScheduledTask` 실행. 사전 검사 거부만으로 관리자 모드 Core가 멈추고 재시작되지 않음 | 이전 `c45969d`의 조건과 AST mock 시험 복원 |
+| Funnel 공개 검증 시간 초과 후 Ready 재표시 | 5초 deadline 초과 시 pending 기록 전에 반환하여 이전 `verified_at`으로 status가 Ready를 재구성 | 시간 초과·취소 경로에서도 빠른 실패와 같은 pending 기록. 정상 검증 중 Ready를 먼저 지우는 PR #9 방식은 5분 주기 자동 검증마다 상태가 깜박이므로 채택하지 않음 |
+| 제어판 loopback 요청의 프록시·리다이렉트 사용 | `RuntimeService`의 기본 `HttpClient`가 시스템 프록시·리다이렉트를 사용하며 Bearer 토큰 요청에도 쓰임 | `ActivityClient`와 같은 handler를 `LoopbackHttp` 하나로 공유 |
+
+미룬 항목은 메인 창 활동 요약 갱신, 비JSON health 수용, Core 정지 중 버전 표시 프로세스 반복, 상태 조회 실패의 "중지됨" 표시, 앱 밖 Tailscale 주소 변경 시 캐시 혼합, 생성 후 Job 할당 틈, 관리자 작업의 UAC 재시도, tunnel configure 롤백, 폴더 보안 재설정 성능, 브라우저 시작 대기다. insertion preview(기능), receipt 재시도의 나머지(원자적 기록으로 발생 불가), 프로세스 스캔 오표시(읽는 곳 없음), 오프라인 전용 배포 framework(fork 주소로 위험 해소)는 불필요로 판단했다. 운영 로그의 30초 주기 `GET /hello` 404는 사용자 Edge 프로필에서 온 외부 요청이며 제품 결함이 아니다.
+
+각 수정은 수정 전 실패와 수정 후 통과를 로컬에서 확인했다. 예약 작업 시험 5 cases는 PowerShell 5.1과 7에서 통과했고 조건 제거 시 실패한다. Funnel 시험은 수정 전 `verified_at` 유지로 실패했고, 수정 후 Tailscale/Funnel 35 PASS다. loopback 시험은 프록시 사용 시 실패하고, 수정 후 desktop 순수 정책 892 assertions가 통과한다. go vet 전체, `internal/desktopruntime`·`scripts/test` 315 PASS / 2 SKIP / 0 FAIL, installer 정적 계약이 통과했다.
+
+사용자는 이 3개 반영 후 CI를 생략하고 로컬 Windows 빌드만 정식 Release에 포함하도록 결정했다. 따라서 이 소스의 전체 Go·Linux·race·native·WPF, 실제 Setup 설치·업그레이드 시험은 **실행하지 않는다.** 설치·업그레이드 통과는 직전 `2ae798f`의 결과이며 이 배포 파일의 결과로 옮겨 적지 않는다. `verification-scope.json`에 이 구분을 그대로 기록하고, 기존 verifier의 `-RequireAcceptance`는 통과하도록 값을 바꾸지 않는다. 이 문서를 포함한 커밋이 v1.1.17100 게시 소스다. 게시 결과(URL·hash·재다운로드)는 Release와 외부 evidence에 기록하며, 게시 후 main에 기록 커밋을 추가하지 않는다.
 
 ## 5. 미완료 및 명시적 차단
 
