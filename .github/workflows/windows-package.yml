@@ -253,20 +253,8 @@ jobs:
           "tag=$tag" | Out-File $env:GITHUB_OUTPUT -Encoding ascii -Append
           "artifact_name=$artifactName" | Out-File $env:GITHUB_OUTPUT -Encoding ascii -Append
 
-      - name: Offscreen desktop layout regression
-        run: |
-          $ErrorActionPreference = 'Stop'
-          dotnet run --project desktop/windows/control-panel-layout-tests/AgentDock.ControlPanel.LayoutTests.csproj --configuration Release -- $PWD (Join-Path $PWD 'dist/layout-validation')
-          if ($LASTEXITCODE -ne 0) { throw 'Offscreen desktop layout validation failed.' }
-
-      - name: Preserve layout evidence
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: desktop-layout-${{ github.run_id }}
-          path: dist/layout-validation/*
-          if-no-files-found: warn
-          retention-days: 30
+      # The required native-acceptance job already runs this exact source's
+      # WPF suite and retains its screenshots. Do not render it a second time.
 
       - name: Backend regression
         run: |
@@ -369,7 +357,7 @@ jobs:
               -BaselineArchive (Join-Path $baselineOutput 'release/agentdock_windows_amd64.zip') `
               -CloudflaredBinary (Join-Path $PWD 'dist/windows-package/cloudflared.exe') `
               -InstallerPath (Join-Path $PWD 'scripts/install/install.ps1') `
-              -BaselineInstallerPath (Join-Path $baselineRoot 'scripts/install/install.ps1') `
+              -BaselineInstallerPath (Join-Path $baselineRoot 'scripts/install/install.ps1') -BaselineChannel setup `
               -ExpectedVersion '${{ steps.metadata.outputs.version }}' -ExerciseRollback `
               -ReportPath (Join-Path $PWD 'dist/windows-package/upgrade-validation.json')
             $receipt = Get-Content dist/windows-package/upgrade-validation.json -Raw | ConvertFrom-Json
