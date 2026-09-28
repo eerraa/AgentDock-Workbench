@@ -1056,6 +1056,17 @@ function Test-AgentDockReleasePayloadPath {
     ) -contains $Name) {
         return $true
     }
+    # Exact pinned ripgrep component files only; the installer engine verifies
+    # the complete set, sizes and SHA-256 before copying it into a generation.
+    if (@(
+        'share/agentdock/bin/manifest.json',
+        'share/agentdock/bin/rg.exe',
+        'share/agentdock/bin/COPYING',
+        'share/agentdock/bin/LICENSE-MIT',
+        'share/agentdock/bin/UNLICENSE'
+    ) -ccontains $Name) {
+        return $true
+    }
     return $Name.StartsWith('share/agentdock/core-skills/', [StringComparison]::Ordinal) -or
         $Name.StartsWith('wsl-helper/', [StringComparison]::Ordinal)
 }

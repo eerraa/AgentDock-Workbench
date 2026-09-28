@@ -100,3 +100,43 @@ func TestComponentArchiveLegacyAndCancellation(t *testing.T) {
 		t.Fatalf("canceled extraction ignored: %v", err)
 	}
 }
+
+// The single-pass Release payload used by local-archive updates must carry the
+// same verified component into the generation staging directory.
+func TestReleasePayloadCarriesVerifiedBundle(t *testing.T) {
+	source := os.Getenv("AGENTDOCK_TEST_RG_BUNDLE")
+	if source == "" {
+		t.Fatal("verified component fixture is required")
+	}
+	for _, mutation := range []string{"valid", "tampered"} {
+		t.Run(mutation, func(t *testing.T) {
+			archive := makeWindowsReleaseZIP(t, func(writer *zip.Writer) {
+				writeReleaseEntry(t, writer, bundledrg.RelativeDir+"/manifest.json", string(bundledrg.ManifestBytes()))
+				for _, expected := range bundledrg.Specification().Files {
+					data, err := os.ReadFile(filepath.Join(source, expected.Path))
+					if err != nil {
+						t.Fatal(err)
+					}
+					if mutation == "tampered" && expected.Path == "rg.exe" {
+						data[len(data)-1] ^= 1
+					}
+					writeReleaseEntry(t, writer, bundledrg.RelativeDir+"/"+expected.Path, string(data))
+				}
+			})
+			payload, err := extractWindowsReleasePayload(t.Context(), archive, t.TempDir(), "agentdock.exe", "v1.1.18100")
+			if mutation == "tampered" {
+				if !errors.Is(err, bundledrg.ErrIntegrity) {
+					t.Fatalf("tampered bundle accepted: %v", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			present, err := bundledrg.VerifyIfPresent(t.Context(), payload.DesktopPath)
+			if err != nil || !present {
+				t.Fatalf("verified bundle lost from the release payload: %v %v", present, err)
+			}
+		})
+	}
+}

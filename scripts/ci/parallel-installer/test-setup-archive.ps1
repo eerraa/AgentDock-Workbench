@@ -124,6 +124,25 @@ try {
     Assert-True ($legacy.selected_entry_count -eq 11) 'legacy backslash ZIP did not preserve selected payload'
     Assert-True ((Get-Content -LiteralPath (Join-Path $legacyDestination 'share\agentdock\core-skills\manifest.json') -Raw) -eq '{}') 'legacy nested payload was not extracted'
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $legacyDestination 'docs\not-installed.txt'))) 'legacy normalization bypassed selection'
+
+    # The pinned ripgrep component must reach the installer engine, which owns
+    # its integrity verification; unknown files beside it are never selected.
+    $rgFiles = @('manifest.json', 'rg.exe', 'COPYING', 'LICENSE-MIT', 'UNLICENSE')
+    $rgArchive = Join-Path $normalRoot 'bundled-rg.zip'
+    $rgDestination = Join-Path $normalRoot 'rg-extract'
+    New-TestArchive -Path $rgArchive -Mutate {
+        param($archive)
+        foreach ($file in $rgFiles) { Add-TestEntry -Archive $archive -Name "share/agentdock/bin/$file" -Content $file }
+        Add-TestEntry -Archive $archive -Name 'share/agentdock/bin/extra.exe' -Content 'unexpected'
+        Add-TestEntry -Archive $archive -Name 'share/agentdock/bin/rg.exe.bak' -Content 'unexpected'
+    }
+    $rg = Expand-AgentDockReleaseArchive -ArchivePath $rgArchive -DestinationPath $rgDestination
+    foreach ($file in $rgFiles) {
+        Assert-True ((Get-Content -LiteralPath (Join-Path $rgDestination "share\agentdock\bin\$file") -Raw) -eq $file) "bundled rg file was not extracted: $file"
+    }
+    Assert-True (-not (Test-Path -LiteralPath (Join-Path $rgDestination 'share\agentdock\bin\extra.exe'))) 'unknown bundled tool was selected'
+    Assert-True (-not (Test-Path -LiteralPath (Join-Path $rgDestination 'share\agentdock\bin\rg.exe.bak'))) 'near-match bundled file was selected'
+    Assert-True ($rg.selected_entry_count -eq 16) "unexpected selected count with bundled rg: $($rg.selected_entry_count)"
 } finally {
     Remove-Item -LiteralPath $normalRoot -Recurse -Force -ErrorAction SilentlyContinue
 }
