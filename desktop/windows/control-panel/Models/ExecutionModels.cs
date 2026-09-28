@@ -159,7 +159,11 @@ public sealed partial class ExecutionCallRow : INotifyPropertyChanged
     public string Parameters => _value.Text("parameter_summary");
     public bool ReadOnlyLegacy => _value.Flag("read_only_legacy");
     public string Summary => OwnedText.Render(_value.Field("summary_text"), _value.Text("summary"), Tool, _value.Text("activity_label_source"), Status);
-    public string OriginalLabel => _value.Text("activity_label", _value.Text("display_title", _value.Text("title", Tool)));
+    // The descriptor is bound to the retained title, not the registered tool's
+    // separate default label. Explicit user labels still take precedence.
+    public string OriginalLabel => _value.Text("activity_label_source") == "tool"
+        ? _value.Text("display_title", _value.Text("title", Tool))
+        : _value.Text("activity_label", _value.Text("display_title", _value.Text("title", Tool)));
     public string Title => IsInsertion ? UiText.Get("ExecutionUserSupplement") : ExecutionTitleFormatter.Format(Tool, OwnedText.Render(_value.Field("title_text"), OriginalLabel, Tool, _value.Text("activity_label_source"), Status), _value.Text("action"));
     public string TitleTooltip => Title + (OriginalLabel.Length > 0 && OriginalLabel != Title ? UiText.Get("ExecutionOriginalLabelPrefix") + OriginalLabel : "");
     public DateTimeOffset? RequestReceivedAt => _value.Date("request_received_at");

@@ -32,10 +32,11 @@ internal static partial class Program
             }
             var original="读取文件 · 사용자文件.txt";
             var descriptor=new OwnedTextDescriptor{SchemaVersion=1,Code="tool.read_file",Args=[" · 사용자文件.txt"],TextHash=Hash(original)};
-            var value=Json(new {tool_name="read_file",activity_label_source="tool",display_title=original,summary=original,title_text=descriptor,summary_text=descriptor,status="succeeded",updated_seq=1});
+            var value=Json(new {tool_name="read_file",activity_label="Read a UTF-8 text file slice",activity_label_source="tool",display_title=original,summary=original,title_text=descriptor,summary_text=descriptor,status="succeeded",updated_seq=1});
             var row=new ExecutionCallRow(value);
             Check(row.Title=="read_file · "+UiText.Format("OwnedTool_read_file"," · 사용자文件.txt"),"generated label not translated");
             Check(row.Summary==UiText.Format("OwnedTool_read_file"," · 사용자文件.txt"),"summary not translated");
+            Check(new ExecutionCallRow(Json(new{tool_name="read_file",activity_label="사용자 지정 설명",activity_label_source="",display_title=original,title_text=descriptor,status="succeeded"})).Title=="read_file · 사용자 지정 설명","a generated title must not replace the user's explicit label");
             Check(row.Technical.Contains("text_hash") && value.Text("display_title")==original,"stored original was changed");
             var decoded=JsonSerializer.Deserialize<ActivityEvent>(JsonSerializer.Serialize(new{title=original,title_text=descriptor,activity_label_source="tool",tool_name="read_file",kind="call.completed",status="succeeded"}),ActivityClient.JsonOptions)!;
             var activity=new ActivityRow(decoded);Check(activity.Title==row.Summary,"activity and execution use different descriptors");
