@@ -62,6 +62,9 @@ internal static partial class Program
             Check(payload.ApplyPage(Json(new{payload=new{@ref="blob"},offset=0,next_offset=bytes,has_more=false,text=request}),"blob",false) && payload.Text==request,"payload content modified");
             var edit=new ExecutionCallRow(Json(new{tool_name="file_edit",file_edit=new{stats_state="known",insertions=26,deletions=9,path="保留/한글.txt",diff_preview="- 原文\n+ 사용자",changed=true}}));
             Check(edit.AddedLinesText=="+26"&&edit.DeletedLinesText=="−9"&&edit.FileEditDetails.Contains("- 原文\n+ 사용자"),"file statistics or original diff changed");
+            var truncated=new ExecutionCallRow(Json(new{tool_name="file_edit",file_edit=new{stats_state="known",insertions=1,deletions=0,path="a.txt",diff_preview="+ 마지막 줄",diff_truncated=true,changed=true}}));
+            var truncationNotice=UiText.Get("ExecutionDiffTruncated");
+            Check(truncated.FileEditDetails.EndsWith("+ 마지막 줄"+truncationNotice)&&truncationNotice.Length>1&&(truncationNotice[0]=='\r'||truncationNotice[0]=='\n'),"diff truncation notice is glued to the last diff line");
             var unknown=new ExecutionCallRow(Json(new{tool_name="file_edit",file_edit=new{stats_state="unknown"}}));Check(unknown.AddedLinesText=="—","unknown edit treated as zero");
             var diagnostic="task_owner_mismatch: 原始句子 사용자";
             Check(NativeDiagnosticText.Describe(diagnostic).Contains(UiText.Get("NativeTaskOwnerMismatch"))&&NativeDiagnosticText.Describe(diagnostic).EndsWith(diagnostic),"native failure lost original");

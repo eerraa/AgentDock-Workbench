@@ -1559,7 +1559,8 @@
     <value>파일 목록이 미리보기 한도를 초과했습니다.</value>
   </data>
   <data name="ExecutionDiffTruncated" xml:space="preserve">
-    <value>변경 사항 미리보기의 일부가 생략됐습니다.</value>
+    <value>
+변경 사항 미리보기의 일부가 생략됐습니다.</value>
   </data>
   <data name="ExecutionUnassigned" xml:space="preserve">
     <value>미연결</value>

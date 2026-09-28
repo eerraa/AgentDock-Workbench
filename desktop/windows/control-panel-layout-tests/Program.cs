@@ -195,7 +195,7 @@ internal static class Program
         var container=(ListBoxItem?)list.ItemContainerGenerator.ContainerFromItem(message);
         Check(container is not null && Math.Abs(container.ActualHeight-InsertionTimeline.MessageRowHeight)<0.1,"Actual supplement row height is inconsistent with scroll anchoring.");
         var text=Descendants(container!).OfType<TextBlock>().Select(block=>block.Text).ToArray();
-        Check(text.Contains(UiText.Get("ExecutionUserSupplement")) && text.Any(value=>value.Contains("你好，我是帅哥")) && text.Contains(message.State),"Real timeline template did not render the localized supplement heading, unchanged user text and evidence state.");
+        Check(text.Contains(UiText.Get("ExecutionUserSupplement")) && text.Any(value=>value.Contains("你好，我是帅哥")) && text.Contains(UiText.Get("InsertionStateAwaitReceiverReceipt")),"Real timeline template did not render the localized supplement heading, unchanged user text and evidence state.");
         Check(Descendants(container!).OfType<Button>().Any(button=>Equals(button.Content,UiText.Get("InsertionRetryButton"))),"Supplement-only retry action was not rendered.");
         var total=window.Calls.Count;
         list.SelectedItem=message;

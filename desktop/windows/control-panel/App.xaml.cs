@@ -29,6 +29,7 @@ public partial class App : System.Windows.Application
     private RuntimeSnapshot? _traySnapshot;
     private bool _traySnapshotRefreshInProgress;
     private bool _updateInProgress;
+    private bool _releasesPromptOpen;
     private bool _ownsSingleInstanceMutex;
     private bool _exitRequested;
 
@@ -537,21 +538,30 @@ public partial class App : System.Windows.Application
 
     public Task CheckForUpdatesAsync(Window? owner = null)
     {
-        if (_updateInProgress)
+        // The tray stays usable while the window's modal prompt is open.
+        if (_updateInProgress || _releasesPromptOpen)
         {
             return Task.CompletedTask;
         }
 
-        if (ShowUpdateMessage(owner, UiText.Get("ForkUpdateThroughSetup"), MessageBoxButton.YesNo, MessageBoxImage.Information) == MessageBoxResult.Yes)
+        _releasesPromptOpen = true;
+        try
         {
-            try
+            if (ShowUpdateMessage(owner, UiText.Get("ForkUpdateThroughSetup"), MessageBoxButton.YesNo, MessageBoxImage.Information) == MessageBoxResult.Yes)
             {
-                Process.Start(new ProcessStartInfo(ForkReleasesUrl) { UseShellExecute = true });
+                try
+                {
+                    Process.Start(new ProcessStartInfo(ForkReleasesUrl) { UseShellExecute = true });
+                }
+                catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
+                {
+                    ShowUpdateMessage(owner, UiText.Format("ForkReleasesOpenFailed", ForkReleasesUrl), MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
             }
-            catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
-            {
-                ShowUpdateMessage(owner, UiText.Format("ForkReleasesOpenFailed", ForkReleasesUrl), MessageBoxButton.OK, MessageBoxImage.Warning);
-            }
+        }
+        finally
+        {
+            _releasesPromptOpen = false;
         }
         return Task.CompletedTask;
     }

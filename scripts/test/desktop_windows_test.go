@@ -414,6 +414,8 @@ func TestWindowsUpdateFeedbackUsesUTF8AndImmediateStatus(t *testing.T) {
 	for _, want := range []string{
 		`_updateInProgress ? UiText.Get("CheckingForUpdates") : UiText.Get("CheckForUpdates")`,
 		`ShowUpdateMessage(owner, UiText.Get("ForkUpdateThroughSetup"), MessageBoxButton.YesNo`,
+		`if (_updateInProgress || _releasesPromptOpen)`,
+		`_releasesPromptOpen = false;`,
 		`"https://github.com/eerraa/AgentDock-Workbench/releases"`,
 		`ResumeUpdateProgressIfNeededAsync`,
 		`ReadUpdateUiHandoffTransactionAsync`,

@@ -1559,7 +1559,8 @@
     <value>文件明细超过预览上限。</value>
   </data>
   <data name="ExecutionDiffTruncated" xml:space="preserve">
-    <value>差异预览已截断。</value>
+    <value>
+差异预览已截断。</value>
   </data>
   <data name="ExecutionUnassigned" xml:space="preserve">
     <value>未归属</value>

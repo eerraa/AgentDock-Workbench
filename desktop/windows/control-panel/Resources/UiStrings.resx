@@ -1559,7 +1559,8 @@ Added/deleted lines: {6} / {7}
     <value>File details exceed the preview limit.</value>
   </data>
   <data name="ExecutionDiffTruncated" xml:space="preserve">
-    <value>The diff preview was truncated.</value>
+    <value>
+The diff preview was truncated.</value>
   </data>
   <data name="ExecutionUnassigned" xml:space="preserve">
     <value>Unassigned</value>
