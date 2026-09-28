@@ -8,7 +8,7 @@
 |---|---|
 | 저장소 | origin `eerraa/AgentDock-Workbench` (push 대상). upstream·workbench `A-m-o-r-F-a-t-i/AgentDock-Workbench` (읽기 전용, push 금지). uvwt `uvwt/agentdock` (원조, 참고용) |
 | 소스 기준선 | upstream `v1.1.8` 프리릴리스 `4bd778d4077bbe58cfe19e4abb777f660694377b`를 main에 병합한 상태. 이전 기준선은 `v1.1.7` `b367eaab` |
-| 버전 규칙 | `1.1.<upstream patch>100(+수정 번호)`. 현재 `1.1.8100`. 게시된 fork 버전(`1.1.6100`, `1.1.16101`, `1.1.16102`, `1.1.17100`)은 재사용하지 않는다. 앱 내 업데이트가 없으므로 이전 fork 버전보다 클 필요는 없다 |
+| 버전 규칙 | `1.1.<upstream patch>100(+수정 번호)`. 현재 게시본 `1.1.8100`(태그 `v1.1.8100`). 게시된 fork 버전(`1.1.6100`, `1.1.16101`, `1.1.16102`, `1.1.17100`, `1.1.8100`)은 재사용하지 않는다. 앱 내 업데이트가 없으므로 이전 fork 버전보다 클 필요는 없다 |
 | 버전 선언 위치 | `internal/buildinfo/buildinfo.go`, `desktop/windows/control-panel/AgentDock.ControlPanel.csproj`. `go run ./tools/release version`과 `verify-version v<ver>`로 확인 |
 | 업데이트 | Setup으로만 한다. 트레이·창의 업데이트 항목은 fork Releases 페이지 안내만 하고, `agentdock update`는 `--local-archive`만 허용한다 |
 | 배포 대상 | Windows x64 Setup만. arm64·macOS·Linux·Android 코드는 업스트림 그대로 두고 빌드하거나 게시하지 않는다 |
@@ -79,7 +79,7 @@ Setup receipt 공유 위반 대기는 업스트림 `internal/desktopruntime/setu
 | 구분 | 내용 |
 |---|---|
 | 알려진 제약 | `--local-archive`와 데스크톱 복구는 실행 중인 Core의 rg pin으로 payload를 검사하므로, rg pin 변경은 Setup으로만 배포한다. selfupdate의 구형 flat 이관(`PrepareWindowsLegacyGeneration`)은 rg를 복사하지 않는다. fork 설치로는 이 경로에 닿지 않는다. 시작 시 복구는 Core·Tray 버전이 다를 때만 Core 시작마다 GitHub API를 1회 조회하고, 아무것도 바꾸지 않는다. `RuntimeService`의 온라인 업데이트 메서드는 호출되지 않지만 업스트림 계약 시험 때문에 남아 있다. `rules` 모드에서 사용자가 승인한 호출의 결과는 모델에 돌아가지 않는다(모델은 다시 관찰해야 한다). ChatGPT가 MCP 이미지 결과를 모델에게 보여 주는지는 실제 연결로 확인해야 한다 |
-| 릴리스 전 결정 필요 | 게시 자산을 Setup과 SHA-256으로 줄이기(현재 스크립트는 ZIP과 install.ps1을 포함한 10개 기준). 역사적 upgrade 기준을 1.1.16102에서 1.1.17100으로 바꿀지. `docs/releases/v<ver>.md` |
+| 게시 자산 | 로컬 게시는 `AgentDockSetup-amd64.exe`, `build-report.json`, `verification-scope.json`과 각 `.sha256`만 올린다(ZIP·`install.ps1` 제외). CI의 `windows-package.yml` 게시 경로와 검증기는 아직 10개 기준이며, 역사적 upgrade 기준도 1.1.16102 그대로다. CI로 게시하려면 둘 다 먼저 맞춘다 |
 | 보류 후보 (요청 시만) | 메인 창 활동 요약 주기 갱신, 비JSON health 수용, Core 정지 중 버전 표시 프로세스 반복, 상태 조회 실패의 '중지됨' 표시, 앱 밖 Tailscale 주소 변경 시 캐시 혼합, 생성 후 Job 할당 틈, 관리자 작업 UAC 재시도, tunnel configure 롤백, 폴더 보안 재설정 성능, 브라우저 시작 20초 제한 |
 | upstream 1.1.8 이후 미반영 | PR #22 (`0591339a`: 시작 시 DACL이 이미 같으면 재설정 생략 + 시작 단계 시간 기록 → '폴더 보안 재설정 성능'과 겹침; `f1df7381`: 설치 스테이징 분리·launcher rollback journal; `813e7d5f`: 스트리밍 복사). PR #21: 설치 파일만 게시. 재현되는 것만 채택한다 |
 | 제품 결함 아님 | 운영 로그의 30초 주기 `GET /hello` 404는 사용자 Edge에서 온 외부 요청이다 |
